@@ -1,0 +1,36 @@
+never create test files and never create new files just for small changes or testing, always work in the same files to keep things clean, untill you need a new file for actual usable functionality.
+
+Define props with interfaces/types, not prop-types.
+
+Use the function keyword for components:
+
+Call hooks (useState, useEffect, etc.) only at the top level.
+
+Extract reusable logic into custom hooks (useAuth, useFormValidation).
+
+Memoize with React.memo, useCallback, useMemo where appropriate.
+
+Avoid inline functions in JSX, pull handlers out or wrap in useCallback.
+
+Favor composition (render props, children) over inheritance.
+
+Use React.lazy + Suspense for code splitting.
+
+Use refs only for direct DOM access.
+
+Prefer controlled components for forms.
+
+Implement an error boundary component.
+
+Clean up effects in useEffect to prevent leaks.
+
+Use guard clauses (early returns) for error handling.
+
+
+Types/Interfaces in PascalCase (e.g. User, ButtonProps)
+
+Use semantic HTML.
+
+Apply appropriate ARIA attributes.
+
+Ensure full keyboard navigation.
