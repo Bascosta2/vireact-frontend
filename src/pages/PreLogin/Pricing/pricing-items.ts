@@ -2,7 +2,7 @@ import type { PricingFeature } from '@/types/pricing';
 
 // Free plan features
 export const freeFeatures: PricingFeature[] = [
-    { text: '30 credits per month', type: 'check' },
+    { text: '30 credits/month', type: 'check' },
     { text: 'Upload up to 5 videos / month', type: 'check' },
     { text: 'Video insights with HookScore™ & TempoCheck™ (basic)', type: 'check' },
     { text: 'AI captions with SmartSubs™ (watermarked)', type: 'check' },
