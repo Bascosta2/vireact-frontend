@@ -27,6 +27,7 @@ const AccessibilityStatement = lazy(() => import('@/pages/PreLogin/TrustAndLegal
 
 // Early Access
 const EarlyAccess = lazy(() => import('@/pages/PreLogin/EarlyAccess'));
+const CaseStudies = lazy(() => import('@/pages/PreLogin/CaseStudies'));
 
 function PublicRoutes() {
 
@@ -64,6 +65,9 @@ function PublicRoutes() {
 
                 {/* Early Access */}
                 <Route path='/early-access' element={<EarlyAccess />} />
+
+                {/* Case Studies */}
+                <Route path='/case-studies' element={<CaseStudies />} />
 
 
                 {/* <Route path='/fallback' element={<Fallback />} /> */}

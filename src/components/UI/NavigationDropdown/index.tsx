@@ -72,7 +72,7 @@
                 className={`
                     absolute top-[140%] -left-12 mt-2 
                     w-[380px] sm:w-[580px] lg:w-[700px]
-                    glassmorphism border border-white/10 
+                    bg-[#1a1a1a] backdrop-blur-3xl border border-white/10 
                     rounded-2xl shadow-2xl 
                     z-50
                     ${className}

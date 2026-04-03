@@ -8,6 +8,7 @@ import { SocialIcon } from '@/components/Footer/SocialIcon';
 const Footer: React.FC<FooterProps> = ({ className = '' }) => {
     return (
         <footer className={`bg-black ${className}`}>
+            <div className="hidden md:block">
             {/* Main Footer Content */}
             <div className="py-16">
                 <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,6 +52,12 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                         </div>
                     </div>
                 </div>
+            </div>
+            </div>
+            <div className="md:hidden py-6 px-4 border-t border-gray-800">
+                <p className="text-center text-xs text-gray-500 font-heading font-semibold">
+                    © {new Date().getFullYear()} Vireact. All rights reserved.
+                </p>
             </div>
         </footer>
     );

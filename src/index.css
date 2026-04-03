@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap');
 
 /* Fonts */
 .poppins {
@@ -8,6 +10,15 @@
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
+}
+
+.montserrat {
+  font-family: "Montserrat", sans-serif;
+}
+
+.impact {
+  font-family: "Anton", "Impact", "Arial Black", sans-serif;
+  letter-spacing: 0.05em;
 }
 
 /* .special-gothic-condensed-one-regular {
@@ -28,6 +39,23 @@
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
+}
+
+.font-feature-card {
+  font-family: "Inter", "Manrope", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Feature cards typography (Satoshi / DM Sans / Fragment Mono) */
+.font-satoshi {
+  font-family: "Satoshi", system-ui, -apple-system, sans-serif;
+}
+.font-dm-sans {
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+.font-fragment-mono {
+  font-family: "Fragment Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 @theme {
@@ -63,6 +91,8 @@
   --font-heading: "Bebas Neue", sans-serif;
   --font-bebas-neue: "Bebas Neue", sans-serif;
   --font-roboto: "Roboto", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
+  --font-impact: "Anton", "Impact", "Arial Black", sans-serif;
 }
 
 @layer utilities {
@@ -158,6 +188,32 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: 0 2px 4px 0 #FF004F1A;
+}
+
+/* Hero nav Sign up button: pulse, hover scale, active scale, ripple */
+.btn-primary-hero-nav {
+  animation: hero-cta-pulse 3s ease-in-out infinite;
+}
+.btn-primary-hero-nav:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 28px 0 rgba(255, 0, 79, 0.5);
+}
+.btn-primary-hero-nav:active {
+  transform: scale(0.97);
+}
+@keyframes hero-cta-pulse {
+  0%, 100% { box-shadow: 0 4px 14px 0 #FF004F26; }
+  50% { box-shadow: 0 4px 20px 0 #FF004F40; }
+}
+@keyframes ripple {
+  to {
+    transform: scale(20);
+    opacity: 0;
+  }
+}
+.animate-ripple {
+  animation: ripple 0.2s ease-out forwards;
+  transform: scale(0);
 }
 
 /* Secondary Button */
@@ -446,4 +502,100 @@
   }
 }
 
+/* Enhanced glassmorphism for Wins cards */
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-card:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow:
+    0 12px 48px rgba(239, 68, 68, 0.2),
+    0 0 24px rgba(239, 68, 68, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-card {
+    background: rgba(26, 31, 46, 0.9);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.4);
+  }
+}
+
+.glow-on-hover:hover {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
 /* Infinite Scroll Animation for Testimonials - Replaced with react-fast-marquee */
+
+/* Analysis progress modal - shimmer on progress bar */
+@keyframes analysis-progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.analysis-progress-shimmer {
+  animation: analysis-progress-shimmer 2s ease-in-out infinite;
+}
+
+/* Actionable Edits card: retention score range slider (scoped) */
+.card-actionable-edits .retention-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+}
+
+.card-actionable-edits .retention-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.card-actionable-edits .retention-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e);
+}
+
+.card-actionable-edits .retention-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  border: none;
+}
+
+.card-actionable-edits .retention-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e);
+}

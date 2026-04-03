@@ -18,9 +18,29 @@ export const AUTH_ROLE = "auth_role"
 export const AUTH_IS_AUTHENTICATED = "auth_is_authenticated"
 
 
-export const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-export const VITE_FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL;
-export const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+// Environment variable validation and export
+const getEnvVar = (key: string, defaultValue?: string): string | undefined => {
+  const value = import.meta.env[key];
+  
+  if (!value && import.meta.env.DEV) {
+    if (defaultValue) {
+      console.warn(`⚠️ ${key} is not set. Using default: ${defaultValue}`);
+      return defaultValue;
+    } else {
+      console.warn(`⚠️ ${key} is not set in environment variables.`);
+    }
+  }
+  
+  if (!value && !import.meta.env.DEV && !defaultValue) {
+    console.error(`❌ ${key} is required but not set!`);
+  }
+  
+  return value || defaultValue;
+};
+
+export const VITE_BACKEND_URL = getEnvVar('VITE_BACKEND_URL', import.meta.env.DEV ? 'http://localhost:5000' : undefined)?.trim();
+export const VITE_FRONTEND_URL = getEnvVar('VITE_FRONTEND_URL', import.meta.env.DEV ? 'http://localhost:5174' : undefined)?.trim();
+export const VITE_GOOGLE_CLIENT_ID = getEnvVar('VITE_GOOGLE_CLIENT_ID');
 
 
 // Regex patterns for validation
@@ -39,7 +59,7 @@ export const TIME_REGEX = /^\d{2}:\d{2}$/
 // Upload validation constants
 export const UPLOAD_VALIDATION = {
     VIDEO: {
-        MAX_SIZE: 50 * 1024 * 1024, // 50MB in bytes
+        MAX_SIZE: 200 * 1024 * 1024, // 200MB in bytes
         ALLOWED_FORMATS: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
         MAX_DURATION: 60, // 60 seconds
         MIN_DURATION: 5, // 5 seconds

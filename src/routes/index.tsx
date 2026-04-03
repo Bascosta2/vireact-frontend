@@ -27,7 +27,9 @@ const BaseRoutes = () => {
               <>
                 <PreLoginHeader />
                 <PublicRoutes />
-                <BottomCta />
+                <div className="hidden md:block">
+                  <BottomCta />
+                </div>
                 <Footer />
               </>
 

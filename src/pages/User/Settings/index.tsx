@@ -11,14 +11,16 @@ function Settings() {
   const handleTabClick = (tab: TabType) => {
     setActiveTab(tab);
     if (tab === 'subscription') {
-      navigate('/subscription-usage');
+      navigate('/profile');
     }
   };
 
   return (
-    <UserPage>
-      <div className="px-4 py-8">
-        <h1 className="text-white text-2xl font-bebas-neue mb-6">Settings</h1>
+    <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
+      <div className="max-w-6xl mx-auto pb-8">
+        <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-wide text-white mb-6" style={{ fontFamily: 'Impact, Anton, "Arial Black", sans-serif' }}>
+          Settings
+        </h1>
         
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b border-gray-700">
@@ -46,7 +48,7 @@ function Settings() {
 
         {/* General Tab Content */}
         {activeTab === 'general' && (
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="rounded-2xl border border-white/5 bg-gray-900/50 backdrop-blur-sm p-6 md:p-8">
             <h2 className="text-white text-xl font-semibold mb-4">General Settings</h2>
             <p className="text-gray-300">Your general settings and preferences will appear here.</p>
           </div>

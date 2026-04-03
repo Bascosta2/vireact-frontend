@@ -70,7 +70,7 @@ function SubscriptionPlans() {
         {/* Header */}
         <div className="text-center mb-12">
           <button
-            onClick={() => navigate('/subscription-usage')}
+            onClick={() => navigate('/profile')}
             className="text-gray-400 hover:text-white mb-6 inline-flex items-center gap-2"
           >
             ← Back to Subscription

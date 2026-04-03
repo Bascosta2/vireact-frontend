@@ -6,6 +6,8 @@ import UserRoutes from '@/routes/ProtectedRoutes/UserRoutes'
 import AdminHeader from '@/components/Header/AdminHeader'
 import { useAuth } from '@/redux/hooks/use-auth'
 import { USER_ROLES } from '@/constants'
+import { SidebarProvider } from '@/contexts/SidebarContext'
+import { PendingUploadProvider } from '@/contexts/PendingUploadContext'
 // import BottomNav from '@/components/Header/UserHeader/BottomNav'
 
 const ProtectedRoutes = () => {
@@ -29,9 +31,11 @@ const ProtectedRoutes = () => {
                             : isUser ?
 
                                 <>
-                                    {/* <UserHeader /> */}
-                                    <UserRoutes />
-                                    {/* <BottomNav /> */}
+                                    <SidebarProvider>
+                                        <PendingUploadProvider>
+                                            <UserRoutes />
+                                        </PendingUploadProvider>
+                                    </SidebarProvider>
                                 </>
 
                                 :

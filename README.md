@@ -15,6 +15,8 @@ This application includes Google One-Tap authentication functionality using Goog
    VITE_FRONTEND_URL=http://localhost:5173
    ```
 
+   **Production builds:** Set `VITE_BACKEND_URL` to your deployed API origin (HTTPS, no trailing slash). See [`env.production.sample`](./env.production.sample) — copy to `.env.production` locally or define the same variable in Vercel / CI. In dev, `vite.config.ts` proxies `/api` to the local backend when using relative Axios URLs.
+
 2. **Google Cloud Console**: 
    - Create a project in [Google Cloud Console](https://console.cloud.google.com/)
    - Enable Google Identity API

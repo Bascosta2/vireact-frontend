@@ -17,15 +17,6 @@ interface Logo {
 function CreatorsAndBusinesses() {
     return (
         <div className="w-full max-w-7xl mx-auto py-16">
-            {/* Title Badge */}
-            <div className="flex justify-center mb-12">
-                <div className="inline-flex items-center px-6 py-3 bg-white/15 border-gradient-secondary rounded-full">
-                    <span className="text-sm text-white font-medium">
-                        Used by 1,000+ creators and businesses
-                    </span>
-                </div>
-            </div>
-
             {/* Profile Cards Row - Moving Right */}
             <div className="mb-8">
                 <CustomMarquee

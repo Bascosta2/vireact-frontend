@@ -12,7 +12,7 @@ interface HomeSectionProps {
     overflow?: 'visible' | 'hidden';
     // Optional section header props
     sectionHeader?: {
-        badge: string;
+        badge?: string;
         title: string;
         icon?: React.ReactNode;
         className?: string;

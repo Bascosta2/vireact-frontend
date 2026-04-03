@@ -8,6 +8,7 @@ function FeaturesSection() {
             className="px-4"
             gradient={true}
             overflow="hidden"
+            background="transparent"
             sectionHeader={{
                 badge: "Features",
                 title: "The only features you need for 100x growth"

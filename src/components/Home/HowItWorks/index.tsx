@@ -8,6 +8,7 @@ function HowItWorksSection() {
             className="px-4"
             gradient={false}
             overflow="hidden"
+            background="transparent"
             sectionHeader={{
                 badge: "How It Works",
                 title: "The Easiest Way to Go Viral"

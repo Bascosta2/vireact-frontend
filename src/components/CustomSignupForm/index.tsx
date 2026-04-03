@@ -8,6 +8,7 @@ import { useAuth } from '@/redux/hooks/use-auth';
 import { useUser } from '@/redux/hooks/use-user';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { isProviderConflictError } from '@/utils/authHelpers';
+import { VITE_BACKEND_URL } from '@/constants';
 
 interface CustomSignupFormProps {
   onSuccess?: () => void;
@@ -131,6 +132,32 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     } catch (error: any) {
       console.error('Authentication error:', error);
       
+      // Handle network errors (when backend is unreachable)
+      if (!error.response) {
+        // Network error - backend unreachable or connection failed
+        let networkErrorMessage = 'Unable to connect to server. ';
+        
+        if (!VITE_BACKEND_URL) {
+          networkErrorMessage = 'Backend URL is not configured. Please check your environment variables.';
+        } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+          networkErrorMessage += 'Please check your internet connection or ensure the backend server is running.';
+        } else if (error.message && error.message.includes('Network Error')) {
+          networkErrorMessage += 'Please check your internet connection and try again.';
+        } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+          networkErrorMessage = 'Request timed out. Please try again later.';
+        } else {
+          networkErrorMessage += 'Please try again later.';
+        }
+        
+        if (onError) {
+          onError(networkErrorMessage);
+        } else {
+          ErrorNotification(networkErrorMessage);
+        }
+        return;
+      }
+      
+      // Handle API errors (backend responded with error status)
       const errorMessage = error.response?.data?.message || 
                           error.message || 
                           (isLogin ? 'Login failed' : 'Signup failed');

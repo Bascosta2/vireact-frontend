@@ -1,9 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom"
+import Features from '@/pages/Features'
 import Fallback from "@/components/Fallback";
 
 function UserRoutes() {
     const Dashboard = lazy(() => import('@/pages/User/Dashboard'));
+    const Upload = lazy(() => import('@/pages/User/Upload'));
     const Analytics = lazy(() => import('@/pages/User/Analytics'));
     const Videos = lazy(() => import('@/pages/User/Videos'));
     const Chat = lazy(() => import('@/pages/User/Chat'));
@@ -16,6 +18,8 @@ function UserRoutes() {
         <Suspense fallback={<Fallback />}>
             <Routes>
                 <Route path='/dashboard' element={<Dashboard />} />
+                <Route path='/upload' element={<Upload />} />
+                <Route path='/features' element={<Features />} />
                 <Route path='/analytics' element={<Analytics />} />
                 <Route path='/videos' element={<Videos />} />
                 <Route path='/videos/:videoId' element={<Chat />} />
