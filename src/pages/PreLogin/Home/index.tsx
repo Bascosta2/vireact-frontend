@@ -25,29 +25,27 @@ function Home() {
                 {/* 1. Hero */}
                 <HeroSection />
 
-                {/* 2. Three feature cards — desktop: + AIFeatures; mobile: differentiation only */}
+                {/* 2. Three feature cards + AI feature tabs (all viewports) */}
                 <section className="relative" style={{ background: 'transparent' }}>
                     <DifferentiationSection />
-                    <div className="hidden md:block">
+                    <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-2 md:pb-0">
                         <AIFeatures />
                     </div>
                 </section>
 
-                {/* 4–5. Creator row, viral predictions — desktop only */}
-                <section className="hidden md:block" style={{ background: 'transparent' }}>
-                    <CreatorsAndBusinesses />
-                </section>
-                <section className="hidden md:block" style={{ background: 'transparent' }}>
-                    <ViralPredictionsSection />
-                </section>
-
-                {/* 6. Creator story cards (marquee desktop; 2-card stack mobile) */}
+                {/* Creator story cards */}
                 <div style={{ background: 'transparent' }}>
                     <WinsSection />
                 </div>
 
-                {/* 7. Rest of page — desktop only */}
-                <section className="hidden md:block" style={{ background: 'transparent' }}>
+                <section style={{ background: 'transparent' }}>
+                    <CreatorsAndBusinesses />
+                </section>
+                <section style={{ background: 'transparent' }}>
+                    <ViralPredictionsSection />
+                </section>
+
+                <section style={{ background: 'transparent' }}>
                     <HowItWorksSection />
                     <FeaturesSection />
                     <WhyChooseUsSection />

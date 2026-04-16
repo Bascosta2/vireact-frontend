@@ -6,9 +6,9 @@ interface ProfileCardProps {
 
 function ProfileCard({ name, image, followers }: ProfileCardProps) {
     return (
-        <div className="flex flex-col items-center mx-6">
+        <div className="flex flex-col items-center mx-3 shrink-0 md:mx-6">
             {/* Profile Image */}
-            <div className="w-16 h-16 rounded-full overflow-hidden mb-3 relative">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden mb-2 md:mb-3 relative">
                 <img
                     src={image}
                     alt={name}

@@ -158,8 +158,8 @@ function FeaturesWorkflowIcon() {
             100% { transform: translate(88px, 100px) rotate(-12deg); opacity: 0; }
           }
           @keyframes features-pill-select {
-            0%, 10% { fill: rgba(255,255,255,0.04); stroke: rgba(212,212,216,0.65); filter: none; }
-            12%, 100% { fill: rgba(255,85,0,0.85); stroke: rgba(255,85,0,1); filter: drop-shadow(0 0 6px rgba(255,85,0,0.45)); }
+            0%, 10.99% { fill: rgba(255,255,255,0.04); stroke: rgba(212,212,216,0.65); filter: none; }
+            11%, 100% { fill: rgba(255,85,0,0.85); stroke: rgba(255,85,0,1); filter: drop-shadow(0 0 6px rgba(255,85,0,0.45)); }
           }
           @keyframes features-ripple {
             0%, 10% { opacity: 0; transform: scale(0.2); }
@@ -172,12 +172,12 @@ function FeaturesWorkflowIcon() {
             transform-origin: center;
             animation: features-cursor-path 4s cubic-bezier(0.22, 0.72, 0.2, 1) infinite;
           }
-          .features-pill-1 { animation: features-pill-select 4s linear infinite; animation-delay: 0s; }
-          .features-pill-2 { animation: features-pill-select 4s linear infinite; animation-delay: 0.4s; }
-          .features-pill-3 { animation: features-pill-select 4s linear infinite; animation-delay: 0.8s; }
-          .features-pill-4 { animation: features-pill-select 4s linear infinite; animation-delay: 1.2s; }
-          .features-pill-5 { animation: features-pill-select 4s linear infinite; animation-delay: 1.6s; }
-          .features-pill-6 { animation: features-pill-select 4s linear infinite; animation-delay: 2s; }
+          .features-pill-1 { animation: features-pill-select 4s linear infinite; animation-delay: 0.12s; }
+          .features-pill-2 { animation: features-pill-select 4s linear infinite; animation-delay: 0.68s; }
+          .features-pill-3 { animation: features-pill-select 4s linear infinite; animation-delay: 1.24s; }
+          .features-pill-4 { animation: features-pill-select 4s linear infinite; animation-delay: 1.8s; }
+          .features-pill-5 { animation: features-pill-select 4s linear infinite; animation-delay: 2.36s; }
+          .features-pill-6 { animation: features-pill-select 4s linear infinite; animation-delay: 2.92s; }
           .features-ripple-1, .features-ripple-2, .features-ripple-3, .features-ripple-4, .features-ripple-5, .features-ripple-6 {
             transform-box: fill-box;
             transform-origin: center;
@@ -287,7 +287,7 @@ function AiWorkflowIcon() {
 
 function ChatWorkflowIcon() {
   return (
-    <div className="relative mx-auto h-[120px] w-[200px] max-w-full" aria-hidden>
+    <div className="relative mx-auto h-[120px] w-[270px] max-w-full overflow-hidden" aria-hidden>
       <style>
         {`
           @keyframes chat4-dot-bounce {
@@ -411,7 +411,7 @@ function ChatWorkflowIcon() {
           }
         `}
       </style>
-      <svg width="200" height="120" viewBox="0 0 200 120" className="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+      <svg width="270" height="120" viewBox="0 0 200 120" className="block h-full w-full max-w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
           <clipPath id="chat4-left-clip">
             <rect x="0" y="0" width="93" height="120" />

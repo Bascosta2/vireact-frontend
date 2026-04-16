@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/redux/hooks/use-auth";
 import { motion } from "framer-motion";
 import HeroAvatarStack from "@/components/Home/HeroAvatarStack";
+import { MobileWidgetPreviewRow } from "@/components/Home/HeroSection/MobileWidgetPreviewRow";
 
 const TYPING_PHRASES = [
   "Drop an Instagram Reel Link",
@@ -138,7 +139,7 @@ function Hero() {
 
         {/* Mobile-only primary CTA */}
         <motion.div
-          className="md:hidden px-4 mb-5"
+          className="md:hidden px-4 mb-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.25 }}
@@ -154,6 +155,8 @@ function Hero() {
             Sign Up Free — Predict Your Views
           </button>
         </motion.div>
+
+        <MobileWidgetPreviewRow />
 
         {/* Desktop: input + or + upload — unchanged */}
         <motion.div
@@ -206,9 +209,40 @@ function Hero() {
           </motion.button>
         </motion.div>
 
-        {/* Social proof — mobile: stack; md+: row */}
+        {/* Social proof — mobile: single compact row under widget previews */}
         <motion.div
-          className="social-proof-compact flex flex-col md:flex-row flex-wrap items-center justify-center gap-3 md:gap-6 lg:gap-8 mb-0 px-4"
+          className="social-proof-compact md:hidden mt-6 mb-6 flex flex-row flex-nowrap items-center justify-center gap-3 px-2 min-w-0"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <HeroAvatarStack variant="heroMobileCompact" />
+          <button
+            type="button"
+            onClick={handleReviewClick}
+            className="rating-section flex min-w-0 shrink flex-row flex-nowrap items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <div className="flex shrink-0 items-center justify-center gap-0.5" title="Rated 4.6/5 by 1000+ creators">
+              {[1, 2, 3, 4].map((star) => (
+                <Star key={star} className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#eab308', fill: '#eab308' }} aria-hidden />
+              ))}
+              <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0" aria-hidden>
+                <Star className="absolute inset-0 h-3.5 w-3.5" style={{ color: '#a16207', fill: 'none' }} />
+                <span className="pointer-events-none absolute left-0 top-0 h-full w-[60%] overflow-hidden">
+                  <Star className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#eab308', fill: '#eab308' }} />
+                </span>
+              </span>
+            </div>
+            <span className="text-xs leading-tight whitespace-nowrap">
+              <span className="font-medium text-white">4.6/5</span>{" "}
+              <span className="font-normal text-gray-400">based on 1000+ reviews</span>
+            </span>
+          </button>
+        </motion.div>
+
+        {/* Social proof — desktop: unchanged row layout */}
+        <motion.div
+          className="social-proof-compact hidden md:flex flex-row flex-wrap items-center justify-center gap-6 lg:gap-8 mb-0 px-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}

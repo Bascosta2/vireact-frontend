@@ -16,52 +16,47 @@ function NicheCard({ category, alt, thumbnail, isFounder = false, interactive = 
   const [modalOpen, setModalOpen] = useState(false);
 
   const cardContent = (
-    <>
-      <div className="mb-3">
-        <span className="inline-block text-xs font-medium rounded-full px-4 py-2 bg-white/10 text-white border border-white/20">
-          {isFounder ? 'Founder (1.1M+ @YouTube)' : category}
-        </span>
-      </div>
-      <motion.div
-        className="relative rounded-xl border overflow-hidden bg-white/10 border-white/20"
-        style={{ width: 240, height: 426 }}
-        whileHover={interactive ? {
-          y: -10,
-          scale: 1.05,
-          boxShadow: '0 15px 50px rgba(0,0,0,0.5)',
-          borderColor: 'rgba(255,255,255,0.2)',
-        } : undefined}
-        transition={{ duration: 0.2 }}
-      >
-        <img
-          src={thumbnail}
-          alt={alt}
-          className={`w-full h-full object-cover transition-all duration-200 ${interactive && hover ? 'brightness-110' : ''}`}
-        />
-        {interactive && hover && (
+    <motion.div
+      className="relative w-full max-w-[200px] aspect-[240/426] rounded-xl border overflow-hidden bg-white/10 border-white/20 md:max-w-none md:w-[240px] md:h-[426px] md:aspect-auto mx-auto"
+      whileHover={interactive ? {
+        y: -10,
+        scale: 1.05,
+        boxShadow: '0 15px 50px rgba(0,0,0,0.5)',
+        borderColor: 'rgba(255,255,255,0.2)',
+      } : undefined}
+      transition={{ duration: 0.2 }}
+    >
+      <img
+        src={thumbnail}
+        alt={alt}
+        className={`w-full h-full object-cover transition-all duration-200 ${interactive && hover ? 'brightness-110' : ''}`}
+      />
+      <span className="absolute top-3 left-3 z-10 inline-block text-xs font-medium rounded-full px-4 py-2 bg-white/10 text-white border border-white/20">
+        {isFounder ? 'Founder (1.1M+ @YouTube)' : category}
+      </span>
+      {interactive && hover && (
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center bg-black/30"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            className="w-14 h-14 rounded-full bg-white/30 flex items-center justify-center"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
           >
-            <motion.div
-              className="w-14 h-14 rounded-full bg-white/30 flex items-center justify-center"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-            >
-              <Play className="w-8 h-8 text-white fill-white" />
-            </motion.div>
+            <Play className="w-8 h-8 text-white fill-white" />
           </motion.div>
-        )}
-      </motion.div>
-    </>
+        </motion.div>
+      )}
+    </motion.div>
   );
 
   if (interactive) {
     return (
       <>
         <div
-          className="mx-2 flex-shrink-0 w-[240px] cursor-pointer"
+          className="mx-auto flex w-full max-w-[200px] shrink-0 cursor-pointer md:mx-2 md:w-[240px] md:max-w-none"
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           onClick={() => setModalOpen(true)}
@@ -83,7 +78,7 @@ function NicheCard({ category, alt, thumbnail, isFounder = false, interactive = 
   }
 
   return (
-    <div className="mx-2 flex-shrink-0 w-[240px]">
+    <div className="mx-auto flex w-full max-w-[200px] shrink-0 md:mx-2 md:w-[240px] md:max-w-none">
       {cardContent}
     </div>
   );

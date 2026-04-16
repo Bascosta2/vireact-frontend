@@ -24,7 +24,7 @@ function StepCard({ step }: StepCardProps) {
             </div>
             
             {/* Title with Step Number */}
-            <h3 className="text-xl md:text-2xl lg:text-3xl font-normal leading-[1.2] text-white mb-4">
+            <h3 className="text-lg md:text-2xl lg:text-3xl font-normal leading-[1.2] text-white mb-4">
                 {step.title}
             </h3>
             

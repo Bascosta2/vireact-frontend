@@ -6,6 +6,10 @@ export interface FeatureEntry {
     rating: string | null;
     feedback: string | null;
     suggestions: string[];
+    emotionalTriggers?: string[];
+    retentionDrivers?: string[];
+    psychologicalProfile?: string | null;
+    weakestMoment?: string | null;
 }
 
 interface PresignedUrlResponse {
@@ -35,6 +39,8 @@ interface Video {
     uploader_id: string;
     createdAt: string;
     updatedAt: string;
+    /** Sanitized client-safe message when analysis failed (from status API or list if provided) */
+    errorSummary?: string;
     /** When returned from GET /videos/:id, analysis is the VideoAnalysis DTO */
     analysis?: {
         viralityScore: number;
@@ -62,6 +68,7 @@ interface Video {
             audio: number | null;
             caption: number | null;
             viewsPredictor: number | null;
+            advanced?: number | null;
         };
         predictedViews: {
             low: number | null;
@@ -158,6 +165,12 @@ export const getUserVideos = async (): Promise<Video[]> => {
         return {
             ...row,
             analysisStatus: (row.analysisStatus ?? row.analysis_status ?? 'pending') as string,
+            errorSummary:
+                typeof row.errorSummary === 'string'
+                    ? row.errorSummary
+                    : typeof row.error_summary === 'string'
+                      ? row.error_summary
+                      : undefined,
         } as Video;
     });
 };
@@ -259,10 +272,22 @@ export const uploadVideoUrlToTwelveLabs = async (
 /** Timeout for video upload/processing (5 min) - backend may wait for Twelve Labs indexing */
 export const VIDEO_UPLOAD_TIMEOUT_MS = 300000;
 
-export const getVideoStatus = async (videoId: string): Promise<{ uploadStatus: string; analysisStatus: string; isAnalysisReady?: boolean }> => {
-    const response = await Axios.get<{ data: { uploadStatus: string; analysisStatus: string; isAnalysisReady?: boolean } }>(
-        `/videos/${videoId}/status`
-    );
+export const getVideoStatus = async (
+    videoId: string
+): Promise<{
+    uploadStatus: string;
+    analysisStatus: string;
+    isAnalysisReady?: boolean;
+    errorSummary?: string;
+}> => {
+    const response = await Axios.get<{
+        data: {
+            uploadStatus: string;
+            analysisStatus: string;
+            isAnalysisReady?: boolean;
+            errorSummary?: string;
+        };
+    }>(`/videos/${videoId}/status`);
     return response.data.data;
 };
 

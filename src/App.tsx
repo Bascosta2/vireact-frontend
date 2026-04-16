@@ -7,7 +7,6 @@ import { Toaster } from "react-hot-toast"
 // import { StateInitializer } from "@/components/StateInitializer"
 import { setupAuthInterceptors } from "@/utils/authInterceptor"
 import ScrollToTop from "@/utils/ScrollToTop"
-import Axios from "@/api"
 import { VITE_BACKEND_URL } from "@/constants"
 
 // Setup auth interceptors
@@ -17,9 +16,11 @@ setupAuthInterceptors()
 const testBackendConnection = async () => {
   if (import.meta.env.DEV) {
     try {
-      // Test via Axios (uses proxy in dev, full URL in prod)
-      const axiosResponse = await Axios.get('/health');
-      console.log('✅ [STARTUP] Backend connection successful:', axiosResponse.data);
+      // /api/health matches backend app.js and Vite proxy `/api` → backend
+      const res = await fetch('/api/health');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      console.log('✅ [STARTUP] Backend connection successful:', data);
     } catch (error: any) {
       console.warn('⚠️ [STARTUP] Backend connection test failed:', error.message);
       if (VITE_BACKEND_URL) {

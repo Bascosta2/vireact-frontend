@@ -560,15 +560,15 @@
   animation: analysis-progress-shimmer 2s ease-in-out infinite;
 }
 
-/* Actionable Edits card: retention score range slider (scoped) */
-.card-actionable-edits .retention-slider {
+/* Retention score range slider (shared: feature card + hero mobile preview) */
+.retention-slider-scope .retention-slider {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   background: transparent;
 }
 
-.card-actionable-edits .retention-slider::-webkit-slider-thumb {
+.retention-slider-scope .retention-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
@@ -578,13 +578,13 @@
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
 }
 
-.card-actionable-edits .retention-slider::-webkit-slider-runnable-track {
+.retention-slider-scope .retention-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 3px;
   background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e);
 }
 
-.card-actionable-edits .retention-slider::-moz-range-thumb {
+.retention-slider-scope .retention-slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -594,7 +594,7 @@
   border: none;
 }
 
-.card-actionable-edits .retention-slider::-moz-range-track {
+.retention-slider-scope .retention-slider::-moz-range-track {
   height: 6px;
   border-radius: 3px;
   background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e);

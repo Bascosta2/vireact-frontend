@@ -10,6 +10,9 @@ let headers = {
 // In production, use full backend URL
 const useProxy = import.meta.env.DEV;
 const backendUrl = VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:5000' : '');
+if (!useProxy && !backendUrl) {
+    throw new Error('VITE_BACKEND_URL is required in production');
+}
 
 // Connection diagnostics
 if (import.meta.env.DEV) {
@@ -37,7 +40,7 @@ if (!useProxy && backendUrl && !backendUrl.startsWith('http://') && !backendUrl.
 // create axios instance
 // Use relative path in dev (Vite proxy) or full URL in production
 const Axios = axios.create({
-    baseURL: useProxy ? '/api/v1' : (backendUrl ? `${backendUrl}/api/v1` : '/api/v1'),
+    baseURL: useProxy ? '/api/v1' : `${backendUrl}/api/v1`,
     headers: headers,
     withCredentials: true,
     timeout: 30000, // 30 seconds timeout

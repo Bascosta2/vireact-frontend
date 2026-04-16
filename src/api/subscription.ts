@@ -15,6 +15,9 @@ export interface Subscription {
     stripeSubscriptionId?: string;
     stripeCustomerId?: string;
     stripePriceId?: string;
+    /** Set by Stripe invoice.payment_failed; cleared on successful invoice payment. */
+    paymentFailed?: boolean;
+    paymentFailedAt?: string;
     createdAt: string;
     updatedAt: string;
 }

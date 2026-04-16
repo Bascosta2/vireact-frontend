@@ -37,10 +37,10 @@ function HomeSection({
         'relative',
         // Padding
         padding === 'small'
-            ? 'py-12'
+            ? 'py-12 md:py-12'
             : padding === 'large'
-                ? 'py-32'
-                : 'py-24',
+                ? 'py-12 md:py-32'
+                : 'py-12 md:py-24',
         // Background
         background === 'black'
             ? 'bg-black'
@@ -67,6 +67,7 @@ function HomeSection({
                 ? 'max-w-7xl'
                 : 'max-w-7xl',
         'mx-auto',
+        'px-4 md:px-6',
         containerClassName
     ]
         .filter(Boolean)

@@ -21,7 +21,7 @@ import {
   Circle,
 } from 'lucide-react';
 import { ANALYSIS_STATUS, UPLOAD_STATUS } from '@/constants';
-import type { Video } from '@/api/video';
+import { getVideoStatus, type Video } from '@/api/video';
 import { cn } from '@/lib/utils';
 
 interface VideoCardProps {
@@ -56,6 +56,7 @@ export default function VideoCard({
   const [isHovered, setIsHovered] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [fetchedErrorSummary, setFetchedErrorSummary] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,6 +85,40 @@ export default function VideoCard({
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
   }, [isHovered, video.videoUrl]);
+
+  useEffect(() => {
+    if (statusFromApi !== ANALYSIS_STATUS.FAILED) {
+      setFetchedErrorSummary(null);
+      return;
+    }
+    const fromList =
+      typeof video.errorSummary === 'string' && video.errorSummary.trim().length > 0
+        ? video.errorSummary.trim()
+        : '';
+    if (fromList) {
+      setFetchedErrorSummary(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await getVideoStatus(video._id);
+        if (cancelled) return;
+        const s = st.errorSummary;
+        setFetchedErrorSummary(typeof s === 'string' && s.trim().length > 0 ? s.trim() : null);
+      } catch {
+        if (!cancelled) setFetchedErrorSummary(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [statusFromApi, video._id, video.errorSummary]);
+
+  const displayErrorSummary =
+    (typeof video.errorSummary === 'string' && video.errorSummary.trim().length > 0
+      ? video.errorSummary.trim()
+      : null) || fetchedErrorSummary;
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -116,7 +151,7 @@ export default function VideoCard({
       return { text: 'Analyzing', color: 'bg-purple-500', icon: RefreshCw };
     }
     if (statusFromApi === ANALYSIS_STATUS.FAILED) {
-      return { text: 'Failed', color: 'bg-red-500', icon: AlertCircle };
+      return { text: 'Analysis Failed', color: 'bg-red-500', icon: AlertCircle };
     }
     if (video.uploadStatus === UPLOAD_STATUS.UPLOADING) {
       return { text: 'Uploading', color: 'bg-blue-500', icon: Clock };
@@ -253,26 +288,36 @@ export default function VideoCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-semibold text-white flex items-center gap-1.5',
-              statusInfo.color
-            )}
-          >
-            <StatusIcon
-              size={14}
-              strokeWidth={2}
-              className={cn('flex-shrink-0', statusFromApi === ANALYSIS_STATUS.COMPLETED && 'text-green-500')}
-            />
-            {statusInfo.text}
-          </span>
-          {isAnalysisComplete && video.analysisScore != null && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 text-white flex items-center gap-1.5">
-              <Star className="w-3 h-3" fill="white" />
-              {video.analysisScore}/10
+        <div className="mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={cn(
+                'px-3 py-1 rounded-full text-xs font-semibold text-white flex items-center gap-1.5',
+                statusInfo.color
+              )}
+            >
+              <StatusIcon
+                size={14}
+                strokeWidth={2}
+                className={cn('flex-shrink-0', statusFromApi === ANALYSIS_STATUS.COMPLETED && 'text-green-500')}
+              />
+              {statusInfo.text}
             </span>
-          )}
+            {isAnalysisComplete && video.analysisScore != null && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 text-white flex items-center gap-1.5">
+                <Star className="w-3 h-3" fill="white" />
+                {video.analysisScore}/10
+              </span>
+            )}
+          </div>
+          {statusFromApi === ANALYSIS_STATUS.FAILED && displayErrorSummary ? (
+            <p
+              className="text-xs text-red-400/90 mt-1.5 leading-snug line-clamp-3"
+              title={displayErrorSummary}
+            >
+              {displayErrorSummary}
+            </p>
+          ) : null}
         </div>
 
         {video.selectedFeatures && video.selectedFeatures.length > 0 && (

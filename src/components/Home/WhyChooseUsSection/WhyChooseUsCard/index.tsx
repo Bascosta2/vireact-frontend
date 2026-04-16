@@ -10,7 +10,7 @@ function WhyChooseUsCard({ card, index }: { card: WhyChooseUsCardProps; index: n
     const { icon, title, description } = card;
     
     return (
-        <div className="flex-shrink-0 w-80 mx-3 relative overflow-hidden border-gradient-secondary rounded-2xl">
+        <div className="w-full max-w-md mx-auto sm:max-w-none flex-shrink-0 md:w-80 md:mx-3 relative overflow-hidden border-gradient-secondary rounded-2xl">
             <div className="bg-dark-primary bg-opacity-50 backdrop-blur-lg border border-gray-500 rounded-2xl p-6 h-full min-h-72">
                 <div className="text-center mb-6">
                     <div className="flex items-center justify-center mx-auto mb-4">
