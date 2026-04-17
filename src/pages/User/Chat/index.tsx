@@ -915,6 +915,7 @@ function Chat() {
 
                 const isPendingOrProcessing =
                     foundVideo.analysisStatus === ANALYSIS_STATUS.PENDING ||
+                    foundVideo.analysisStatus === ANALYSIS_STATUS.QUEUED ||
                     foundVideo.analysisStatus === ANALYSIS_STATUS.PROCESSING;
 
                 if (!isPendingOrProcessing && foundVideo.analysisStatus === ANALYSIS_STATUS.COMPLETED) {
@@ -999,7 +1000,9 @@ function Chat() {
     useEffect(() => {
         if (!videoId || !video) return;
         const isPending =
-            video.analysisStatus === ANALYSIS_STATUS.PENDING || video.analysisStatus === ANALYSIS_STATUS.PROCESSING;
+            video.analysisStatus === ANALYSIS_STATUS.PENDING ||
+            video.analysisStatus === ANALYSIS_STATUS.QUEUED ||
+            video.analysisStatus === ANALYSIS_STATUS.PROCESSING;
         if (!isPending) return;
 
         const interval = setInterval(async () => {
@@ -1011,7 +1014,9 @@ function Chat() {
                 setVideo(found);
                 if (
                     found.analysisStatus === ANALYSIS_STATUS.FAILED &&
-                    (prevStatus === ANALYSIS_STATUS.PENDING || prevStatus === ANALYSIS_STATUS.PROCESSING)
+                    (prevStatus === ANALYSIS_STATUS.PENDING ||
+                        prevStatus === ANALYSIS_STATUS.QUEUED ||
+                        prevStatus === ANALYSIS_STATUS.PROCESSING)
                 ) {
                     try {
                         const st = await getVideoStatus(videoId);
@@ -1204,7 +1209,9 @@ function Chat() {
     }
 
     const isAnalysisPending =
-        video.analysisStatus === ANALYSIS_STATUS.PENDING || video.analysisStatus === ANALYSIS_STATUS.PROCESSING;
+        video.analysisStatus === ANALYSIS_STATUS.PENDING ||
+        video.analysisStatus === ANALYSIS_STATUS.QUEUED ||
+        video.analysisStatus === ANALYSIS_STATUS.PROCESSING;
     const isAnalysisFailed = video.analysisStatus === ANALYSIS_STATUS.FAILED;
 
     if (isAnalysisPending) {

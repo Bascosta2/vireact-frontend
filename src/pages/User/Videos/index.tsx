@@ -55,7 +55,9 @@ function Videos() {
   useEffect(() => {
     const hasPending = videos.some(
       (v) =>
-        v.analysisStatus === ANALYSIS_STATUS.PENDING || v.analysisStatus === ANALYSIS_STATUS.PROCESSING
+        v.analysisStatus === ANALYSIS_STATUS.PENDING ||
+        v.analysisStatus === ANALYSIS_STATUS.QUEUED ||
+        v.analysisStatus === ANALYSIS_STATUS.PROCESSING
     );
     if (!hasPending) return;
     const interval = setInterval(() => {
@@ -149,6 +151,7 @@ function Videos() {
   const allStatuses = [
     ANALYSIS_STATUS.COMPLETED,
     ANALYSIS_STATUS.PROCESSING,
+    ANALYSIS_STATUS.QUEUED,
     ANALYSIS_STATUS.PENDING,
     ANALYSIS_STATUS.FAILED,
   ];

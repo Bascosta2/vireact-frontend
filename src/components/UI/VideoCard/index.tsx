@@ -37,6 +37,7 @@ interface VideoCardProps {
 function getProgressFromStatus(analysisStatus: string): number {
   const map: Record<string, number> = {
     [ANALYSIS_STATUS.PENDING]: 10,
+    [ANALYSIS_STATUS.QUEUED]: 50,
     [ANALYSIS_STATUS.PROCESSING]: 50,
     [ANALYSIS_STATUS.COMPLETED]: 100,
     [ANALYSIS_STATUS.FAILED]: 0,
@@ -65,7 +66,9 @@ export default function VideoCard({
     video.analysisStatus ?? (video as unknown as Record<string, string>).analysis_status;
   const isAnalysisComplete = statusFromApi === ANALYSIS_STATUS.COMPLETED;
   const isAnalysisPending =
-    statusFromApi === ANALYSIS_STATUS.PENDING || statusFromApi === ANALYSIS_STATUS.PROCESSING;
+    statusFromApi === ANALYSIS_STATUS.PENDING ||
+    statusFromApi === ANALYSIS_STATUS.QUEUED ||
+    statusFromApi === ANALYSIS_STATUS.PROCESSING;
 
   useEffect(() => {
     if (isHovered && video.videoUrl) {
@@ -146,6 +149,9 @@ export default function VideoCard({
   const getStatusInfo = () => {
     if (statusFromApi === ANALYSIS_STATUS.COMPLETED) {
       return { text: 'Complete', color: 'bg-green-500', icon: CheckCircle };
+    }
+    if (statusFromApi === ANALYSIS_STATUS.QUEUED) {
+      return { text: 'Queued', color: 'bg-purple-500', icon: RefreshCw };
     }
     if (statusFromApi === ANALYSIS_STATUS.PROCESSING) {
       return { text: 'Analyzing', color: 'bg-purple-500', icon: RefreshCw };
@@ -415,7 +421,11 @@ export default function VideoCard({
           <div className="text-center pointer-events-none">
             <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-white font-semibold text-sm">
-              {statusFromApi === ANALYSIS_STATUS.PROCESSING ? 'Analyzing...' : 'Processing...'}
+              {statusFromApi === ANALYSIS_STATUS.PROCESSING
+                ? 'Analyzing...'
+                : statusFromApi === ANALYSIS_STATUS.QUEUED
+                  ? 'In queue...'
+                  : 'Processing...'}
             </p>
             <p className="text-gray-400 text-xs mt-1">{analysisProgress}% complete</p>
           </div>

@@ -55,6 +55,7 @@ function Features() {
 
   const hasProcessingOrCompleted = videos.some(
     (v) =>
+      v.analysisStatus === ANALYSIS_STATUS.QUEUED ||
       v.analysisStatus === ANALYSIS_STATUS.PROCESSING ||
       v.analysisStatus === ANALYSIS_STATUS.COMPLETED
   );
