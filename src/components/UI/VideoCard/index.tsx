@@ -34,6 +34,16 @@ interface VideoCardProps {
   reanalyzingVideoId?: string | null;
 }
 
+const ANALYZING_MESSAGES = [
+  'Watching your video...',
+  'Breaking down the hook...',
+  'Analyzing pacing and rhythm...',
+  'Listening to your audio...',
+  'Reading psychological signals...',
+  'Predicting view range...',
+  'Almost there...',
+];
+
 function getProgressFromStatus(analysisStatus: string): number {
   const map: Record<string, number> = {
     [ANALYSIS_STATUS.PENDING]: 10,
@@ -58,6 +68,7 @@ export default function VideoCard({
   const [showVideo, setShowVideo] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [fetchedErrorSummary, setFetchedErrorSummary] = useState<string | null>(null);
+  const [messageIndex, setMessageIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -117,6 +128,21 @@ export default function VideoCard({
       cancelled = true;
     };
   }, [statusFromApi, video._id, video.errorSummary]);
+
+  useEffect(() => {
+    const isInProgress =
+      statusFromApi === ANALYSIS_STATUS.QUEUED ||
+      statusFromApi === ANALYSIS_STATUS.PROCESSING ||
+      statusFromApi === ANALYSIS_STATUS.PENDING;
+    if (!isInProgress) {
+      setMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % ANALYZING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [statusFromApi]);
 
   const displayErrorSummary =
     (typeof video.errorSummary === 'string' && video.errorSummary.trim().length > 0
@@ -427,9 +453,17 @@ export default function VideoCard({
                   ? 'In queue...'
                   : 'Processing...'}
             </p>
-            <p className="text-gray-400 text-xs mt-1">{analysisProgress}% complete</p>
+            <p
+              key={messageIndex}
+              className="text-gray-400 text-xs mt-1 transition-opacity duration-300"
+              style={{ opacity: 1 }}
+            >
+              {ANALYZING_MESSAGES[messageIndex]}
+            </p>
           </div>
-          <p className="text-gray-400 text-xs mt-2 mb-3 pointer-events-none">Stuck? Re-analyze or remove.</p>
+          <p className="text-gray-400 text-xs mt-2 mb-3 pointer-events-none">
+            Taking longer than expected? Re-analyze or remove.
+          </p>
           <div className="flex gap-2 pointer-events-auto">
             <button
               type="button"
