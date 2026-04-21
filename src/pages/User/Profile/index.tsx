@@ -23,6 +23,7 @@ interface ProfileFormValues {
 }
 
 interface PasswordFormValues {
+  currentPassword: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -112,11 +113,13 @@ function Profile() {
   });
 
   const passwordInitialValues: PasswordFormValues = {
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   };
 
   const passwordValidationSchema = Yup.object({
+    currentPassword: Yup.string().required('Current password is required'),
     newPassword: Yup.string()
       .min(8, 'Password must be at least 8 characters')
       .required('New password is required'),
@@ -129,6 +132,7 @@ function Profile() {
     try {
       setIsUpdatingPassword(true);
       await updatePassword({
+        currentPassword: values.currentPassword,
         newPassword: values.newPassword,
         confirmPassword: values.confirmPassword,
       });
@@ -536,6 +540,14 @@ function Profile() {
             >
               {({ isSubmitting, isValid, dirty }) => (
                 <Form className="space-y-4">
+                  <PasswordField
+                    field="currentPassword"
+                    label_text="Current Password"
+                    placeholder="Enter your current password"
+                    required
+                    autoComplete="current-password"
+                  />
+
                   <PasswordField
                     field="newPassword"
                     label_text="New Password"

@@ -210,9 +210,123 @@ export default function VideoCard({
     featureIcons[featureKey] ?? Circle; // TODO: replace Circle with correct icon when feature key is unknown
 
   return (
+    <>
+    {/* Mobile compact card (<768px) */}
+    <div
+      className="md:hidden relative flex h-24 items-stretch overflow-hidden rounded-xl border border-white/5 bg-gray-900 cursor-pointer"
+      onClick={() => onCardClick(video._id)}
+    >
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>
+        {isAnalysisPending ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-1 text-center">
+            <div className="h-6 w-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            <p
+              key={messageIndex}
+              className="text-[9px] leading-tight text-gray-300 line-clamp-2 transition-opacity duration-300"
+            >
+              {ANALYZING_MESSAGES[messageIndex]}
+            </p>
+          </div>
+        ) : video.thumbnailUrl ? (
+          <img
+            src={video.thumbnailUrl}
+            alt={video.filename}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <VideoIcon size={28} className="text-white/30" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col justify-between p-3 pr-10">
+        <h3 className="truncate text-sm font-medium text-white" title={video.filename}>
+          {video.filename}
+        </h3>
+        <span
+          className={cn(
+            'inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white',
+            statusInfo.color
+          )}
+        >
+          <StatusIcon
+            size={12}
+            strokeWidth={2}
+            className={cn('flex-shrink-0', statusFromApi === ANALYSIS_STATUS.COMPLETED && 'text-green-500')}
+          />
+          {statusInfo.text}
+        </span>
+        {isAnalysisPending ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void onReanalyze(video._id);
+              }}
+              disabled={isReanalyzing}
+              className="flex-1 rounded-md bg-gray-800 py-1.5 text-xs font-medium text-white flex items-center justify-center gap-1 disabled:opacity-50"
+            >
+              <RefreshCw className={cn('w-3 h-3', isReanalyzing && 'animate-spin')} />
+              Re-analyze
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(video._id);
+              }}
+              disabled={deletingVideoId === video._id}
+              className="flex-1 rounded-md bg-red-900/80 py-1.5 text-xs font-medium text-red-200 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={!isAnalysisComplete}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isAnalysisComplete) onChatClick(video._id);
+            }}
+            className={cn(
+              'w-full rounded-md py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all',
+              isAnalysisComplete
+                ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+            )}
+          >
+            <MessageCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+            Chat
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(video._id);
+        }}
+        disabled={deletingVideoId === video._id}
+        className="absolute top-2 right-2 p-1.5 rounded-md bg-black/50 text-gray-300 disabled:opacity-50"
+        aria-label="Delete video"
+      >
+        {deletingVideoId === video._id ? (
+          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="w-3.5 h-3.5" />
+        )}
+      </button>
+    </div>
+
+    {/* Desktop/tablet card (>=768px) - unchanged layout, only visibility wrapper altered */}
     <div
       className={cn(
-        'relative group bg-gray-900 rounded-2xl overflow-hidden border border-white/5 transition-all duration-300 cursor-pointer',
+        'hidden md:block relative group bg-gray-900 rounded-2xl overflow-hidden border border-white/5 transition-all duration-300 cursor-pointer',
         isHovered && 'scale-[1.02] border-orange-500/40 shadow-2xl shadow-orange-500/15',
         !isHovered && 'hover:border-white/10'
       )}
@@ -497,5 +611,6 @@ export default function VideoCard({
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -14,10 +14,10 @@ function ViralPredictionsSection() {
   useEffect(() => setMounted(true), []);
 
   return (
-    <div ref={ref} className="w-full py-12 md:py-24 overflow-x-hidden">
+    <div ref={ref} className="w-full py-6 md:py-24 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 md:px-20">
         <motion.h2
-          className="text-center text-2xl md:text-4xl lg:text-[52px] font-bold mb-8 md:mb-20 px-2 md:px-0 leading-tight"
+          className="text-center text-2xl md:text-4xl lg:text-[52px] font-bold mb-4 md:mb-20 px-2 md:px-0 leading-tight"
           style={{
             background: 'linear-gradient(90deg, #ffffff, #FF1493, #FF6B35)',
             WebkitBackgroundClip: 'text',

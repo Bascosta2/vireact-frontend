@@ -49,10 +49,10 @@ function WinsSection() {
   }, []);
 
   return (
-    <div id="creator-stories" ref={ref} className="w-full py-12 md:py-24 overflow-x-hidden">
+    <div id="creator-stories" ref={ref} className="w-full py-6 md:py-24 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 md:px-20">
         <motion.div
-          className="flex justify-center mb-6 md:mb-12"
+          className="flex justify-center mb-4 md:mb-12"
           initial={mounted ? { scale: 0.9, opacity: 0 } : false}
           animate={inView ? { scale: 1, opacity: 1 } : {}}
           transition={{ duration: 0.4, ease: 'easeOut' }}

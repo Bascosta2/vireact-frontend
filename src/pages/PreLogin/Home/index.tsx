@@ -25,25 +25,42 @@ function Home() {
                 {/* 1. Hero */}
                 <HeroSection />
 
-                {/* 2. Three feature cards + AI feature tabs (all viewports) */}
-                <section className="relative" style={{ background: 'transparent' }}>
-                    <DifferentiationSection />
-                    <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-2 md:pb-0">
-                        <AIFeatures />
+                {/*
+                  Mobile-only reorder wrapper.
+                  On mobile, this is a flex column and `order-*` controls visual order so
+                  the sequence is: badges → testimonials → creator circles → carousel → from-idea-to-viral.
+                  On desktop (md+), `md:contents` removes the wrapper from the box tree and the
+                  source-order flow is preserved exactly as before: carousel → badges → testimonials
+                  → creator circles → from-idea-to-viral. `order-*` has no effect in block flow.
+                */}
+                <div className="flex flex-col md:contents">
+                    {/* 2. Three feature cards carousel (mobile) / grid (desktop) */}
+                    <section className="order-4 md:order-1 relative" style={{ background: 'transparent' }}>
+                        <DifferentiationSection />
+                    </section>
+
+                    {/* 3. AI feature badges */}
+                    <section className="order-1 md:order-2 relative" style={{ background: 'transparent' }}>
+                        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-2 md:pb-0">
+                            <AIFeatures />
+                        </div>
+                    </section>
+
+                    {/* 4. Creator story cards / testimonials */}
+                    <div className="order-2 md:order-3" style={{ background: 'transparent' }}>
+                        <WinsSection />
                     </div>
-                </section>
 
-                {/* Creator story cards */}
-                <div style={{ background: 'transparent' }}>
-                    <WinsSection />
+                    {/* 5. Creator avatars + brand logos */}
+                    <section className="order-3 md:order-4" style={{ background: 'transparent' }}>
+                        <CreatorsAndBusinesses />
+                    </section>
+
+                    {/* 6. From idea to viral */}
+                    <section className="order-5 md:order-5" style={{ background: 'transparent' }}>
+                        <ViralPredictionsSection />
+                    </section>
                 </div>
-
-                <section style={{ background: 'transparent' }}>
-                    <CreatorsAndBusinesses />
-                </section>
-                <section style={{ background: 'transparent' }}>
-                    <ViralPredictionsSection />
-                </section>
 
                 <section style={{ background: 'transparent' }}>
                     <HowItWorksSection />

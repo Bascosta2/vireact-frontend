@@ -34,7 +34,7 @@ function DifferentiationSection() {
   });
 
   return (
-    <section className="relative z-[11] w-full bg-transparent px-4 pt-0 pb-8 md:pb-24 -mt-6 md:-mt-[300px]" aria-label="Feature cards">
+    <section className="relative z-[11] w-full bg-transparent px-4 pt-0 pb-4 md:pb-24 md:-mt-[300px]" aria-label="Feature cards">
       <div className="max-w-7xl mx-auto">
         {isMd ? (
           <div className="grid grid-cols-1 md:grid-cols-3 items-stretch gap-4 md:gap-6">

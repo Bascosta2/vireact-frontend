@@ -857,6 +857,7 @@ function Chat() {
     const [chipsVisible, setChipsVisible] = useState(true);
     const [timestampFeedbackList, setTimestampFeedbackList] = useState<VideoFeedback[]>([]);
     const [analysisErrorSummary, setAnalysisErrorSummary] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'chat' | 'analytics'>('analytics');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const prevAnalysisStatusForPollRef = useRef<string | null>(null);
@@ -1344,7 +1345,9 @@ function Chat() {
             {/* ─── Two panels: Chat (left) | Analysis (right). Mobile: stack (45vh + 55vh) ─── */}
             <div className="flex flex-col md:flex-row flex-1 min-h-0 w-full">
                 {/* Left: 45% desktop, 45vh mobile - AI Chat */}
-                <div className="flex flex-col w-full md:w-[45%] min-h-0 md:min-h-0 h-[45vh] md:h-auto border-r border-white/[0.07] flex-shrink-0">
+                <div
+                    className={`${activeTab === 'chat' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[45%] min-h-0 flex-1 md:flex-none md:h-auto border-r-0 md:border-r border-white/[0.07] md:flex-shrink-0`}
+                >
                     {/* Panel header (sticky within left) */}
                     <div
                         className="flex-shrink-0 px-4 py-3 border-b border-white/[0.08] flex items-start justify-between gap-3"
@@ -1492,7 +1495,9 @@ function Chat() {
                 />
 
                 {/* Right: 55% desktop, 55vh mobile - Analysis Report */}
-                <div className="flex-1 min-h-[55vh] md:min-h-0 overflow-y-auto px-6 py-6 bg-[rgba(255,255,255,0.01)] md:min-w-0">
+                <div
+                    className={`${activeTab === 'analytics' ? 'block' : 'hidden'} md:block flex-1 min-h-0 md:min-h-0 overflow-y-auto px-6 py-6 bg-[rgba(255,255,255,0.01)] md:min-w-0`}
+                >
                     {/* Section A: Scores overview */}
                     <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
                         Analysis Report
@@ -1897,6 +1902,39 @@ function Chat() {
                         </AccordionCard>
                     )}
                 </div>
+            </div>
+
+            {/* Mobile-only tab switcher (<768px) — sits at the bottom of the page content area */}
+            <div
+                className="md:hidden flex-shrink-0 h-14 border-t border-white/[0.08] flex"
+                style={{ background: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(12px)' }}
+                role="tablist"
+                aria-label="Video view tabs"
+            >
+                {(['analytics', 'chat'] as const).map((tab) => {
+                    const isActive = activeTab === tab;
+                    return (
+                        <button
+                            key={tab}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => setActiveTab(tab)}
+                            className={`relative flex-1 flex items-center justify-center text-sm transition-colors ${
+                                isActive ? 'text-white font-semibold' : 'text-zinc-500 font-medium'
+                            }`}
+                        >
+                            {isActive && (
+                                <span
+                                    aria-hidden
+                                    className="absolute top-0 left-4 right-4 h-[2px] rounded-full"
+                                    style={{ background: 'linear-gradient(90deg, #FF3CAC 0%, #FF8C00 100%)' }}
+                                />
+                            )}
+                            {tab === 'analytics' ? 'Analytics' : 'Chat'}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );

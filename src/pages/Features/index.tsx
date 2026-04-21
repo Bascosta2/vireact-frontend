@@ -228,7 +228,45 @@ function Features() {
           </div>
         )}
 
-        <div className="mx-auto max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        {/* Mobile 2x3 compact tile grid (<768px) */}
+        <div className="md:hidden mx-auto grid grid-cols-2 gap-3">
+          {ANALYSIS_FEATURES_UI.map((feature) => {
+            const isSelected = selectedFeatureIds.includes(feature.id);
+            const Icon = feature.Icon;
+            return (
+              <button
+                key={feature.id}
+                type="button"
+                onClick={() => toggleFeature(feature.id)}
+                aria-pressed={isSelected}
+                className={cn(
+                  'relative flex aspect-square flex-col items-center justify-center rounded-2xl border p-3 transition-all duration-200',
+                  'bg-gray-900/80 backdrop-blur-sm',
+                  isSelected
+                    ? 'border-orange-500/60 shadow-[0_0_24px_-4px_rgba(249,115,22,0.35)] bg-orange-500/5'
+                    : 'border-white/5'
+                )}
+              >
+                {isSelected && (
+                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow">
+                    <CheckCircle className="w-3 h-3" strokeWidth={2.5} />
+                  </span>
+                )}
+                <Icon
+                  size={32}
+                  strokeWidth={1.5}
+                  className={cn('mb-2', isSelected ? 'text-orange-400' : 'text-gray-400')}
+                />
+                <span className="text-center text-sm font-medium text-white leading-tight">
+                  {feature.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop/tablet grid (>=768px) - unchanged from pre-change layout */}
+        <div className="hidden md:grid mx-auto max-w-5xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {ANALYSIS_FEATURES_UI.map((feature) => {
             const isSelected = selectedFeatureIds.includes(feature.id);
             const Icon = feature.Icon;

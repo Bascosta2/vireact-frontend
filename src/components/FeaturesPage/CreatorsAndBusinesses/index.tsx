@@ -82,8 +82,8 @@ function CreatorsAndBusinesses() {
     }, []);
 
     return (
-        <div className="w-full max-w-7xl mx-auto py-12 md:py-16 px-4 md:px-6 overflow-x-hidden">
-            <div className="mb-8">
+        <div className="w-full max-w-7xl mx-auto py-4 md:py-16 px-4 md:px-6 overflow-x-hidden">
+            <div className="mb-4 md:mb-8">
                 <div
                     ref={creatorScrollRef}
                     {...creatorTouchHandlers}

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Video, Activity } from 'lucide-react';
+import { MessageSquare, Video, Activity, ChevronRight } from 'lucide-react';
 import { useUser } from '@/redux/hooks/use-user';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos } from '@/api/video';
@@ -44,6 +44,13 @@ const steps = [
     navigable: true,
   },
 ] as const;
+
+const MOBILE_STEP_LABELS: ReadonlyArray<{ title: string; description: string }> = [
+  { title: 'Upload', description: 'Drop a video or paste a link' },
+  { title: 'Select features', description: 'Choose what to analyze' },
+  { title: 'Analyze', description: 'AI breaks it down frame by frame' },
+  { title: 'Review', description: 'Get scores, fixes, and predictions' },
+];
 
 function UploadWorkflowIcon() {
   return (
@@ -714,6 +721,63 @@ function Dashboard() {
           </div>
 
           <div className="relative mb-12">
+            {/* Mobile compact checklist (<768px). Desktop grid below is unchanged. */}
+            <ul className="md:hidden flex flex-col gap-3 px-1">
+              {steps.map((s, index) => {
+                const isActive = activeStep === index;
+                const label = MOBILE_STEP_LABELS[index];
+                const row = (
+                  <div
+                    className={cn(
+                      'flex items-center gap-3 h-16 rounded-xl border px-4 transition-colors duration-300',
+                      isActive
+                        ? 'border-orange-500/60 bg-white/[0.04]'
+                        : 'border-white/5 bg-gray-900/70'
+                    )}
+                  >
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF1B6B 0%, #FF6B35 100%)',
+                        boxShadow: isActive
+                          ? '0 0 12px rgba(255, 107, 53, 0.5)'
+                          : '0 0 8px rgba(255, 27, 107, 0.2)',
+                      }}
+                    >
+                      {s.step}
+                    </div>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-[15px] font-medium text-white leading-tight">
+                        {label.title}
+                      </p>
+                      <p className="truncate text-xs text-gray-400 leading-tight mt-0.5">
+                        {label.description}
+                      </p>
+                    </div>
+                    {s.navigable && (
+                      <ChevronRight className="h-4 w-4 text-gray-500 shrink-0" aria-hidden />
+                    )}
+                  </div>
+                );
+                return (
+                  <li key={s.step}>
+                    {s.navigable && s.href ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(s.href!)}
+                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 rounded-xl"
+                      >
+                        {row}
+                      </button>
+                    ) : (
+                      row
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="hidden md:block">
             <div className="relative grid grid-cols-1 md:grid-cols-2 md:items-stretch gap-5 md:gap-6 md:min-h-0">
               {/* Connector A: card 0 → card 1 */}
               <div
@@ -818,6 +882,7 @@ function Dashboard() {
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
 

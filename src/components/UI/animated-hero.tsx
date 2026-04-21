@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/redux/hooks/use-auth";
 import { motion } from "framer-motion";
 import HeroAvatarStack from "@/components/Home/HeroAvatarStack";
-import { MobileWidgetPreviewRow } from "@/components/Home/HeroSection/MobileWidgetPreviewRow";
 
 const TYPING_PHRASES = [
   "Drop an Instagram Reel Link",
@@ -68,7 +67,7 @@ function Hero() {
 
   return (
     <div
-      className="relative overflow-hidden min-h-screen pb-0 max-w-[100vw]"
+      className="relative overflow-hidden md:min-h-screen pb-0 max-w-[100vw]"
       style={{ background: 'transparent' }}
     >
       <div className="relative z-10 max-w-7xl mx-auto px-4 max-md:px-4 pt-4 sm:pt-6 md:pt-8 lg:pt-10">
@@ -155,8 +154,6 @@ function Hero() {
             Sign Up Free — Predict Your Views
           </button>
         </motion.div>
-
-        <MobileWidgetPreviewRow />
 
         {/* Desktop: input + or + upload — unchanged */}
         <motion.div
