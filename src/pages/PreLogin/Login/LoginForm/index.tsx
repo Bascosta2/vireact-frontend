@@ -1,78 +1,15 @@
-import { useEffect } from 'react';
 import GoogleOneTap from '@/components/GoogleOneTap';
 import CustomSignupForm from '@/components/CustomSignupForm';
-import { ErrorNotification, SuccessNotification } from '@/utils/toast';
-import { useAuth } from '@/redux/hooks/use-auth';
-import { useUser } from '@/redux/hooks/use-user';
+import { ErrorNotification } from '@/utils/toast';
 import { Link } from 'react-router-dom';
+import { useOAuthHydration } from '@/redux/hooks/use-oauth-hydration';
 
 function LoginForm() {
 
-    const { login, updateAuthData } = useAuth();
-    const { setUserData } = useUser();
-
-    // Handle OAuth callback and errors
-    useEffect(() => {
-        const handleOAuthCallback = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const authStatus = urlParams.get('auth');
-            const userData = urlParams.get('data');
-            const errorMessage = urlParams.get('error');
-
-            // Handle provider conflict errors
-            if (errorMessage) {
-                const decodedError = decodeURIComponent(errorMessage);
-                ErrorNotification(decodedError);
-                // Clear the error parameter from URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
-            }
-
-            if (authStatus === 'success' && userData) {
-                try {
-                    const decodedData = JSON.parse(decodeURIComponent(userData));
-
-                    // Update Redux store
-                    login(true);
-                    updateAuthData({
-                        token: decodedData.accessToken,
-                        refreshToken: decodedData.refreshToken || '',
-                        role: decodedData.user.role,
-                    });
-
-                    // Map user data to match user slice structure
-                    const mappedUser = {
-                        id: decodedData.user._id || decodedData.user.id,
-                        name: decodedData.user.name,
-                        email: decodedData.user.email,
-                        avatar: decodedData.user.avatar,
-                        preferences: decodedData.user.preferences || {}
-                    };
-                    setUserData(mappedUser);
-
-                    // Store in localStorage for persistence
-                    localStorage.setItem('accessToken', decodedData.accessToken);
-                    if (decodedData.refreshToken) {
-                        localStorage.setItem('refreshToken', decodedData.refreshToken);
-                    }
-                    localStorage.setItem('auth_role', decodedData.user.role);
-                    localStorage.setItem('auth_user', JSON.stringify(mappedUser));
-                    localStorage.setItem('auth_is_authenticated', 'true');
-
-                    SuccessNotification('Login successful!');
-
-                    // Clear URL parameters and redirect to dashboard
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    window.location.href = '/dashboard';
-                } catch (error) {
-                    console.error('Error parsing OAuth data:', error);
-                    ErrorNotification('Login failed. Please try again.');
-                }
-            }
-        };
-
-        handleOAuthCallback();
-    }, [login, updateAuthData, setUserData]);
+    // Hydrate Redux/localStorage from a Google OAuth redirect (?auth=success, ?error=…).
+    // Central implementation lives in use-oauth-hydration so Login/Signup/GoogleCallback
+    // all share the same cookie-first logic.
+    useOAuthHydration({ redirectOnSuccess: '/dashboard' });
 
     const handleGoogleSuccess = () => {
         console.log('Google authentication initiated');
