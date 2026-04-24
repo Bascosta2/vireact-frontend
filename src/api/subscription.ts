@@ -43,6 +43,11 @@ export const createCheckoutSession = async (plan: CheckoutPlan): Promise<{ url: 
     return response.data.data;
 };
 
+export const createPortalSession = async (): Promise<{ url: string }> => {
+    const response = await Axios.post<{ data: { url: string } }>('/subscription/portal');
+    return response.data.data;
+};
+
 export const cancelSubscription = async (): Promise<void> => {
     await Axios.post('/subscription/cancel');
 };

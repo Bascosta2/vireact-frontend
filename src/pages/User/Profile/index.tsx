@@ -14,7 +14,7 @@ import {
     updateNotificationPreferences,
     type User,
 } from '@/api/profile';
-import { getSubscription, cancelSubscription, type SubscriptionData } from '@/api/subscription';
+import { getSubscription, createPortalSession, type SubscriptionData } from '@/api/subscription';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 
 interface ProfileFormValues {
@@ -50,7 +50,8 @@ function Profile() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   // Notification preferences
   const [notifyShortsReady, setNotifyShortsReady] = useState(true);
@@ -149,26 +150,19 @@ function Profile() {
     }
   };
 
-  const handleCancelSubscription = async () => {
-    if (
-      !confirm(
-        'Are you sure you want to cancel your subscription? You will be downgraded to the FREE plan immediately.'
-      )
-    ) {
-      return;
-    }
-
+  const handleManageBilling = async () => {
     try {
-      setCancelling(true);
-      await cancelSubscription();
-      const data = await getSubscription();
-      setSubscriptionData(data);
-      SuccessNotification('Subscription cancelled. You have been downgraded to the FREE plan.');
+      setLoadingPortal(true);
+      setPortalError(null);
+      const response = await createPortalSession();
+      window.location.href = response.url;
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to cancel subscription';
+      const errorMessage =
+        error?.response?.data?.message || error?.message || 'Failed to open billing portal';
+      setPortalError(errorMessage);
       ErrorNotification(errorMessage);
     } finally {
-      setCancelling(false);
+      setLoadingPortal(false);
     }
   };
 
@@ -375,7 +369,7 @@ function Profile() {
                     </p>
                   </div>
 
-                  {subscription.plan === 'free' ? (
+                  {subscription.plan === 'free' && (
                     <button
                       onClick={handleUpgrade}
                       className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90"
@@ -386,16 +380,24 @@ function Profile() {
                     >
                       Upgrade Plan
                     </button>
-                  ) : (
+                  )}
+                  {(subscription.plan === 'premium' || subscription.plan === 'pro') && (
                     <button
-                      onClick={handleCancelSubscription}
-                      disabled={cancelling}
-                      className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleManageBilling}
+                      disabled={loadingPortal}
+                      className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF3CAC, #FF8C00)',
+                        border: 'none',
+                      }}
                     >
-                      {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                      {loadingPortal ? 'Opening...' : 'Manage Billing'}
                     </button>
                   )}
                 </div>
+                {portalError && (
+                  <div className="text-red-400 text-sm mt-3">{portalError}</div>
+                )}
               </div>
 
               {/* Video Analyses Usage */}
