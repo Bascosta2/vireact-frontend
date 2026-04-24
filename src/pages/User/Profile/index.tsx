@@ -28,16 +28,18 @@ interface PasswordFormValues {
   confirmPassword: string;
 }
 
-const planNames = {
+const planNames: Record<'free' | 'premium' | 'pro' | 'enterprise', string> = {
   free: 'FREE',
-  starter: 'STARTER',
-  pro: 'CREATOR PRO',
+  premium: 'PREMIUM',
+  pro: 'PRO',
+  enterprise: 'ENTERPRISE',
 };
 
-const planColors = {
+const planColors: Record<'free' | 'premium' | 'pro' | 'enterprise', string> = {
   free: 'bg-gray-600',
-  starter: 'bg-blue-600',
+  premium: 'bg-blue-600',
   pro: 'bg-gradient-to-r from-purple-500 to-pink-500',
+  enterprise: 'bg-gradient-to-r from-amber-500 to-red-500',
 };
 
 function Profile() {

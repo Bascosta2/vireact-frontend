@@ -53,7 +53,7 @@ function PublicRoutes() {
 
                 {/* FAQs */}
                 <Route path='/frequently-asked-questions' element={<FAQs />} />
-                <Route path='/get-in-touch' element={<GetInTouch />} />
+                <Route path='/contact' element={<GetInTouch />} />
 
                 {/* Trust & Legal */}
                 <Route path='/terms-and-conditions' element={<TermsAndConditions />} />

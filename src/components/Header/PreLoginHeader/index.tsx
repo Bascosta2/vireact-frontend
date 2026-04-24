@@ -205,7 +205,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                 FAQs
                             </NavLink>
                             <NavLink
-                                to="/get-in-touch"
+                                to="/contact"
                                 className="flex items-center min-h-[48px] text-base text-light-gray hover:text-white border-b border-white/10"
                                 onClick={closeMobileMenu}
                             >

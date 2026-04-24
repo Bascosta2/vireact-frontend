@@ -17,6 +17,8 @@ export interface PricingCardProps {
     isPopular?: boolean;
     isDisabled?: boolean;
     className?: string;
+    onClick?: () => void;
+    disabled?: boolean;
 }
 
 export interface PricingToggleProps {

@@ -1,9 +1,10 @@
 import Axios from './index';
+import type { CheckoutPlan, TierId } from '../config/tiers';
 
 export interface Subscription {
     _id: string;
     userId: string;
-    plan: 'free' | 'starter' | 'pro';
+    plan: TierId;
     status: 'active' | 'cancelled' | 'expired' | 'trial';
     currentPeriodStart: string;
     currentPeriodEnd: string;
@@ -37,7 +38,7 @@ export const getSubscription = async (): Promise<SubscriptionData> => {
     return response.data.data;
 };
 
-export const createCheckoutSession = async (plan: 'starter' | 'pro'): Promise<{ url: string; sessionId: string }> => {
+export const createCheckoutSession = async (plan: CheckoutPlan): Promise<{ url: string; sessionId: string }> => {
     const response = await Axios.post<{ data: { url: string; sessionId: string } }>('/subscription/checkout', { plan });
     return response.data.data;
 };

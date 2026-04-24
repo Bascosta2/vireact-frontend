@@ -19,7 +19,7 @@ function FAQs() {
 
             <div className='flex items-center justify-center gap-2 mb-12 pt-8'>
                 <p className='text-center text-gray-400'>Have more questions?</p>
-                <Link to="/get-in-touch" className='text-secondary hover:underline'>
+                <Link to="/contact" className='text-secondary hover:underline'>
                     Get in touch
                 </Link>
             </div>

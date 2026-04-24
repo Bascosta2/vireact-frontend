@@ -16,8 +16,11 @@ const PricingCard: React.FC<PricingCardProps> = ({
     ctaSubtext,
     isPopular = false,
     isDisabled = false,
-    className = ''
+    className = '',
+    onClick,
+    disabled = false
 }) => {
+    const buttonDisabled = isDisabled || disabled;
     return (
         <article className={`
             relative bg-black border-2 rounded-2xl p-6
@@ -25,7 +28,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
                 ? 'border-gradient-primary shadow-lg shadow-orange-500/20'
                 : 'border-white/60 hover:border-white/80'
             }
-            ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+            ${buttonDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
             ${className}
         `}>
             {/* Popular Badge */}
@@ -54,8 +57,10 @@ const PricingCard: React.FC<PricingCardProps> = ({
                 {/* CTA Button */}
                 <div className="space-y-2 mb-4">
                     <button
+                        type="button"
+                        onClick={onClick}
                         className={`${isPopular ? 'btn-secondary' : 'btn-outline'} w-full`}
-                        disabled={isDisabled}
+                        disabled={buttonDisabled}
                     >
                         {ctaText}
                     </button>
