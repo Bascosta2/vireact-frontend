@@ -382,17 +382,29 @@ function Profile() {
                     </button>
                   )}
                   {(subscription.plan === 'premium' || subscription.plan === 'pro') && (
-                    <button
-                      onClick={handleManageBilling}
-                      disabled={loadingPortal}
-                      className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: 'linear-gradient(135deg, #FF3CAC, #FF8C00)',
-                        border: 'none',
-                      }}
-                    >
-                      {loadingPortal ? 'Opening...' : 'Manage Billing'}
-                    </button>
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <button
+                        onClick={() => navigate('/subscription-plans')}
+                        className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90"
+                        style={{
+                          background: 'linear-gradient(135deg, #FF3CAC, #FF8C00)',
+                          border: 'none',
+                        }}
+                      >
+                        Change Plan
+                      </button>
+                      <button
+                        onClick={handleManageBilling}
+                        disabled={loadingPortal}
+                        className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                        }}
+                      >
+                        {loadingPortal ? 'Opening...' : 'Manage Billing'}
+                      </button>
+                    </div>
                   )}
                 </div>
                 {portalError && (

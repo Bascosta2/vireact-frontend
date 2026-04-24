@@ -48,6 +48,26 @@ export const createPortalSession = async (): Promise<{ url: string }> => {
     return response.data.data;
 };
 
+export interface PlanChangePreview {
+    currentPlan: TierId;
+    targetPlan: CheckoutPlan;
+    currency: string;
+    immediateCharge: number;
+    nextInvoiceAmount: number;
+    nextBillingDate: string;
+    prorationDate: string;
+}
+
+export const previewPlanChange = async (plan: CheckoutPlan): Promise<PlanChangePreview> => {
+    const response = await Axios.post<{ data: PlanChangePreview }>('/subscription/preview-change', { plan });
+    return response.data.data;
+};
+
+export const changePlan = async (plan: CheckoutPlan): Promise<{ newPlan: string; stripeSubscriptionStatus: string }> => {
+    const response = await Axios.post<{ data: { newPlan: string; stripeSubscriptionStatus: string } }>('/subscription/change-plan', { plan });
+    return response.data.data;
+};
+
 export const cancelSubscription = async (): Promise<void> => {
     await Axios.post('/subscription/cancel');
 };
