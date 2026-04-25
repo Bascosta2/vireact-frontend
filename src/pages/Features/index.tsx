@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, Loader2, Wand2, X } from 'lucide-react';
+import { CheckCircle, Loader2, Lock, Wand2, X } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { usePendingUpload } from '@/contexts/PendingUploadContext';
 import { getUserVideos, uploadVideoFileToTwelveLabs, uploadVideoUrlToTwelveLabs, type Video } from '@/api/video';
+import { getSubscription } from '@/api/subscription';
+import type { TierId } from '@/config/tiers';
 import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
-import { ANALYSIS_STATUS } from '@/constants';
+import { ANALYSIS_STATUS, FEATURES_IDS } from '@/constants';
 import { cn } from '@/lib/utils';
 import AnalysisProgressModal from '@/components/UI/AnalysisProgressModal';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
@@ -36,6 +38,40 @@ function Features() {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const simulateProgressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Tier gate state — fetched on mount, used to lock the Advanced Analytics
+  // card for Free/Premium. C2 will migrate this to a shared subscription slice;
+  // for now we accept a per-page fetch (UserPage layout already does its own
+  // for the payment-failed banner — dedup happens later in C5/C6).
+  const [currentPlan, setCurrentPlan] = useState<TierId | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getSubscription();
+        if (!cancelled) {
+          setCurrentPlan(data.subscription?.plan ?? 'free');
+        }
+      } catch {
+        // Network or auth failure — degrade safe by treating as Free so the
+        // locked variant renders. The user can refresh to retry.
+        if (!cancelled) {
+          setCurrentPlan('free');
+        }
+      } finally {
+        if (!cancelled) {
+          setSubscriptionLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const canUseAdvancedAnalytics = currentPlan === 'pro' || currentPlan === 'enterprise';
+
   const refreshVideos = useCallback(async () => {
     try {
       const list = await getUserVideos();
@@ -53,6 +89,19 @@ function Features() {
     localStorage.setItem(STORAGE_SELECTED, JSON.stringify(selectedFeatureIds));
   }, [selectedFeatureIds]);
 
+  // Scrub advanced_analytics from selectedFeatureIds once tier is known to be
+  // ineligible. Handles the localStorage-rehydration case where a user was on
+  // Pro, ticked Advanced Analytics, then downgraded to Premium.
+  useEffect(() => {
+    if (subscriptionLoading) return;
+    if (canUseAdvancedAnalytics) return;
+    setSelectedFeatureIds((prev) =>
+      prev.includes(FEATURES_IDS.ADVANCED_ANALYTICS)
+        ? prev.filter((id) => id !== FEATURES_IDS.ADVANCED_ANALYTICS)
+        : prev
+    );
+  }, [subscriptionLoading, canUseAdvancedAnalytics]);
+
   const hasProcessingOrCompleted = videos.some(
     (v) =>
       v.analysisStatus === ANALYSIS_STATUS.QUEUED ||
@@ -68,6 +117,9 @@ function Features() {
   };
 
   const toggleFeature = (featureId: string) => {
+    if (featureId === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics) {
+      return;
+    }
     setSelectedFeatureIds((prev) =>
       prev.includes(featureId) ? prev.filter((id) => id !== featureId) : [...prev, featureId]
     );
@@ -103,6 +155,13 @@ function Features() {
       }, 1500);
     };
 
+    // Belt-and-suspenders: backend (B3) silently strips advanced_analytics for
+    // ineligible tiers, but we filter client-side so the request payload
+    // matches what the backend will actually process. Keeps offer parity tight.
+    const featuresToSend = canUseAdvancedAnalytics
+      ? selectedFeatureIds
+      : selectedFeatureIds.filter((id) => id !== FEATURES_IDS.ADVANCED_ANALYTICS);
+
     try {
       if (pending.mode === 'url' && pending.url) {
         setAnalysisProgress(10);
@@ -110,7 +169,7 @@ function Features() {
         await uploadVideoUrlToTwelveLabs(
           pending.url.trim(),
           pending.displayName || `video_${Date.now()}.mp4`,
-          selectedFeatureIds
+          featuresToSend
         );
         stopSimulatedProgress();
         setAnalysisProgress(100);
@@ -119,7 +178,7 @@ function Features() {
         await uploadVideoFileToTwelveLabs(
           pending.file,
           pending.file.name,
-          selectedFeatureIds,
+          featuresToSend,
           (uploadPct) => {
             const stage1 = Math.round((uploadPct / 100) * 33);
             setAnalysisProgress((prev) => Math.max(prev, stage1));
@@ -155,7 +214,7 @@ function Features() {
     } finally {
       setIsUploading(false);
     }
-  }, [pending, selectedFeatureIds, clearPending, navigate, refreshVideos]);
+  }, [pending, selectedFeatureIds, canUseAdvancedAnalytics, clearPending, navigate, refreshVideos]);
 
   const showUploadHint = !hasProcessingOrCompleted && !bannerDismissed && !pending;
 
@@ -232,19 +291,50 @@ function Features() {
         <div className="md:hidden mx-auto flex flex-col gap-3">
           {ANALYSIS_FEATURES_UI.map((feature) => {
             const isSelected = selectedFeatureIds.includes(feature.id);
+            const isLockedForTier =
+              feature.id === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics;
+            const isDisabled = subscriptionLoading || isLockedForTier;
             const Icon = feature.Icon;
+
+            if (isLockedForTier) {
+              return (
+                <Link
+                  key={feature.id}
+                  to="/subscription-plans"
+                  aria-label={`${feature.name} — upgrade to Pro to unlock`}
+                  className={cn(
+                    'relative flex h-24 w-full items-center gap-4 rounded-2xl border p-4 transition-all duration-200',
+                    'bg-gray-900/80 backdrop-blur-sm border-white/5',
+                    'opacity-75 hover:opacity-90 hover:border-white/15'
+                  )}
+                >
+                  <Icon size={32} strokeWidth={1.5} className="flex-shrink-0 text-gray-400" />
+                  <span className="flex-1 text-left text-base font-semibold text-white leading-tight">
+                    {feature.name}
+                  </span>
+                  <span className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-2.5 py-1 text-xs font-semibold text-white shadow">
+                    <Lock className="w-3 h-3" strokeWidth={2.5} />
+                    Pro
+                  </span>
+                </Link>
+              );
+            }
+
             return (
               <button
                 key={feature.id}
                 type="button"
                 onClick={() => toggleFeature(feature.id)}
                 aria-pressed={isSelected}
+                disabled={isDisabled}
+                aria-disabled={isDisabled}
                 className={cn(
                   'relative flex h-24 w-full items-center gap-4 rounded-2xl border p-4 transition-all duration-200',
                   'bg-gray-900/80 backdrop-blur-sm',
                   isSelected
                     ? 'border-orange-500/60 shadow-[0_0_24px_-4px_rgba(249,115,22,0.35)] bg-orange-500/5'
-                    : 'border-white/5'
+                    : 'border-white/5',
+                  subscriptionLoading && 'opacity-50 cursor-not-allowed'
                 )}
               >
                 <Icon
@@ -269,18 +359,48 @@ function Features() {
         <div className="hidden md:grid mx-auto max-w-5xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {ANALYSIS_FEATURES_UI.map((feature) => {
             const isSelected = selectedFeatureIds.includes(feature.id);
+            const isLockedForTier =
+              feature.id === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics;
+            const isDisabled = subscriptionLoading || isLockedForTier;
             const Icon = feature.Icon;
+
+            if (isLockedForTier) {
+              return (
+                <Link
+                  key={feature.id}
+                  to="/subscription-plans"
+                  aria-label={`${feature.name} — upgrade to Pro to unlock`}
+                  className={cn(
+                    'relative flex flex-col items-center text-center rounded-2xl border p-6 min-h-[200px] transition-all duration-200',
+                    'bg-gray-900/80 backdrop-blur-sm border-white/5',
+                    'opacity-75 hover:opacity-90 hover:border-white/15'
+                  )}
+                >
+                  <span className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-2.5 py-1 text-xs font-semibold text-white shadow-lg">
+                    <Lock className="w-3 h-3" strokeWidth={2.5} />
+                    Pro
+                  </span>
+                  <Icon size={36} strokeWidth={1.5} className="mb-4 text-gray-400" />
+                  <h3 className="text-white font-bold text-sm uppercase tracking-wide mb-2">{feature.name}</h3>
+                  <p className="text-gray-400 text-xs leading-relaxed">{feature.description}</p>
+                </Link>
+              );
+            }
+
             return (
               <button
                 key={feature.id}
                 type="button"
                 onClick={() => toggleFeature(feature.id)}
+                disabled={isDisabled}
+                aria-disabled={isDisabled}
                 className={cn(
                   'relative flex flex-col items-center text-center rounded-2xl border p-6 min-h-[200px] transition-all duration-200',
                   'bg-gray-900/80 backdrop-blur-sm',
                   isSelected
                     ? 'border-orange-500/60 shadow-[0_0_24px_-4px_rgba(249,115,22,0.35)] bg-orange-500/5'
-                    : 'border-white/5 hover:border-white/10'
+                    : 'border-white/5 hover:border-white/10',
+                  subscriptionLoading && 'opacity-50 cursor-not-allowed'
                 )}
               >
                 {isSelected && (
