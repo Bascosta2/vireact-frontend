@@ -24,8 +24,10 @@ export interface Subscription {
 }
 
 export interface SubscriptionLimits {
-    videosPerMonth: number;
-    chatMessagesPerMonth: number;
+    /** Per-period video analysis cap. `null` represents unlimited (Enterprise tier). */
+    videosPerMonth: number | null;
+    /** Per-period chat message cap. `null` represents unlimited (Enterprise tier). */
+    chatMessagesPerMonth: number | null;
 }
 
 export interface SubscriptionData {

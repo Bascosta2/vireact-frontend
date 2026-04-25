@@ -8,6 +8,8 @@ import { Toaster } from "react-hot-toast"
 import { setupAuthInterceptors } from "@/utils/authInterceptor"
 import ScrollToTop from "@/utils/ScrollToTop"
 import { VITE_BACKEND_URL } from "@/constants"
+import { useAuth } from "@/redux/hooks/use-auth"
+import { useSubscription } from "@/redux/hooks/use-subscription"
 
 // Setup auth interceptors
 setupAuthInterceptors()
@@ -36,6 +38,28 @@ const testBackendConnection = async () => {
   }
 };
 
+/**
+ * Mount-time bootstrap that fetches the user's subscription into Redux once
+ * authenticated. Lives inside <Provider> so it can use useSelector/useDispatch.
+ * Renders nothing — its only job is to own the mount effect.
+ *
+ * The thunk's own `condition` callback dedupes if status !== 'idle'; the
+ * status guard here is belt-and-suspenders for StrictMode double-mount.
+ */
+const SubscriptionBootstrap = () => {
+  const { isAuthenticated } = useAuth();
+  const { ensureLoaded, status } = useSubscription();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (status !== "idle") return;
+    ensureLoaded();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, status]);
+
+  return null;
+};
+
 function App() {
   useEffect(() => {
     // Test backend connectivity on app startup
@@ -47,6 +71,7 @@ function App() {
       <BrowserRouter>
         <Provider store={store}>
           {/* <StateInitializer> */}
+            <SubscriptionBootstrap />
             <Toaster
               position="bottom-center"
               toastOptions={{ duration: 4000 }} />

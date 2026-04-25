@@ -1,6 +1,7 @@
 import { useAuth } from '@/redux/hooks/use-auth';
 import { useUser } from '@/redux/hooks/use-user';
 import { useAdmin } from '@/redux/hooks/use-admin';
+import { useSubscription } from '@/redux/hooks/use-subscription';
 import Axios from '@/api';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 
@@ -8,6 +9,7 @@ export const useLogout = () => {
     const { logout: logoutAuth, role } = useAuth();
     const { clearUserData } = useUser();
     const { clearAdminData } = useAdmin();
+    const { clear: clearSubscription } = useSubscription();
 
     const logout = async () => {
         try {
@@ -16,10 +18,13 @@ export const useLogout = () => {
                 role: role || 'user'
             });
 
-            // Clear frontend state
+            // Clear frontend state. Auth FIRST so subscription-dependent
+            // components see isAuthenticated:false and unmount before
+            // re-rendering against an empty subscription slice.
             logoutAuth();
             clearUserData();
             clearAdminData();
+            clearSubscription();
 
             // Clear localStorage
             localStorage.removeItem('auth_is_authenticated');
@@ -38,6 +43,7 @@ export const useLogout = () => {
             logoutAuth();
             clearUserData();
             clearAdminData();
+            clearSubscription();
 
             // Clear localStorage
             localStorage.removeItem('auth_is_authenticated');

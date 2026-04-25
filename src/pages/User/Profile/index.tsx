@@ -225,8 +225,11 @@ function Profile() {
     }
   };
 
-  const calculatePercentage = (used: number, limit: number) =>
-    limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+  // `limit` may be `null` for Enterprise unlimited tiers (per backend
+  // PLAN_LIMITS). Treat null as 0% so the progress bar never fills and
+  // the at-limit warnings never trigger for unlimited plans.
+  const calculatePercentage = (used: number, limit: number | null) =>
+    limit != null && limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
 
   if (isLoading) {
     return (
@@ -426,7 +429,7 @@ function Profile() {
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-white font-bold text-lg">VIDEO ANALYSES</h3>
                   <span className="text-gray-400 text-sm">
-                    {subscription.usage.videosUsed} / {limits.videosPerMonth}
+                    {subscription.usage.videosUsed} / {limits.videosPerMonth === null ? '∞' : limits.videosPerMonth}
                   </span>
                 </div>
                 <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -467,7 +470,7 @@ function Profile() {
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-white font-bold text-lg">CHAT MESSAGES</h3>
                   <span className="text-gray-400 text-sm">
-                    {subscription.usage.chatMessagesUsed} / {limits.chatMessagesPerMonth}
+                    {subscription.usage.chatMessagesUsed} / {limits.chatMessagesPerMonth === null ? '∞' : limits.chatMessagesPerMonth}
                   </span>
                 </div>
                 <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
