@@ -198,6 +198,23 @@ export default function VideoCard({
   const StatusIcon = statusInfo.icon;
   const isReanalyzing = reanalyzingVideoId === video._id;
 
+  // Mobile-only: color-coded virality score next to the status pill.
+  // Only rendered when analysis is complete AND viralityScore is a finite number.
+  const mobileViralityScore =
+    isAnalysisComplete &&
+    typeof video.viralityScore === 'number' &&
+    !isNaN(video.viralityScore)
+      ? Math.round(video.viralityScore)
+      : null;
+  const viralityScoreColor =
+    mobileViralityScore == null
+      ? ''
+      : mobileViralityScore >= 70
+        ? 'text-green-400'
+        : mobileViralityScore >= 40
+          ? 'text-yellow-400'
+          : 'text-red-400';
+
   const featureIcons: Record<string, ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
     hook: Zap,
     caption: MessageSquare,
@@ -245,19 +262,26 @@ export default function VideoCard({
         <h3 className="truncate text-sm font-medium text-white" title={video.filename}>
           {video.filename}
         </h3>
-        <span
-          className={cn(
-            'inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white',
-            statusInfo.color
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white',
+              statusInfo.color
+            )}
+          >
+            <StatusIcon
+              size={12}
+              strokeWidth={2}
+              className={cn('flex-shrink-0', statusFromApi === ANALYSIS_STATUS.COMPLETED && 'text-green-500')}
+            />
+            {statusInfo.text}
+          </span>
+          {mobileViralityScore != null && (
+            <span className={cn('text-sm font-bold tabular-nums', viralityScoreColor)}>
+              {mobileViralityScore}
+            </span>
           )}
-        >
-          <StatusIcon
-            size={12}
-            strokeWidth={2}
-            className={cn('flex-shrink-0', statusFromApi === ANALYSIS_STATUS.COMPLETED && 'text-green-500')}
-          />
-          {statusInfo.text}
-        </span>
+        </div>
         {isAnalysisPending ? (
           <div className="flex gap-2">
             <button
@@ -293,14 +317,14 @@ export default function VideoCard({
               if (isAnalysisComplete) onChatClick(video._id);
             }}
             className={cn(
-              'w-full rounded-md py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all',
+              'w-full rounded-md py-1.5 text-xs font-semibold flex items-center justify-center gap-1 whitespace-nowrap transition-all',
               isAnalysisComplete
                 ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
                 : 'bg-gray-800 text-gray-600 cursor-not-allowed'
             )}
           >
             <MessageCircle size={14} strokeWidth={2} className="flex-shrink-0" />
-            Chat
+            Constructive Overview
           </button>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos, deleteVideo, reanalyzeVideo, type Video } from '@/api/video';
@@ -147,6 +147,28 @@ function Videos() {
     [navigate]
   );
 
+  // Mobile-only: average virality across completed videos with a numeric score.
+  // Returns null when there are no eligible videos so the header can be omitted.
+  const averageViralityScore = useMemo<number | null>(() => {
+    const scored = videos.filter(
+      (v) =>
+        v.analysisStatus === ANALYSIS_STATUS.COMPLETED &&
+        typeof v.viralityScore === 'number' &&
+        !isNaN(v.viralityScore)
+    );
+    if (scored.length === 0) return null;
+    const sum = scored.reduce((acc, v) => acc + (v.viralityScore as number), 0);
+    return Math.round(sum / scored.length);
+  }, [videos]);
+  const averageScoreColor =
+    averageViralityScore == null
+      ? ''
+      : averageViralityScore >= 70
+        ? 'text-green-400'
+        : averageViralityScore >= 40
+          ? 'text-yellow-400'
+          : 'text-red-400';
+
   const allFeatures = ['hook', 'caption', 'pacing', 'audio', 'views_predictor', 'advanced_analytics'];
   const allStatuses = [
     ANALYSIS_STATUS.COMPLETED,
@@ -235,6 +257,25 @@ function Videos() {
           </h1>
           <p className="text-gray-400">Manage and view your analyzed short-form videos</p>
         </div>
+
+        {averageViralityScore != null && (
+          <div className="max-w-6xl mx-auto mb-4">
+            <div
+              className="flex items-center justify-between rounded-xl px-4 py-3"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                Average Virality Score
+              </span>
+              <span className={`text-3xl font-bold tabular-nums leading-none ${averageScoreColor}`}>
+                {averageViralityScore}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-6xl mx-auto mb-6">
           <div className="flex flex-col md:flex-row gap-4">
