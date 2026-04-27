@@ -57,7 +57,9 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     })
   });
 
-  const handleSubmit = async (values: FormValues, { setSubmitting, setFieldError }: any) => {
+  const handleSubmit = async (values: FormValues, { setSubmitting, setFieldError, setStatus }: any) => {
+    // Clear any prior form-level error before each submit attempt.
+    setStatus(undefined);
     try {
       if (isLogin) {
         // Handle login
@@ -68,7 +70,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         });
 
         if (response.data.success) {
-          const { accessToken, refreshToken, user } = response.data.data;
+          const { accessToken, user } = response.data.data;
           
           // Map user data to match user slice structure
           const mappedUser = {
@@ -79,21 +81,21 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
             preferences: user.preferences || {}
           };
           
-          // Update Redux store
+          // Update Redux store. The refresh token is intentionally not handled
+          // here — it lives only in an HttpOnly cookie set by the backend on
+          // this response, and is sent back automatically via withCredentials
+          // when the auth interceptor calls /auth/refresh-token.
           login(true);
           updateAuthData({ 
             token: accessToken, 
-            refreshToken: refreshToken || '',
             role: 'user', 
             user: mappedUser 
           });
           setUserData(mappedUser);
           
-          // Store tokens in localStorage for persistence
+          // Store access token + identity in localStorage for rehydration on
+          // reload. Refresh token is never persisted client-side.
           localStorage.setItem('accessToken', accessToken);
-          if (refreshToken) {
-            localStorage.setItem('refreshToken', refreshToken);
-          }
           localStorage.setItem('auth_role', 'user');
           localStorage.setItem('auth_user', JSON.stringify(mappedUser));
           localStorage.setItem('auth_is_authenticated', 'true');
@@ -157,37 +159,40 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         return;
       }
       
-      // Handle API errors (backend responded with error status)
+      // Handle API errors (backend responded with error status). Backend
+      // security hardening (commit 0837232) collapsed all credential failures
+      // (unknown email, bad password, unverified email) to a single 401 with
+      // message "Invalid email or password". We must NOT pattern-match on the
+      // old distinguishable strings — they no longer arrive — and we must NOT
+      // attribute the failure to a specific field, since neither field is
+      // independently wrong from the server's POV.
       const errorMessage = error.response?.data?.message || 
                           error.message || 
                           (isLogin ? 'Login failed' : 'Signup failed');
       
-      if (error.response?.status === 409) {
-        const errorMessage = error.response?.data?.message || 'User with this email already exists';
-        if (isProviderConflictError(errorMessage)) {
-          setFieldError('email', errorMessage);
+      if (error.response?.status === 401 && isLogin) {
+        // Generic credential failure on login. Surface as a top-level form
+        // error so neither email nor password gets a misleading field marker.
+        setStatus({ formError: errorMessage || 'Invalid email or password' });
+      } else if (error.response?.status === 409) {
+        // 409 has two distinct meanings:
+        //   - login + cross-provider conflict: the account exists under a
+        //     different provider (e.g. Google). Surface as a top-level error;
+        //     it's about the account, not a specific field value.
+        //   - signup + email already taken: keep the existing field-level
+        //     surfacing so the user knows which field to change.
+        const conflictMessage = error.response?.data?.message || 'User with this email already exists';
+        if (isLogin) {
+          setStatus({ formError: conflictMessage });
+        } else if (isProviderConflictError(conflictMessage)) {
+          setFieldError('email', conflictMessage);
         } else {
           setFieldError('email', 'User with this email already exists');
         }
-      } else if (error.response?.status === 401) {
-        // Handle authentication failures (401 status)
-        if (errorMessage.includes('verify your email')) {
-          setFieldError('email', 'Please verify your email first. Check your inbox for a verification link.');
-        } else {
-          setFieldError('password', 'Invalid password');
-        }
-      } else if (error.response?.status === 400) {
-        // Handle validation errors and other 400 status responses
-        if (errorMessage.includes('User Not Found')) {
-          setFieldError('email', 'User not found');
-        } else if (errorMessage.includes('Invalid Password')) {
-          setFieldError('password', 'Invalid password');
-        } else {
-          setFieldError('password', 'Invalid password');
-        }
-      } else if (error.response?.status === 404) {
-        setFieldError('email', 'User not found');
       } else {
+        // Anything else (network 4xx/5xx that isn't 401-login or 409) — fall
+        // through to the existing error-surface path. Field-level Yup errors
+        // are handled by Formik before we ever reach this catch.
         if (onError) {
           onError(errorMessage);
         } else {
@@ -206,7 +211,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
       >
-        {({ isSubmitting, isValid, dirty }) => (
+        {({ isSubmitting, isValid, dirty, status }) => (
           <Form className="space-y-4">
             {!isLogin && (
               <TextField
@@ -244,6 +249,16 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
                 required
                 autoComplete="new-password"
               />
+            )}
+
+            {status?.formError && (
+              <div
+                role="alert"
+                className="text-sm text-red-400"
+                data-testid="form-error"
+              >
+                {status.formError}
+              </div>
             )}
             
             <button

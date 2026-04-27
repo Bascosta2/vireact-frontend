@@ -79,16 +79,12 @@ export const useOAuthHydration = (opts: Options = {}) => {
                 login(true);
                 updateAuthData({
                     token: decoded.accessToken,
-                    refreshToken: decoded.refreshToken || '',
                     role: decoded.user.role,
                     user: mapped,
                 });
                 setUserData(mapped);
                 if (decoded.accessToken) {
                     localStorage.setItem('accessToken', decoded.accessToken);
-                }
-                if (decoded.refreshToken) {
-                    localStorage.setItem('refreshToken', decoded.refreshToken);
                 }
                 localStorage.setItem('auth_role', decoded.user.role);
                 localStorage.setItem('auth_user', JSON.stringify(mapped));
@@ -110,7 +106,6 @@ export const useOAuthHydration = (opts: Options = {}) => {
             login(true);
             updateAuthData({
                 token: '',
-                refreshToken: '',
                 role: user.role,
                 user: mapped,
             });

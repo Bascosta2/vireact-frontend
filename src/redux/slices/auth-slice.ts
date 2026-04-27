@@ -11,16 +11,17 @@ interface User {
 interface AuthData {
     isAuthenticated: boolean,
     token: string,
-    refreshToken: string,
     role: string | null,
     user: User | null
 }
 
-// Load initial state from localStorage
+// Load initial state from localStorage. The refresh token is intentionally
+// NOT rehydrated here — refresh-token state lives only in the HttpOnly cookie
+// set by the backend; sending the cookie automatically via withCredentials
+// is the sole client-side refresh path.
 const getInitialState = (): AuthData => {
     const isAuthenticated = localStorage.getItem('auth_is_authenticated') === 'true';
     const token = localStorage.getItem('accessToken') || '';
-    const refreshToken = localStorage.getItem('refreshToken') || '';
     const role = localStorage.getItem('auth_role') || null;
     const userStr = localStorage.getItem('auth_user');
     let user = null;
@@ -40,7 +41,6 @@ const getInitialState = (): AuthData => {
     return {
         isAuthenticated,
         token,
-        refreshToken,
         role,
         user
     };
@@ -58,18 +58,18 @@ const authSlice = createSlice(
             },
             setAuthData: (state, action) => {
                 state.token = action.payload.token;
-                state.refreshToken = action.payload.refreshToken || '';
                 state.role = action.payload.role;
                 state.user = action.payload.user || null;
             },
             logout: (state) => {
                 state.isAuthenticated = false;
                 state.token = "";
-                state.refreshToken = "";
                 state.role = null;
                 state.user = null;
                 
-                // Clear localStorage
+                // Clear localStorage. refreshToken removal is legacy cleanup
+                // for sessions that were established before refresh tokens
+                // stopped being persisted client-side. Safe to keep indefinitely.
                 localStorage.removeItem('auth_is_authenticated');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');

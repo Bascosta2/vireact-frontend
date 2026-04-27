@@ -22,11 +22,12 @@ export const setupAuthInterceptors = () => {
   );
 
   // Response interceptor to handle 401 errors and token refresh.
-  // Supports two user populations:
-  //   1. Form users   — Redux has refreshToken, send it in the body.
-  //   2. OAuth users  — Redux has no refreshToken, rely on the HttpOnly
-  //                     refresh cookie (sent automatically via withCredentials).
-  // Backend controller reads body first, then cookie.
+  // The refresh token lives only in an HttpOnly cookie set by the backend.
+  // Axios is configured with withCredentials: true (see api/index.ts) so the
+  // cookie is sent automatically on every same-site/CORS request. We send no
+  // body — the backend controller resolves the token from req.cookies.
+  // The new accessToken is returned in the JSON body and stored for Bearer
+  // header use; refresh-token rotation happens server-side via Set-Cookie.
   Axios.interceptors.response.use(
     (response) => {
       return response;
@@ -38,8 +39,8 @@ export const setupAuthInterceptors = () => {
         return Promise.reject(error);
       }
 
-      // Hard stop: a 401 on the refresh call itself means the refresh token
-      // (body or cookie) is invalid/expired. Do not loop.
+      // Hard stop: a 401 on the refresh call itself means the refresh cookie
+      // is invalid/expired. Do not loop.
       const url: string = originalRequest?.url || '';
       if (url.endsWith('/auth/refresh-token')) {
         return Promise.reject(error);
@@ -47,33 +48,21 @@ export const setupAuthInterceptors = () => {
 
       originalRequest._retry = true;
 
-      const hadReduxRefresh = !!store.getState().auth.refreshToken;
-
       try {
-        const body = hadReduxRefresh
-          ? { refreshToken: store.getState().auth.refreshToken }
-          : {};
-        const response = await Axios.post('/auth/refresh-token', body);
+        const response = await Axios.post('/auth/refresh-token');
 
         if (response.data?.success) {
-          const { accessToken, refreshToken: newRefreshToken } = response.data.data || {};
+          const { accessToken } = response.data.data || {};
 
-          // Only persist tokens client-side for form users who already had them.
-          // OAuth users keep tokens in HttpOnly cookies only; the backend just
-          // re-issued Set-Cookie headers on the refresh response.
-          if (hadReduxRefresh) {
+          if (accessToken) {
             store.dispatch(setAuthData({
               token: accessToken,
-              refreshToken: newRefreshToken,
               role: store.getState().auth.role,
               user: store.getState().auth.user
             }));
-            if (accessToken) localStorage.setItem('accessToken', accessToken);
-            if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+            localStorage.setItem('accessToken', accessToken);
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
-          // For OAuth users the request will resend via withCredentials and
-          // pick up the fresh accessToken cookie automatically.
           return Axios(originalRequest);
         }
       } catch (refreshError) {
@@ -81,6 +70,8 @@ export const setupAuthInterceptors = () => {
       }
 
       // Refresh failed — clear whatever client-side auth remnants exist.
+      // localStorage refreshToken removal is legacy cleanup for sessions
+      // established before client-side refresh-token storage was removed.
       console.warn('Unauthorized access detected, clearing authentication');
       store.dispatch(logout());
       localStorage.removeItem(AUTH_TOKEN);
