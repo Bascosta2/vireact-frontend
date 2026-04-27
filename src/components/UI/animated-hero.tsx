@@ -124,7 +124,7 @@ function Hero() {
 
         {/* Subhead */}
         <motion.p
-          className="text-center text-gray-300 max-md:text-sm md:text-[17px] max-w-xs md:max-w-2xl mx-auto mb-5 md:mb-8 px-2 md:px-4 select-text cursor-text"
+          className="text-center text-gray-300 max-md:text-sm md:text-[17px] max-w-xs md:max-w-2xl mx-auto mt-6 md:mt-0 mb-5 md:mb-8 px-2 md:px-4 select-text cursor-text"
           style={{ lineHeight: 1.5 }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -138,7 +138,7 @@ function Hero() {
 
         {/* Mobile-only primary CTA */}
         <motion.div
-          className="md:hidden px-4 mb-0"
+          className="md:hidden px-4 mt-8 md:mt-0 mb-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.25 }}
@@ -151,7 +151,7 @@ function Hero() {
               background: "linear-gradient(90deg, #FF4757 0%, #FF6B35 50%, #FFA502 100%)",
             }}
           >
-            Sign Up Free — Predict Your Views
+            Free content analysis
           </button>
         </motion.div>
 
@@ -206,14 +206,16 @@ function Hero() {
           </motion.button>
         </motion.div>
 
-        {/* Social proof — mobile: single compact row under widget previews */}
+        {/* Social proof — mobile: stacked rows (avatars+creators above stars+rating) */}
         <motion.div
-          className="social-proof-compact md:hidden mt-6 mb-6 flex flex-row flex-nowrap items-center justify-center gap-3 px-2 min-w-0"
+          className="social-proof-compact md:hidden mt-6 mb-6 flex flex-col items-center justify-center gap-2 px-2 min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <HeroAvatarStack variant="heroMobileCompact" />
+          <div className="flex flex-row flex-nowrap items-center justify-center gap-3 min-w-0">
+            <HeroAvatarStack variant="heroMobileCompact" />
+          </div>
           <button
             type="button"
             onClick={handleReviewClick}

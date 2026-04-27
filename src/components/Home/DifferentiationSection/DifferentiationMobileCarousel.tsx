@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 const AUTO_ADVANCE_MS = 4000;
 const SWIPE_THRESHOLD_PX = 50;
 const SLIDE_WIDTH_FRAC = 0.7;
-const SLIDE_GAP_PX = 16;
+const SLIDE_GAP_PX = 24;
 
 type DifferentiationMobileCarouselProps = {
   children: ReactNode;
