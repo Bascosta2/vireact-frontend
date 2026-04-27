@@ -28,6 +28,10 @@ export interface SubscriptionLimits {
     videosPerMonth: number | null;
     /** Per-period chat message cap. `null` represents unlimited (Enterprise tier). */
     chatMessagesPerMonth: number | null;
+    /** Monotonic count of one-time free trial videos used (User model, lifetime cap). */
+    lifetimeFreeVideosUsed: number;
+    /** Server-side cap for the lifetime free-trial (from LIFETIME_FREE_VIDEO_LIMIT). */
+    lifetimeFreeVideoLimit: number;
 }
 
 export interface SubscriptionData {

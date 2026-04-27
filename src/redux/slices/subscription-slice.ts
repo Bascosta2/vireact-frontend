@@ -19,9 +19,18 @@ export interface SubscriptionState {
     plan: TierId | null;
     status: SubscriptionStatus;
     lifetimeFreeVideosUsed: number | null;
+    /** Server cap for lifetime free trial; `null` if not provided by API. */
+    lifetimeFreeVideoLimit: number | null;
     videosUsedThisPeriod: number | null;
+    chatMessagesUsedThisPeriod: number | null;
     /** Per-period video analysis cap. `null` represents unlimited (Enterprise). */
     videosPerMonthLimit: number | null;
+    /** Per-period chat cap. `null` represents unlimited (Enterprise). */
+    chatMessagesPerMonthLimit: number | null;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    /** Subscription document `status` (active, cancelled, etc.). */
+    subscriptionLifecycleStatus: SubscriptionData['subscription']['status'] | null;
     paymentFailed: boolean;
     error: string | null;
     lastFetchedAt: number | null;
@@ -91,13 +100,15 @@ const subscriptionSlice = createSlice({
             .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<SubscriptionData>) => {
                 const { subscription, limits } = action.payload;
                 state.plan = (subscription?.plan ?? "free") as TierId;
-                // TODO: backend subscription endpoint does not currently return
-                // lifetimeFreeVideosUsed; surfacing this requires a backend change
-                // (the field exists on the User model but is not projected onto
-                // the /subscription response).
-                state.lifetimeFreeVideosUsed = null;
+                state.lifetimeFreeVideosUsed = limits?.lifetimeFreeVideosUsed ?? 0;
+                state.lifetimeFreeVideoLimit = limits?.lifetimeFreeVideoLimit ?? null;
                 state.videosUsedThisPeriod = subscription?.usage?.videosUsed ?? null;
+                state.chatMessagesUsedThisPeriod = subscription?.usage?.chatMessagesUsed ?? null;
                 state.videosPerMonthLimit = limits?.videosPerMonth ?? null;
+                state.chatMessagesPerMonthLimit = limits?.chatMessagesPerMonth ?? null;
+                state.currentPeriodStart = subscription?.currentPeriodStart ?? null;
+                state.currentPeriodEnd = subscription?.currentPeriodEnd ?? null;
+                state.subscriptionLifecycleStatus = subscription?.status ?? null;
                 state.paymentFailed = subscription?.paymentFailed ?? false;
                 state.status = "loaded";
                 state.error = null;

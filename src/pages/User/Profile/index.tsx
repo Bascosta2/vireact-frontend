@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import UserPage from '@/components/Layout/UserPage';
@@ -14,8 +14,9 @@ import {
     updateNotificationPreferences,
     type User,
 } from '@/api/profile';
-import { getSubscription, createPortalSession, type SubscriptionData } from '@/api/subscription';
+import { createPortalSession } from '@/api/subscription';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
+import { useSubscription } from '@/redux/hooks/use-subscription';
 
 interface ProfileFormValues {
   name: string;
@@ -48,8 +49,6 @@ function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -57,6 +56,21 @@ function Profile() {
   const [notifyShortsReady, setNotifyShortsReady] = useState(true);
   const [notifyExportReady, setNotifyExportReady] = useState(true);
   const [notifyProductUpdates, setNotifyProductUpdates] = useState(true);
+
+  const {
+    plan: subPlan,
+    error: subError,
+    lastFetchedAt,
+    videosUsedThisPeriod,
+    chatMessagesUsedThisPeriod,
+    videosPerMonthLimit,
+    chatMessagesPerMonthLimit,
+    lifetimeFreeVideosUsed,
+    lifetimeFreeVideoLimit,
+    currentPeriodStart,
+    currentPeriodEnd,
+    subscriptionLifecycleStatus,
+  } = useSubscription();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -83,21 +97,6 @@ function Profile() {
     };
 
     fetchUserProfile();
-  }, []);
-
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        setSubscriptionError(null);
-        const data = await getSubscription();
-        setSubscriptionData(data);
-      } catch {
-        setSubscriptionError('Failed to load subscription data');
-        setSubscriptionData(null);
-      }
-    };
-
-    fetchSubscription();
   }, []);
 
   const profileInitialValues: ProfileFormValues = {
@@ -257,8 +256,32 @@ function Profile() {
 
   const isLocalUser = user.provider === 'local';
   const isGoogleUser = user.provider === 'google';
-  const subscription = subscriptionData?.subscription;
-  const limits = subscriptionData?.limits;
+  const hasSubscriptionData = subPlan != null && lastFetchedAt != null;
+  const subscription = hasSubscriptionData
+    ? {
+        plan: subPlan,
+        status: (subscriptionLifecycleStatus ?? 'active') as
+          | 'active'
+          | 'cancelled'
+          | 'expired'
+          | 'trial',
+        currentPeriodStart: currentPeriodStart ?? '',
+        currentPeriodEnd: currentPeriodEnd ?? '',
+        usage: {
+          videosUsed: videosUsedThisPeriod ?? 0,
+          chatMessagesUsed: chatMessagesUsedThisPeriod ?? 0,
+        },
+      }
+    : null;
+  const limits = hasSubscriptionData
+    ? {
+        videosPerMonth: videosPerMonthLimit,
+        chatMessagesPerMonth: chatMessagesPerMonthLimit,
+        lifetimeFreeVideosUsed: lifetimeFreeVideosUsed ?? 0,
+        lifetimeFreeVideoLimit,
+      }
+    : null;
+  const subscriptionLoadError = subError && !lastFetchedAt;
 
   return (
     <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
@@ -336,8 +359,8 @@ function Profile() {
         <section className="rounded-2xl border border-white/5 bg-gray-900/50 backdrop-blur-sm p-6 md:p-8 mb-6">
           <h2 className="text-xl font-bold text-red-500 mb-6">SUBSCRIPTION & USAGE</h2>
 
-          {subscriptionError && !subscription ? (
-            <div className="text-red-400 text-sm py-4">{subscriptionError}</div>
+          {subscriptionLoadError && !subscription ? (
+            <div className="text-red-400 text-sm py-4">Failed to load subscription data</div>
           ) : subscription && limits ? (
             <>
               {/* Current Plan */}
@@ -414,6 +437,61 @@ function Profile() {
                   <div className="text-red-400 text-sm mt-3">{portalError}</div>
                 )}
               </div>
+
+              {subscription.plan === 'free' &&
+                lifetimeFreeVideoLimit != null &&
+                (lifetimeFreeVideosUsed ?? 0) < lifetimeFreeVideoLimit && (
+                  <div
+                    className="rounded-lg p-6 mb-4"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                    }}
+                  >
+                    <h3 className="text-pink-500 font-bold text-sm mb-2">FREE TRIAL</h3>
+                    <p className="text-gray-200 text-sm">
+                      You have used {lifetimeFreeVideosUsed ?? 0} of {lifetimeFreeVideoLimit} free trial
+                      videos.{' '}
+                      <Link
+                        to="/subscription-plans"
+                        className="text-pink-400 font-semibold underline underline-offset-2 hover:text-pink-300"
+                      >
+                        Upgrade for unlimited monthly access
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                )}
+
+              {subscription.plan === 'free' &&
+                lifetimeFreeVideoLimit != null &&
+                (lifetimeFreeVideosUsed ?? 0) >= lifetimeFreeVideoLimit && (
+                  <div
+                    className="rounded-lg p-6 mb-4"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                    }}
+                  >
+                    <h3 className="text-pink-500 font-bold text-sm mb-2">FREE TRIAL</h3>
+                    <p className="text-gray-200 text-sm">
+                      You&apos;ve used your free trial.{' '}
+                      <Link
+                        to="/subscription-plans"
+                        className="text-pink-400 font-semibold underline underline-offset-2 hover:text-pink-300"
+                      >
+                        Upgrade to start analyzing more videos
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                )}
 
               {/* Video Analyses Usage */}
               <div
