@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { USER_ROLES } from "@/constants";
 
 interface User {
     id: string;

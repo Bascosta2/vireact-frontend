@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserPage from '@/components/Layout/UserPage';
 import PricingCard from '@/components/PricingCard';
 import PlanChangeModal from '@/components/PlanChangeModal';
 import { TIERS, type Tier, type TierId, type CheckoutPlan } from '@/config/tiers';
-import { createCheckoutSession, getSubscription } from '@/api/subscription';
+import { createCheckoutSession } from '@/api/subscription';
 import { ErrorNotification } from '@/utils/toast';
 import type { PricingFeature } from '@/types/pricing';
+import { useSubscription } from '@/redux/hooks/use-subscription';
 
 const toCardFeatures = (features: string[]): PricingFeature[] =>
   features.map(text => ({ text, type: 'check' }));
@@ -83,38 +84,10 @@ const getCardCta = (currentPlan: TierId | null, tier: Tier): CardCta => {
 
 function SubscriptionPlans() {
   const navigate = useNavigate();
-  const [currentPlan, setCurrentPlan] = useState<TierId | null>(null);
+  const { plan: currentPlan, refetch } = useSubscription();
   const [loadingTier, setLoadingTier] = useState<TierId | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTargetPlan, setModalTargetPlan] = useState<CheckoutPlan | null>(null);
-
-  const refetchSubscription = async () => {
-    try {
-      const data = await getSubscription();
-      setCurrentPlan(data.subscription.plan);
-    } catch {
-      // leave currentPlan as-is on transient error
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await getSubscription();
-        if (!cancelled) {
-          setCurrentPlan(data.subscription.plan);
-        }
-      } catch {
-        if (!cancelled) {
-          setCurrentPlan(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const openSwitchModal = (plan: CheckoutPlan) => {
     setModalTargetPlan(plan);
@@ -130,8 +103,8 @@ function SubscriptionPlans() {
   // the UI eventually-consistent without polling. Webhook is the source of
   // truth for the plan field; this is only a UI freshness compromise.
   const handleSwitchSuccess = async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    await refetchSubscription();
+    await new Promise((r) => setTimeout(r, 2000));
+    await refetch();
   };
 
   const startCheckout = async (tier: Tier, plan: CheckoutPlan) => {

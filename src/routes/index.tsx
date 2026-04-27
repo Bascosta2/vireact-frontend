@@ -5,7 +5,6 @@ import ProtectedRoutes from './ProtectedRoutes'
 import PublicRoutes from './PublicRoutes'
 import PreLoginHeader from '@/components/Header/PreLoginHeader'
 import Footer from '@/components/Footer'
-import BottomCta from '@/pages/PreLogin/Pricing/BottomCta'
 
 const BaseRoutes = () => {
   const { isAuthenticated } = useAuth()
@@ -27,9 +26,6 @@ const BaseRoutes = () => {
               <>
                 <PreLoginHeader />
                 <PublicRoutes />
-                <div className="hidden md:block">
-                  <BottomCta />
-                </div>
                 <Footer />
               </>
 

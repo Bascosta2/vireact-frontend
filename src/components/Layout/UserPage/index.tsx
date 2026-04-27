@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Sidebar } from '@/components/UI/modern-sidebar';
 import BottomNav from '@/components/Header/UserHeader/BottomNav';
 import { useSidebar } from '@/contexts/SidebarContext';
-import { getSubscription } from '@/api/subscription';
+import { useSubscription } from '@/redux/hooks/use-subscription';
 
 const PAYMENT_FAILED_BANNER_DISMISS_KEY = 'vireact_payment_failed_banner_dismissed';
 
@@ -24,27 +24,10 @@ function UserPage({
   showBottomNav = true
 }: UserPageProps) {
   const { isCollapsed } = useSidebar();
-  const [paymentFailed, setPaymentFailed] = useState(false);
+  const { paymentFailed } = useSubscription();
   const [bannerDismissed, setBannerDismissed] = useState(
     () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PAYMENT_FAILED_BANNER_DISMISS_KEY) === '1'
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await getSubscription();
-        if (!cancelled && data.subscription?.paymentFailed) {
-          setPaymentFailed(true);
-        }
-      } catch {
-        // unauthenticated or network — omit banner
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const dismissPaymentBanner = useCallback(() => {
     sessionStorage.setItem(PAYMENT_FAILED_BANNER_DISMISS_KEY, '1');
