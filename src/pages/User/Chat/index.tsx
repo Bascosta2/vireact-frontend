@@ -630,16 +630,28 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
     const [expanded, setExpanded] = useState(true);
     const { plan, status } = useSubscription();
 
+    if (status === 'loading' && plan == null) {
+        return (
+            <div
+                className="mb-4 h-28 animate-pulse rounded-xl border border-white/5 bg-white/[0.04]"
+                role="status"
+                aria-live="polite"
+            />
+        );
+    }
+
+    // Free/Premium: only the Pro lock surface, even if DTO or legacy props ever regressed non-null advanced.
+    if (plan === 'free' || plan === 'premium') {
+        return (
+            <LockedProFeatureSection
+                featureId="advanced_analytics"
+                title="Advanced Analytics"
+                description="Unlock the full breakdown: psychological strategy, emotional triggers, retention drivers, weakest moment, and tailored suggestions—written to match what Pro analysis returns for your short."
+            />
+        );
+    }
+
     if (advanced == null) {
-        if (status === 'loading' && plan == null) {
-            return (
-                <div
-                    className="mb-4 h-28 animate-pulse rounded-xl border border-white/5 bg-white/[0.04]"
-                    role="status"
-                    aria-live="polite"
-                />
-            );
-        }
         if (plan === 'pro' || plan === 'enterprise') {
             return (
                 <div
@@ -883,6 +895,7 @@ function Chat() {
     const { videoId } = useParams<{ videoId: string }>();
     const navigate = useNavigate();
     const { name } = useUser();
+    const { plan: reportSubscriptionPlan } = useSubscription();
     const [video, setVideo] = useState<Video | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
@@ -1893,7 +1906,8 @@ function Chat() {
                         </ul>
                     </AccordionCard>
 
-                    {dto?.features?.advanced && (
+                    {dto?.features?.advanced &&
+                        (reportSubscriptionPlan === 'pro' || reportSubscriptionPlan === 'enterprise') && (
                         <AccordionCard
                             icon={<SvgBarChartSmall />}
                             title="Advanced Analytics"
