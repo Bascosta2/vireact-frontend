@@ -7,7 +7,7 @@ import { getUserVideos, uploadVideoFileToTwelveLabs, uploadVideoUrlToTwelveLabs,
 import { getSubscription } from '@/api/subscription';
 import type { TierId } from '@/config/tiers';
 import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
-import { ANALYSIS_STATUS, FEATURES_IDS } from '@/constants';
+import { ANALYSIS_STATUS } from '@/constants';
 import { cn } from '@/lib/utils';
 import AnalysisProgressModal from '@/components/UI/AnalysisProgressModal';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
@@ -89,16 +89,18 @@ function Features() {
     localStorage.setItem(STORAGE_SELECTED, JSON.stringify(selectedFeatureIds));
   }, [selectedFeatureIds]);
 
-  // Scrub advanced_analytics from selectedFeatureIds once tier is known to be
-  // ineligible. Handles the localStorage-rehydration case where a user was on
-  // Pro, ticked Advanced Analytics, then downgraded to Premium.
+  // Scrub pro-only feature ids from selectedFeatureIds once tier is known to
+  // be ineligible. Handles the localStorage-rehydration case (e.g. downgraded
+  // from Pro).
   useEffect(() => {
     if (subscriptionLoading) return;
     if (canUseAdvancedAnalytics) return;
     setSelectedFeatureIds((prev) =>
-      prev.includes(FEATURES_IDS.ADVANCED_ANALYTICS)
-        ? prev.filter((id) => id !== FEATURES_IDS.ADVANCED_ANALYTICS)
-        : prev
+      prev.filter((id) => {
+        const meta = ANALYSIS_FEATURES_UI.find((f) => f.id === id);
+        if (meta?.proOnly) return false;
+        return true;
+      })
     );
   }, [subscriptionLoading, canUseAdvancedAnalytics]);
 
@@ -117,7 +119,8 @@ function Features() {
   };
 
   const toggleFeature = (featureId: string) => {
-    if (featureId === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics) {
+    const meta = ANALYSIS_FEATURES_UI.find((f) => f.id === featureId);
+    if (meta?.proOnly && !canUseAdvancedAnalytics) {
       return;
     }
     setSelectedFeatureIds((prev) =>
@@ -160,7 +163,10 @@ function Features() {
     // matches what the backend will actually process. Keeps offer parity tight.
     const featuresToSend = canUseAdvancedAnalytics
       ? selectedFeatureIds
-      : selectedFeatureIds.filter((id) => id !== FEATURES_IDS.ADVANCED_ANALYTICS);
+      : selectedFeatureIds.filter((id) => {
+          const meta = ANALYSIS_FEATURES_UI.find((f) => f.id === id);
+          return !meta?.proOnly;
+        });
 
     try {
       if (pending.mode === 'url' && pending.url) {
@@ -291,8 +297,7 @@ function Features() {
         <div className="md:hidden mx-auto flex flex-col gap-3">
           {ANALYSIS_FEATURES_UI.map((feature) => {
             const isSelected = selectedFeatureIds.includes(feature.id);
-            const isLockedForTier =
-              feature.id === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics;
+            const isLockedForTier = feature.proOnly && !canUseAdvancedAnalytics;
             const isDisabled = subscriptionLoading || isLockedForTier;
             const Icon = feature.Icon;
 
@@ -359,8 +364,7 @@ function Features() {
         <div className="hidden md:grid mx-auto max-w-5xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {ANALYSIS_FEATURES_UI.map((feature) => {
             const isSelected = selectedFeatureIds.includes(feature.id);
-            const isLockedForTier =
-              feature.id === FEATURES_IDS.ADVANCED_ANALYTICS && !canUseAdvancedAnalytics;
+            const isLockedForTier = feature.proOnly && !canUseAdvancedAnalytics;
             const isDisabled = subscriptionLoading || isLockedForTier;
             const Icon = feature.Icon;
 

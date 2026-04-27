@@ -27,6 +27,8 @@ import {
 import type { VideoFeedback } from '@/types/video-feedback';
 import { getChatMessages, sendChatMessage, type Message } from '@/api/chat';
 import { useUser } from '@/redux/hooks/use-user';
+import { useSubscription } from '@/redux/hooks/use-subscription';
+import { LockedProFeatureSection } from '@/components/AnalysisReport/LockedSection';
 import { CHAT_WELCOME_MESSAGES, ANALYSIS_STATUS } from '@/constants';
 import { ErrorNotification } from '@/utils/toast';
 import { FaPaperPlane, FaSpinner } from 'react-icons/fa';
@@ -626,8 +628,41 @@ function SvgWarningTriangle() {
 
 function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | null | undefined }) {
     const [expanded, setExpanded] = useState(true);
+    const { plan, status } = useSubscription();
 
-    if (advanced == null) return null;
+    if (advanced == null) {
+        if (status === 'loading' && plan == null) {
+            return (
+                <div
+                    className="mb-4 h-28 animate-pulse rounded-xl border border-white/5 bg-white/[0.04]"
+                    role="status"
+                    aria-live="polite"
+                />
+            );
+        }
+        if (plan === 'pro' || plan === 'enterprise') {
+            return (
+                <div
+                    className="mb-4 rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                    style={{
+                        backgroundImage:
+                            'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(249,115,22,0.04) 100%)',
+                    }}
+                >
+                    <p className="text-sm text-zinc-400">
+                        No Advanced Analytics data for this video yet.
+                    </p>
+                </div>
+            );
+        }
+        return (
+            <LockedProFeatureSection
+                featureId="advanced_analytics"
+                title="Advanced Analytics"
+                description="Unlock the full breakdown: psychological strategy, emotional triggers, retention drivers, weakest moment, and tailored suggestions—written to match what Pro analysis returns for your short."
+            />
+        );
+    }
 
     const profile = advanced.psychologicalProfile?.trim();
     const triggers = advanced.emotionalTriggers?.filter(Boolean) ?? [];
