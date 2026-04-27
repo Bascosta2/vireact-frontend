@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { VideoUpload, type UploadMode } from '@/components/UI/file-upload';
@@ -6,6 +6,7 @@ import { UPLOAD_VALIDATION } from '@/constants';
 import { ErrorNotification } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { usePendingUpload, type PendingVideoMetadata } from '@/contexts/PendingUploadContext';
+import { useSubscription } from '@/redux/hooks/use-subscription';
 
 interface UploadPageProps {
     onBack: () => void;
@@ -14,6 +15,33 @@ interface UploadPageProps {
 function UploadPage({ onBack }: UploadPageProps) {
     const navigate = useNavigate();
     const { setPending, clearPending } = usePendingUpload();
+    const { status: subStatus, videosUsedThisPeriod, videosPerMonthLimit, lastFetchedAt } =
+        useSubscription();
+
+    const { isUnlimited, isApproachingLimit, isAtLimit, showUsageSkeleton, hideUsageCounter } =
+        useMemo(() => {
+            const isUnlimited = videosPerMonthLimit === null;
+            const used = videosUsedThisPeriod;
+            const limit = videosPerMonthLimit;
+            let pct = 0;
+            if (!isUnlimited && used != null && limit != null && limit > 0) {
+                pct = Math.min((used / limit) * 100, 100);
+            }
+            const isApproaching = !isUnlimited && pct >= 80 && pct < 100;
+            const isAtLimit = !isUnlimited && pct >= 100;
+            const showUsageSkeleton =
+                subStatus !== 'error' &&
+                used == null &&
+                (subStatus === 'loading' || (subStatus === 'idle' && lastFetchedAt == null));
+            const hideUsageCounter = subStatus === 'error';
+            return {
+                isUnlimited,
+                isApproachingLimit: isApproaching,
+                isAtLimit,
+                showUsageSkeleton,
+                hideUsageCounter,
+            };
+        }, [subStatus, videosUsedThisPeriod, videosPerMonthLimit, lastFetchedAt]);
     const [uploadMode, setUploadMode] = useState<UploadMode>('file');
     const [url, setUrl] = useState('');
     const [urlError, setUrlError] = useState('');
@@ -110,6 +138,9 @@ function UploadPage({ onBack }: UploadPageProps) {
     }, []);
 
     const handleStageForFeatures = useCallback(() => {
+        if (isAtLimit) {
+            return;
+        }
         if (!hasVideoReady) {
             setError('Please provide a video first');
             return;
@@ -138,7 +169,7 @@ function UploadPage({ onBack }: UploadPageProps) {
             return;
         }
         setStagedForFeatures(true);
-    }, [hasVideoReady, uploadMode, selectedFile, urlSubmitted, url, videoMetadata, setPending]);
+    }, [isAtLimit, hasVideoReady, uploadMode, selectedFile, urlSubmitted, url, videoMetadata, setPending]);
 
     useEffect(() => {
         return () => {
@@ -195,7 +226,7 @@ function UploadPage({ onBack }: UploadPageProps) {
                             )}
                         />
                         <div className="flex items-center gap-2">
-                            {hasVideoReady ? (
+                            {hasVideoReady && !isAtLimit ? (
                                 <Link
                                     to="/features"
                                     className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
@@ -219,6 +250,18 @@ function UploadPage({ onBack }: UploadPageProps) {
                                         Select Features
                                     </span>
                                 </Link>
+                            ) : hasVideoReady && isAtLimit ? (
+                                <div className="flex items-center gap-2 opacity-60">
+                                    <div
+                                        className={cn(
+                                            'w-10 h-10 rounded-full flex items-center justify-center font-bold',
+                                            'bg-gray-800 text-gray-500'
+                                        )}
+                                    >
+                                        2
+                                    </div>
+                                    <span className="text-gray-500 font-medium">Select Features</span>
+                                </div>
                             ) : (
                                 <>
                                     <div
@@ -260,7 +303,79 @@ function UploadPage({ onBack }: UploadPageProps) {
                     <h2 className="text-xl md:text-2xl font-bold text-white uppercase mb-6 tracking-wide">
                         Provide Video
                     </h2>
-                    <div className="max-w-3xl mx-auto">
+
+                    {!hideUsageCounter && (
+                        <>
+                            {showUsageSkeleton ? (
+                                <div
+                                    className="mb-4 max-w-3xl mx-auto rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                                    aria-hidden
+                                >
+                                    <div className="h-4 w-48 animate-pulse rounded bg-white/10" />
+                                </div>
+                            ) : (
+                                <div
+                                    role="status"
+                                    aria-live="polite"
+                                    className="mb-4 max-w-3xl mx-auto rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-gray-300"
+                                >
+                                    {isUnlimited ? (
+                                        <span>
+                                            Unlimited videos this month <span aria-hidden>∞</span>
+                                        </span>
+                                    ) : (
+                                        <span>
+                                            {videosUsedThisPeriod ?? 0} of {videosPerMonthLimit} videos used
+                                            this month
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
+                            {isApproachingLimit && (
+                                <div
+                                    role="alert"
+                                    className="mb-4 max-w-3xl mx-auto rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+                                >
+                                    <p>
+                                        You&apos;re approaching your monthly limit.{' '}
+                                        <Link
+                                            to="/subscription-plans"
+                                            className="font-semibold text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                                        >
+                                            Upgrade for more uploads
+                                        </Link>
+                                        .
+                                    </p>
+                                </div>
+                            )}
+
+                            {isAtLimit && (
+                                <div
+                                    role="alert"
+                                    className="mb-4 max-w-3xl mx-auto rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                                >
+                                    <p>
+                                        You&apos;ve reached your monthly limit.{' '}
+                                        <Link
+                                            to="/subscription-plans"
+                                            className="font-semibold text-red-300 underline underline-offset-2 hover:text-red-200"
+                                        >
+                                            Upgrade to continue uploading
+                                        </Link>
+                                        .
+                                    </p>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    <div
+                        className={cn(
+                            'max-w-3xl mx-auto relative',
+                            isAtLimit && 'pointer-events-none opacity-60'
+                        )}
+                    >
                         <VideoUpload
                             compact
                             mode={uploadMode}
@@ -285,8 +400,15 @@ function UploadPage({ onBack }: UploadPageProps) {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => navigate('/features')}
-                                className="inline-flex h-12 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-6 text-sm font-semibold text-white hover:opacity-95 transition-opacity whitespace-nowrap"
+                                onClick={() => !isAtLimit && navigate('/features')}
+                                disabled={isAtLimit}
+                                aria-disabled={isAtLimit}
+                                className={cn(
+                                    'inline-flex h-12 items-center justify-center rounded-xl px-6 text-sm font-semibold whitespace-nowrap transition-opacity',
+                                    isAtLimit
+                                        ? 'cursor-not-allowed bg-gray-700 text-gray-400 opacity-70'
+                                        : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:opacity-95'
+                                )}
                             >
                                 Continue to Feature Selection →
                             </button>
@@ -351,11 +473,14 @@ function UploadPage({ onBack }: UploadPageProps) {
                             <button
                                 type="button"
                                 onClick={handleStageForFeatures}
-                                disabled={isValidating}
+                                disabled={isValidating || isAtLimit}
+                                aria-disabled={isValidating || isAtLimit}
                                 className={cn(
                                     'w-full h-12 rounded-xl font-semibold text-sm md:text-base transition-all',
-                                    'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:shadow-lg hover:shadow-orange-500/25',
-                                    isValidating && 'opacity-50 cursor-not-allowed'
+                                    isAtLimit || isValidating
+                                        ? 'cursor-not-allowed bg-gray-700 text-gray-400 opacity-70'
+                                        : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:shadow-lg hover:shadow-orange-500/25',
+                                    isValidating && !isAtLimit && 'opacity-50 cursor-not-allowed'
                                 )}
                             >
                                 Continue to Feature Selection →
