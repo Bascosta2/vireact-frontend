@@ -245,7 +245,7 @@ export function VideoUpload({
                   <Check className="w-6 h-6 text-green-500" />
                 </div>
                 <h3 className="text-white text-lg font-semibold mb-2">Video Selected</h3>
-                <p className="text-gray-400 text-sm mb-2 truncate max-w-xs">{selectedFile.name}</p>
+                <p className="text-gray-400 text-sm mb-2 truncate max-w-full md:max-w-xs">{selectedFile.name}</p>
                 <p className="text-gray-500 text-xs mb-4">{formatFileSize(selectedFile.size)}</p>
                 <button
                   onClick={(e) => {

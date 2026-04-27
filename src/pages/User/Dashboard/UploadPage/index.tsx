@@ -441,9 +441,9 @@ function UploadPage({ onBack }: UploadPageProps) {
                                     <span>Format:</span>
                                     <span className="text-white ml-2 uppercase">{videoMetadata.format}</span>
                                 </div>
-                                <div>
-                                    <span>Filename:</span>
-                                    <span className="text-white ml-2 truncate">
+                                <div className="flex items-baseline min-w-0">
+                                    <span className="shrink-0">Filename:</span>
+                                    <span className="text-white ml-2 truncate min-w-0">
                                         {selectedFile?.name.length > 24
                                             ? selectedFile?.name.slice(0, 24) + '…'
                                             : selectedFile?.name}
@@ -464,7 +464,7 @@ function UploadPage({ onBack }: UploadPageProps) {
 
                     {error && (
                         <div className="mt-4 max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-                            <p className="text-red-400 text-sm">{error}</p>
+                            <p className="text-red-400 text-sm break-words">{error}</p>
                         </div>
                     )}
 
