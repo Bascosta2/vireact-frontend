@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import Fallback from '@/components/Fallback'
+import RouteErrorBoundary from '@/components/RouteErrorBoundary'
 import { useAuth } from '@/redux/hooks/use-auth'
 import ProtectedRoutes from './ProtectedRoutes'
 import PublicRoutes from './PublicRoutes'
@@ -14,23 +15,25 @@ const BaseRoutes = () => {
     <>
       <div
         className="">
-        <Suspense fallback={<Fallback />}>
-          {
-            isAuthenticated ?
-              <>
-                <ProtectedRoutes />
-              </>
+        <RouteErrorBoundary>
+          <Suspense fallback={<Fallback />}>
+            {
+              isAuthenticated ?
+                <>
+                  <ProtectedRoutes />
+                </>
 
-              :
+                :
 
-              <>
-                <PreLoginHeader />
-                <PublicRoutes />
-                <Footer />
-              </>
+                <>
+                  <PreLoginHeader />
+                  <PublicRoutes />
+                  <Footer />
+                </>
 
-          }
-        </Suspense>
+            }
+          </Suspense>
+        </RouteErrorBoundary>
       </div>
 
     </>
