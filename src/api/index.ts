@@ -79,7 +79,13 @@ Axios.interceptors.response.use(
     },
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-        
+        // Only retry idempotent methods on transient network errors.
+        // Retrying POST/PATCH/PUT/DELETE on a blip risks duplicate side
+        // effects (duplicate Stripe checkouts, duplicate video ingests,
+        // double lifetime free-trial quota claims).
+        const method = (originalRequest?.method || '').toLowerCase();
+        const isIdempotent = method === 'get' || method === 'head' || method === 'options';
+
         // Log error details
         if (import.meta.env.DEV) {
             console.error(`[API Error] ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`, {
@@ -95,6 +101,7 @@ Axios.interceptors.response.use(
         if (
             originalRequest &&
             !originalRequest._retry &&
+            isIdempotent &&
             (!error.response || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')
         ) {
             originalRequest._retry = true;
