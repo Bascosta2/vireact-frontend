@@ -8,9 +8,7 @@ export type PendingVideoMetadata = {
 };
 
 export type PendingUploadState = {
-  mode: 'file' | 'url';
   file: File | null;
-  url: string;
   displayName: string;
   videoMetadata: PendingVideoMetadata | null;
 };

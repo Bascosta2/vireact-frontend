@@ -63,14 +63,6 @@ export const UPLOAD_VALIDATION = {
         ALLOWED_FORMATS: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
         MAX_DURATION: 60, // 60 seconds
         MIN_DURATION: 5, // 5 seconds
-    },
-    URL: {
-        SUPPORTED_PLATFORMS: ['youtube', 'tiktok', 'instagram', 'twitter', 'facebook'],
-        YOUTUBE_REGEX: /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/,
-        TIKTOK_REGEX: /^(https?:\/\/)?(www\.)?(tiktok\.com\/@[\w.-]+\/video\/\d+)/,
-        INSTAGRAM_REGEX: /^(https?:\/\/)?(www\.)?(instagram\.com\/p\/[\w-]+)/,
-        TWITTER_REGEX: /^(https?:\/\/)?(www\.)?(twitter\.com\/[\w]+\/status\/\d+)/,
-        FACEBOOK_REGEX: /^(https?:\/\/)?(www\.)?(facebook\.com\/[\w.-]+\/videos\/\d+)/,
     }
 }
 

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, Lock, Wand2, X } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { usePendingUpload } from '@/contexts/PendingUploadContext';
-import { getUserVideos, uploadVideoFileToTwelveLabs, uploadVideoUrlToTwelveLabs, type Video } from '@/api/video';
+import { getUserVideos, uploadVideoFileToTwelveLabs, type Video } from '@/api/video';
 import { getSubscription } from '@/api/subscription';
 import type { TierId } from '@/config/tiers';
 import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
@@ -169,18 +169,7 @@ function Features() {
         });
 
     try {
-      if (pending.mode === 'url' && pending.url) {
-        setAnalysisProgress(10);
-        startSimulatedProgress();
-        await uploadVideoUrlToTwelveLabs(
-          pending.url.trim(),
-          pending.displayName || `video_${Date.now()}.mp4`,
-          featuresToSend
-        );
-        stopSimulatedProgress();
-        setAnalysisProgress(100);
-        SuccessNotification('Video uploaded successfully!');
-      } else if (pending.mode === 'file' && pending.file) {
+      if (pending.file) {
         await uploadVideoFileToTwelveLabs(
           pending.file,
           pending.file.name,
@@ -198,7 +187,7 @@ function Features() {
           URL.revokeObjectURL(pending.videoMetadata.previewUrl);
         }
       } else {
-        throw new Error('No video file or URL to upload');
+        throw new Error('No video file to upload');
       }
 
       await new Promise((r) => setTimeout(r, 800));

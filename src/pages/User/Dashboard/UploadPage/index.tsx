@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
-import { VideoUpload, type UploadMode } from '@/components/UI/file-upload';
-import { UPLOAD_VALIDATION } from '@/constants';
+import { VideoUpload } from '@/components/UI/file-upload';
 import { ErrorNotification } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { usePendingUpload, type PendingVideoMetadata } from '@/contexts/PendingUploadContext';
@@ -42,47 +41,15 @@ function UploadPage({ onBack }: UploadPageProps) {
                 hideUsageCounter,
             };
         }, [subStatus, videosUsedThisPeriod, videosPerMonthLimit, lastFetchedAt]);
-    const [uploadMode, setUploadMode] = useState<UploadMode>('file');
-    const [url, setUrl] = useState('');
-    const [urlError, setUrlError] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [error, setError] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [videoMetadata, setVideoMetadata] = useState<PendingVideoMetadata | null>(null);
-    const [urlSubmitted, setUrlSubmitted] = useState(false);
     const [stagedForFeatures, setStagedForFeatures] = useState(false);
     const videoRef = useRef<HTMLVideoElement | null>(null);
 
-    const hasVideoReady = selectedFile !== null || urlSubmitted;
+    const hasVideoReady = selectedFile !== null;
     const currentStep: 1 | 2 = hasVideoReady ? 2 : 1;
-
-    const validateUrl = (u: string): boolean => {
-        const { URL } = UPLOAD_VALIDATION;
-        const patterns = [
-            URL.YOUTUBE_REGEX,
-            URL.TIKTOK_REGEX,
-            URL.INSTAGRAM_REGEX,
-            URL.TWITTER_REGEX,
-            URL.FACEBOOK_REGEX,
-        ];
-        return patterns.some((pattern) => pattern.test(u));
-    };
-
-    const handleUrlSubmit = useCallback(async (submittedUrl: string) => {
-        if (!submittedUrl.trim()) {
-            setUrlError('Please enter a URL');
-            return;
-        }
-        if (!validateUrl(submittedUrl)) {
-            setUrlError('Please enter a valid URL from a supported platform');
-            return;
-        }
-        setUrl(submittedUrl);
-        setUrlError('');
-        setUrlSubmitted(true);
-        setError('');
-        setStagedForFeatures(false);
-    }, []);
 
     const handleFileSelect = useCallback(
         async (file: File | null) => {
@@ -141,35 +108,18 @@ function UploadPage({ onBack }: UploadPageProps) {
         if (isAtLimit) {
             return;
         }
-        if (!hasVideoReady) {
+        if (!selectedFile) {
             setError('Please provide a video first');
             return;
         }
         setError('');
-        if (uploadMode === 'file' && selectedFile) {
-            setPending({
-                mode: 'file',
-                file: selectedFile,
-                url: '',
-                displayName: selectedFile.name,
-                videoMetadata,
-            });
-        } else if (uploadMode === 'url' && urlSubmitted && url.trim()) {
-            const name =
-                url.trim().length > 48 ? `${url.trim().slice(0, 48)}…` : url.trim();
-            setPending({
-                mode: 'url',
-                file: null,
-                url: url.trim(),
-                displayName: name,
-                videoMetadata: null,
-            });
-        } else {
-            setError('Please provide a video first');
-            return;
-        }
+        setPending({
+            file: selectedFile,
+            displayName: selectedFile.name,
+            videoMetadata,
+        });
         setStagedForFeatures(true);
-    }, [isAtLimit, hasVideoReady, uploadMode, selectedFile, urlSubmitted, url, videoMetadata, setPending]);
+    }, [isAtLimit, selectedFile, videoMetadata, setPending]);
 
     useEffect(() => {
         return () => {
@@ -179,9 +129,7 @@ function UploadPage({ onBack }: UploadPageProps) {
         };
     }, [videoMetadata]);
 
-    const displayName =
-        selectedFile?.name ||
-        (url.trim() ? (url.trim().length > 56 ? `${url.trim().slice(0, 56)}…` : url.trim()) : '');
+    const displayName = selectedFile?.name || '';
 
     return (
         <div className="relative w-full min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-64px)] py-8 md:py-10 pb-28 sm:pb-10 px-6 md:px-8">
@@ -295,7 +243,7 @@ function UploadPage({ onBack }: UploadPageProps) {
                         Upload Your Short Video
                     </h1>
                     <p className="text-gray-400 text-base md:text-lg text-center max-w-xl mx-auto">
-                        Drop a file or paste a link, then choose analysis features on the next step
+                        Drop a file, then choose analysis features on the next step
                     </p>
                 </div>
 
@@ -378,14 +326,8 @@ function UploadPage({ onBack }: UploadPageProps) {
                     >
                         <VideoUpload
                             compact
-                            mode={uploadMode}
-                            onModeChange={setUploadMode}
                             onFileSelected={handleFileSelect}
-                            onUrlSubmitted={handleUrlSubmit}
                             selectedFile={selectedFile}
-                            urlValue={url}
-                            urlError={urlError}
-                            isUploading={false}
                         />
                     </div>
 
@@ -450,15 +392,6 @@ function UploadPage({ onBack }: UploadPageProps) {
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {urlSubmitted && uploadMode === 'url' && !stagedForFeatures && (
-                        <div className="mt-6 max-w-3xl mx-auto p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={1.5} />
-                            <p className="text-emerald-300 text-sm break-all">
-                                URL ready: {url.length > 64 ? url.slice(0, 64) + '…' : url}
-                            </p>
                         </div>
                     )}
 
