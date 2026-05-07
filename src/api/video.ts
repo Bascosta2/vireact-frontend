@@ -237,38 +237,6 @@ export const uploadVideoFileToTwelveLabs = async (
     }
 };
 
-export const uploadVideoUrlToTwelveLabs = async (
-    url: string,
-    filename: string,
-    selectedFeatures: string[] = []
-): Promise<Video> => {
-    console.log('📤 Uploading video URL to TwelveLabs...');
-    console.log('🔗 URL:', url);
-    console.log('📁 Filename:', filename);
-    console.log('🎯 Selected features:', selectedFeatures);
-    
-    try {
-        const response = await Axios.post<{ data: { video: Video } }>(
-            '/videos/upload-url',
-            {
-                url,
-                filename,
-                selectedFeatures
-            },
-            { timeout: VIDEO_UPLOAD_TIMEOUT_MS }
-        );
-        console.log('✅ Video URL uploaded successfully:', response.data.data.video);
-        console.log('📊 Video ID:', response.data.data.video._id);
-        console.log('🎯 Features stored:', response.data.data.video.selectedFeatures);
-        return response.data.data.video;
-    } catch (error: any) {
-        console.error('❌ Upload failed:', error);
-        console.error('📡 Response status:', error?.response?.status);
-        console.error('📄 Response data:', error?.response?.data);
-        throw error;
-    }
-};
-
 /** Timeout for video upload/processing (5 min) - backend may wait for Twelve Labs indexing */
 export const VIDEO_UPLOAD_TIMEOUT_MS = 300000;
 
