@@ -1265,7 +1265,7 @@ function Chat() {
 
     if (isAnalysisPending) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4">
+            <div className="flex flex-col items-center justify-center min-h-[100dvh] px-4">
                 <Link to="/videos" className="text-zinc-400 hover:text-white transition-colors text-sm mb-6">
                     ← Back to Library
                 </Link>
@@ -1295,7 +1295,7 @@ function Chat() {
                 ? video.errorSummary.trim()
                 : null);
         return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4">
+            <div className="flex flex-col items-center justify-center min-h-[100dvh] px-4">
                 <Link to="/videos" className="text-zinc-400 hover:text-white transition-colors text-sm mb-6">
                     ← Back to Library
                 </Link>
@@ -1350,8 +1350,7 @@ function Chat() {
 
     return (
         <div
-            className="flex flex-col overflow-hidden md:h-[calc(100vh-80px)] h-[calc(100vh-80px)]"
-            style={{ height: 'calc(100vh - 80px)' }}
+            className="flex flex-col overflow-hidden md:h-[100dvh] h-[100dvh]"
         >
             {/* ─── Sticky banner (full width) ─── */}
             <div
