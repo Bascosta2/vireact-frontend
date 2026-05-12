@@ -1,4 +1,11 @@
 {
+    "redirects": [
+        {
+            "source": "/early-access",
+            "destination": "/viral-hooks",
+            "statusCode": 301
+        }
+    ],
     "rewrites": [
         {
             "source": "/(.*)",

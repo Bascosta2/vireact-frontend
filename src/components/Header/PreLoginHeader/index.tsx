@@ -212,11 +212,11 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                 Get in touch
                             </NavLink>
                             <NavLink
-                                to="/early-access"
+                                to="/viral-hooks"
                                 className="flex items-center min-h-[48px] text-base text-light-gray hover:text-white border-b border-white/10"
                                 onClick={closeMobileMenu}
                             >
-                                Early Access
+                                119 Free Hooks
                             </NavLink>
                             <NavLink
                                 to="/login"
