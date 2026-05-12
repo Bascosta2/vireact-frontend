@@ -25,8 +25,11 @@ const TermsOfServices = lazy(() => import('@/pages/PreLogin/TrustAndLegal/TermsO
 const CookiesPreferences = lazy(() => import('@/pages/PreLogin/TrustAndLegal/CookiesPreferences'));
 const AccessibilityStatement = lazy(() => import('@/pages/PreLogin/TrustAndLegal/AccessibilityStatement'));
 
-// Early Access
-const EarlyAccess = lazy(() => import('@/pages/PreLogin/EarlyAccess'));
+// Viral Hooks PDF lead-gen funnel.
+// The legacy path is redirected at the edge via vercel.json (server-side 301),
+// so no client-side <Navigate> alias is registered here.
+const ViralHooks = lazy(() => import('@/pages/PreLogin/ViralHooks'));
+const ViralHooksThankYou = lazy(() => import('@/pages/PreLogin/ViralHooks/ThankYou'));
 const CaseStudies = lazy(() => import('@/pages/PreLogin/CaseStudies'));
 
 function PublicRoutes() {
@@ -63,8 +66,9 @@ function PublicRoutes() {
                 <Route path='/accessibility-statement' element={<AccessibilityStatement />} />
 
 
-                {/* Early Access */}
-                <Route path='/early-access' element={<EarlyAccess />} />
+                {/* Viral Hooks PDF lead-gen */}
+                <Route path='/viral-hooks' element={<ViralHooks />} />
+                <Route path='/viral-hooks/thank-you' element={<ViralHooksThankYou />} />
 
                 {/* Case Studies */}
                 <Route path='/case-studies' element={<CaseStudies />} />

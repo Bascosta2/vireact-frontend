@@ -55,5 +55,5 @@ export const navItems: PreLoginNavItem[] = [
     { label: 'Pricing', href: '/pricing' },
     { label: 'FAQs', href: '/frequently-asked-questions' },
     { label: 'Get in touch', href: '/contact' },
-    { label: 'Early Access', href: '/early-access' }
+    { label: '119 Free Hooks', href: '/viral-hooks' }
 ];
