@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "formik": "^2.4.6",
     "framer-motion": "^12.28.1",
+    "hls.js": "^1.7.3",
     "lucide-react": "^0.562.0",
     "react": "^19.1.0",
     "react-confetti": "^6.4.0",

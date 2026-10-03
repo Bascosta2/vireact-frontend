@@ -1,5 +1,5 @@
 import Axios from './index';
-import type { VideoFeedbackResponse } from '@/types/video-feedback';
+import type { VideoFeedbackResponse, FeedbackFix, ScriptRewrite } from '@/types/video-feedback';
 
 export interface FeatureEntry {
     score: number | null;
@@ -35,6 +35,11 @@ interface Video {
     predictedViewsHigh?: number | null;
     predictedViewsExpected?: number | null;
     retentionCurve?: number[];
+    /** Twelve Labs HLS stream URL, used by the report player for click-to-seek. */
+    streamUrl?: string | null;
+    thumbnailUrl?: string | null;
+    /** Timestamped transcript segments (segment-level, from Twelve Labs). */
+    rawTranscript?: Array<{ text: string; tStart: number; tEnd: number }>;
     twelveLabsVideoId?: string;
     uploader_id: string;
     createdAt: string;
@@ -53,6 +58,11 @@ interface Video {
         predictedViewsHigh: number;
         predictedViewsExpected: number;
         retentionCurve: number[];
+        /**
+         * Frame-level feedback. The first six keys are the documented FeedbackItem
+         * contract; the rest are the 2026-09 frame-level additions (exact range,
+         * literal fix, authoring analyzer).
+         */
         feedbackItems: Array<{
             feature: string;
             whatIsWrong: string;
@@ -60,7 +70,23 @@ interface Video {
             timestampStart?: number;
             timestampEnd?: number;
             severity: 'critical' | 'important' | 'minor' | string;
+
+            id?: string;
+            category?: string;
+            severityLevel?: number;
+            sourceFeature?: string | null;
+            observed?: string;
+            fix?: FeedbackFix;
+            expectedImpact?: string | null;
+            sourceConfidence?: number | null;
+            timestampStartLabel?: string;
+            timestampEndLabel?: string;
+            isLegacy?: boolean;
         }>;
+        /** Literal line rewrites, separate from general frame feedback. */
+        scriptRewrites?: ScriptRewrite[];
+        /** True when feedbackItems were adapted from pre-2026-09 prose entries. */
+        isLegacyFeedback?: boolean;
         scores: {
             virality: number | null;
             hook: number | null;

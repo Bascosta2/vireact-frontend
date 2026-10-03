@@ -25,7 +25,9 @@ import { getVideoStatus, type Video } from '@/api/video';
 import { cn } from '@/lib/utils';
 
 interface VideoCardProps {
-  video: Video & { thumbnailUrl?: string; videoUrl?: string; analysisProgress?: number; analysisScore?: number };
+  // `thumbnailUrl` is nullable on `Video` (Twelve Labs returns null until the
+  // stream encode finishes), so the local overrides must allow null too.
+  video: Video & { thumbnailUrl?: string | null; videoUrl?: string | null; analysisProgress?: number; analysisScore?: number };
   onDelete: (videoId: string) => void;
   onReanalyze: (videoId: string) => void | Promise<void>;
   onChatClick: (videoId: string) => void;
