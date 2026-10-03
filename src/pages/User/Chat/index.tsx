@@ -24,7 +24,9 @@ import {
     type Video,
     type FeatureEntry,
 } from '@/api/video';
-import type { VideoFeedback } from '@/types/video-feedback';
+import type { FrameFeedback, ScriptRewrite } from '@/types/video-feedback';
+import FeedbackFixCard, { ScriptRewriteCard } from '@/components/domain/FeedbackFixCard';
+import SeekableVideoPlayer, { type SeekableVideoPlayerHandle } from '@/components/domain/SeekableVideoPlayer';
 import { getChatMessages, sendChatMessage, type Message } from '@/api/chat';
 import { useUser } from '@/redux/hooks/use-user';
 import { useSubscription } from '@/redux/hooks/use-subscription';
@@ -903,7 +905,11 @@ function Chat() {
     const [isSending, setIsSending] = useState(false);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [chipsVisible, setChipsVisible] = useState(true);
-    const [timestampFeedbackList, setTimestampFeedbackList] = useState<VideoFeedback[]>([]);
+    const [timestampFeedbackList, setTimestampFeedbackList] = useState<FrameFeedback[]>([]);
+    const [scriptRewriteList, setScriptRewriteList] = useState<ScriptRewrite[]>([]);
+    /** Ids cited by the most recent chat reply, highlighted in the report. */
+    const [citedFeedbackIds, setCitedFeedbackIds] = useState<string[]>([]);
+    const playerRef = useRef<SeekableVideoPlayerHandle>(null);
     const [analysisErrorSummary, setAnalysisErrorSummary] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'chat' | 'analytics'>('analytics');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -975,8 +981,10 @@ function Chat() {
                         try {
                             const fb = await getVideoFeedback(videoId);
                             setTimestampFeedbackList(fb.feedback ?? []);
+                            setScriptRewriteList(fb.scriptRewrites ?? []);
                         } catch {
                             setTimestampFeedbackList([]);
+                            setScriptRewriteList([]);
                         }
                     } catch {
                         // keep list video if single fetch fails
@@ -1005,6 +1013,10 @@ function Chat() {
                             text: msg.text,
                             isUser: msg.isUser,
                             createdAt: msg.createdAt,
+                            feedbackRefs: msg.feedbackRefs,
+                            fixes: msg.fixes,
+                            scriptRewrites: msg.scriptRewrites,
+                            coverage: msg.coverage,
                         }));
                         setMessages(formattedMessages);
                     } else {
@@ -1087,8 +1099,10 @@ function Chat() {
                         try {
                             const fb = await getVideoFeedback(videoId);
                             setTimestampFeedbackList(fb.feedback ?? []);
+                            setScriptRewriteList(fb.scriptRewrites ?? []);
                         } catch {
                             setTimestampFeedbackList([]);
+                            setScriptRewriteList([]);
                         }
                     } catch {
                         setVideo(found);
@@ -1109,6 +1123,10 @@ function Chat() {
                                 text: msg.text,
                                 isUser: msg.isUser,
                                 createdAt: msg.createdAt,
+                                feedbackRefs: msg.feedbackRefs,
+                                fixes: msg.fixes,
+                                scriptRewrites: msg.scriptRewrites,
+                                coverage: msg.coverage,
                             }));
                             setMessages(formatted);
                         } else {
@@ -1174,9 +1192,16 @@ function Chat() {
                         text: response.aiMessage.text,
                         isUser: response.aiMessage.isUser,
                         createdAt: response.aiMessage.createdAt,
+                        feedbackRefs: response.aiMessage.feedbackRefs,
+                        fixes: response.aiMessage.fixes,
+                        scriptRewrites: response.aiMessage.scriptRewrites,
+                        coverage: response.aiMessage.coverage,
                     });
                     return updated;
                 });
+
+                // Highlight the report items this reply cited.
+                setCitedFeedbackIds(response.aiMessage.feedbackRefs ?? []);
             } catch (error: unknown) {
                 const err = error as { response?: { data?: { message?: string }; status?: number } };
                 console.error('Failed to send message:', error);
@@ -1339,6 +1364,18 @@ function Chat() {
         return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
     }
 
+    /**
+     * Jump the report player to a feedback item's timestamp. On mobile the report
+     * lives behind the analytics tab, so switch to it first — otherwise the player
+     * is off-screen and the seek is invisible.
+     */
+    const handleSeek = (seconds: number) => {
+        setActiveTab('analytics');
+        playerRef.current?.seekTo(seconds);
+    };
+
+    const canSeek = Boolean(video.streamUrl);
+
     const dto = video.analysis;
     const pv = dto?.predictedViews;
     const predsAllNull = pv?.low == null && pv?.expected == null && pv?.high == null;
@@ -1439,6 +1476,49 @@ function Chat() {
                                     </div>
                                     <div className="max-w-[80%] rounded-2xl rounded-tl-sm px-4 py-3 border border-white/[0.08] text-white text-sm leading-relaxed bg-[rgba(255,255,255,0.05)]">
                                         {formatChatMessage(message.text)}
+
+                                        {/* Fixes render as structured diffs, never as prose inside the reply. */}
+                                        {(message.fixes ?? []).map((fix) => (
+                                            <FeedbackFixCard
+                                                key={fix.id}
+                                                item={fix}
+                                                onSeek={canSeek ? handleSeek : undefined}
+                                            />
+                                        ))}
+                                        {(message.scriptRewrites ?? []).map((rewrite) => (
+                                            <ScriptRewriteCard
+                                                key={rewrite.lineId}
+                                                rewrite={rewrite}
+                                                onSeek={canSeek ? handleSeek : undefined}
+                                            />
+                                        ))}
+
+                                        {/* Deep-link into the report for items the reply cited. */}
+                                        {(message.feedbackRefs ?? []).length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                                {(message.feedbackRefs ?? []).map((ref) => {
+                                                    const cited = timestampFeedbackList.find((item) => item.id === ref);
+                                                    const citedRewrite = scriptRewriteList.find((item) => item.lineId === ref);
+                                                    const seconds = cited?.tStart ?? citedRewrite?.timestamp;
+                                                    if (seconds == null) return null;
+                                                    return (
+                                                        <button
+                                                            key={ref}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCitedFeedbackIds([ref]);
+                                                                if (canSeek) handleSeek(seconds);
+                                                            }}
+                                                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-zinc-300 hover:bg-[#FF3CAC]/30 hover:text-white transition-colors"
+                                                            title="Show this item in the report"
+                                                        >
+                                                            {formatSecondsToMmSs(seconds)}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
                                         {timestamp && (
                                             <div className="text-[10px] text-zinc-500 mt-1">{timestamp}</div>
                                         )}
@@ -1682,6 +1762,24 @@ function Chat() {
                         </div>
                     </div>
 
+                    {video.streamUrl ? (
+                        <>
+                            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
+                                Your video
+                            </p>
+                            <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
+                            <SeekableVideoPlayer
+                                ref={playerRef}
+                                streamUrl={video.streamUrl}
+                                poster={video.thumbnailUrl}
+                                className="mt-2"
+                            />
+                            <p className="text-[11px] text-zinc-500 mt-2">
+                                Click any timestamp below to jump to that moment.
+                            </p>
+                        </>
+                    ) : null}
+
                     {showFrameFeedbackSection && (
                         <>
                             <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
@@ -1693,35 +1791,35 @@ function Chat() {
                                     No frame-level feedback available for this video.
                                 </p>
                             ) : (
-                                <ul className="space-y-3 mt-2">
-                                    {timestampFeedbackList.map((item, idx) => (
-                                        <li
-                                            key={`${item.timestamp}-${idx}`}
-                                            className="rounded-xl p-4 border border-white/[0.08] bg-white/[0.03]"
-                                        >
-                                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-zinc-300">
-                                                    {formatSecondsToMmSs(item.timestamp)}
-                                                    {item.endTimestamp != null
-                                                        ? ` – ${formatSecondsToMmSs(item.endTimestamp)}`
-                                                        : ''}
-                                                </span>
-                                                <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded border border-white/15 text-zinc-400">
-                                                    {item.category}
-                                                </span>
-                                                <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">
-                                                    {item.severity}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm font-semibold text-white">{item.issue}</p>
-                                            <p className="text-sm text-zinc-300 mt-1">{item.suggestion}</p>
-                                            {item.example ? (
-                                                <p className="text-xs text-zinc-500 mt-2 italic">{item.example}</p>
-                                            ) : null}
-                                        </li>
+                                <div className="space-y-3 mt-2">
+                                    {timestampFeedbackList.map((item) => (
+                                        <FeedbackFixCard
+                                            key={item.id}
+                                            item={item}
+                                            onSeek={canSeek ? handleSeek : undefined}
+                                            isHighlighted={citedFeedbackIds.includes(item.id)}
+                                        />
                                     ))}
-                                </ul>
+                                </div>
                             )}
+                        </>
+                    )}
+
+                    {scriptRewriteList.length > 0 && (
+                        <>
+                            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
+                                Script rewrites
+                            </p>
+                            <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
+                            <div className="space-y-3 mt-2">
+                                {scriptRewriteList.map((rewrite) => (
+                                    <ScriptRewriteCard
+                                        key={rewrite.lineId}
+                                        rewrite={rewrite}
+                                        onSeek={canSeek ? handleSeek : undefined}
+                                    />
+                                ))}
+                            </div>
                         </>
                     )}
 

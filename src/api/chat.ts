@@ -1,4 +1,5 @@
 import Axios from './index';
+import type { FrameFeedback, ScriptRewrite } from '@/types/video-feedback';
 
 interface Message {
     id?: string;
@@ -7,6 +8,17 @@ interface Message {
     isUser: boolean;
     createdAt?: string;
     updatedAt?: string;
+    /**
+     * Ids of stored feedback / rewrites this reply cites, for deep-linking to the
+     * referenced moment in the report.
+     */
+    feedbackRefs?: string[];
+    /** Fixes authored inside this reply, rendered as structured cards. */
+    fixes?: FrameFeedback[];
+    /** Line rewrites authored inside this reply. */
+    scriptRewrites?: ScriptRewrite[];
+    /** Whether the reply was answerable from this video's analysis. */
+    coverage?: 'grounded' | 'partially_grounded' | 'not_covered' | null;
 }
 
 interface GetChatMessagesResponse {
