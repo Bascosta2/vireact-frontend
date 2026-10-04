@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { track } from '@/lib/analytics';
 import { useNavigate } from 'react-router-dom';
 import PricingCard from '@/components/PricingCard';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
@@ -16,7 +17,12 @@ const Pricing: React.FC<PricingPageProps> = () => {
     const { isAuthenticated } = useAuth();
     const [loadingTier, setLoadingTier] = useState<Tier['id'] | null>(null);
 
+    useEffect(() => {
+        track('pricing_viewed');
+    }, []);
+
     const handleCtaClick = async (tier: Tier) => {
+        track('cta_clicked', { location: 'pricing', tier: tier.id, authenticated: isAuthenticated });
         if (tier.id === 'free') {
             navigate('/signup');
             return;
@@ -39,6 +45,7 @@ const Pricing: React.FC<PricingPageProps> = () => {
         try {
             setLoadingTier(tier.id);
             const { url } = await createCheckoutSession(tier.checkoutPlan);
+            track('checkout_started', { tier: tier.id, plan: tier.checkoutPlan }, { beforeUnload: true });
             window.location.href = url;
         } catch (err: any) {
             setLoadingTier(null);

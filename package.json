@@ -8,6 +8,7 @@
     "host": "vite --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "framer-motion": "^12.28.1",
     "hls.js": "^1.7.3",
     "lucide-react": "^0.562.0",
+    "posthog-js": "^1.435.8",
     "react": "^19.1.0",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.1.0",
@@ -52,6 +54,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.34.1",
     "vite": "^7.0.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^5.0.3"
   }
 }

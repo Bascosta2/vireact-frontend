@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/redux/hooks/use-auth";
 import { motion } from "framer-motion";
 import HeroAvatarStack from "@/components/Home/HeroAvatarStack";
+import { track } from "@/lib/analytics";
 
 const TYPING_PHRASES = [
   "Drop an Instagram Reel Link",
@@ -22,6 +23,7 @@ function Hero() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handlePrimaryAction = () => {
+    track('cta_clicked', { location: 'hero', authenticated: isAuthenticated });
     if (isAuthenticated) {
       navigate("/dashboard");
     } else {

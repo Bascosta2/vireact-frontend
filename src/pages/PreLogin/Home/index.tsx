@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { track } from '@/lib/analytics';
 import HeroSection from '@/components/Home/HeroSection';
 import DifferentiationSection from '@/components/Home/DifferentiationSection';
 import WinsSection from '@/components/Home/WinsSection';
@@ -11,6 +13,10 @@ import AIFeatures from '@/components/UI/AIFeatures';
 import CreatorsAndBusinesses from '@/components/FeaturesPage/CreatorsAndBusinesses';
 
 function Home() {
+    useEffect(() => {
+        track('landing_viewed', { path: window.location.pathname });
+    }, []);
+
     return (
         <PreLoginPage>
             <div

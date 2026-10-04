@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaYoutube, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { SiTiktok } from 'react-icons/si';
 import VideoURLInput from '@/components/UI/VideoURLInput'
+import { track } from '@/lib/analytics';
 
 interface UploadCTAInterface {
     uploadButtonText?: string;
@@ -54,6 +55,7 @@ function UploadCTA({ uploadButtonText = "Upload Here", onUploadClick }: UploadCT
     };
     
     const handleButtonClick = () => {
+        track('cta_clicked', { location: 'upload_cta' });
         if (onUploadClick) {
             onUploadClick();
         } else {

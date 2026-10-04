@@ -1,8 +1,8 @@
 import { BrowserRouter } from "react-router-dom"
 import { useEffect } from "react"
 import BaseRoutes from '@/routes/index.tsx'
-import { store } from "@/redux/store"
-import { Provider } from "react-redux"
+import { store, type RootState } from "@/redux/store"
+import { Provider, useSelector } from "react-redux"
 import { Toaster } from "react-hot-toast"
 // import { StateInitializer } from "@/components/StateInitializer"
 import { setupAuthInterceptors } from "@/utils/authInterceptor"
@@ -10,6 +10,8 @@ import ScrollToTop from "@/utils/ScrollToTop"
 import { VITE_BACKEND_URL } from "@/constants"
 import { useAuth } from "@/redux/hooks/use-auth"
 import { useSubscription } from "@/redux/hooks/use-subscription"
+import { getAttribution, identifyUser } from "@/lib/analytics"
+import Axios from "@/api"
 
 // Setup auth interceptors
 setupAuthInterceptors()
@@ -60,6 +62,28 @@ const SubscriptionBootstrap = () => {
   return null;
 };
 
+const ATTRIBUTION_SYNCED_KEY = "vireact_attribution_synced";
+
+const AnalyticsIdentity = () => {
+  const { isAuthenticated, role } = useAuth();
+  const userId = useSelector((state: RootState) => state.auth.user?.id);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    identifyUser(userId);
+
+    // Covers Google OAuth signups; the backend only writes if nothing is stored yet.
+    const attribution = getAttribution();
+    if (role !== "user" || !attribution) return;
+    if (localStorage.getItem(ATTRIBUTION_SYNCED_KEY) === userId) return;
+    Axios.post("/auth/attribution", { attribution })
+      .then(() => localStorage.setItem(ATTRIBUTION_SYNCED_KEY, userId))
+      .catch(() => undefined);
+  }, [isAuthenticated, userId, role]);
+
+  return null;
+};
+
 function App() {
   useEffect(() => {
     // Test backend connectivity on app startup
@@ -72,6 +96,7 @@ function App() {
         <Provider store={store}>
           {/* <StateInitializer> */}
             <SubscriptionBootstrap />
+            <AnalyticsIdentity />
             <Toaster
               position="bottom-center"
               toastOptions={{ duration: 4000 }} />

@@ -4,6 +4,7 @@ import { useAdmin } from '@/redux/hooks/use-admin';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import Axios from '@/api';
 import { SuccessNotification } from '@/utils/toast';
+import { resetAnalytics } from '@/lib/analytics';
 
 export const useLogout = () => {
     const { logout: logoutAuth, role } = useAuth();
@@ -37,6 +38,7 @@ export const useLogout = () => {
         clearUserData();
         clearAdminData();
         clearSubscription();
+        resetAnalytics();
 
         // Clear localStorage. The auth-slice logout reducer also clears these
         // plus 'refreshToken' (legacy); duplication here is harmless and keeps

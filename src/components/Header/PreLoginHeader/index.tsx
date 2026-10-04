@@ -4,6 +4,7 @@ import { FaChevronDown, FaBars, FaTimes } from 'react-icons/fa';
 import type { PreLoginHeaderProps } from '@/types/header';
 import NavigationDropdown from '@/components/UI/NavigationDropdown';
 import { navItems } from './pre-login-nav-items';
+import { track } from '@/lib/analytics';
 
 const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
 
     const handleSignupClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        track('cta_clicked', { location: 'header' });
         const rect = e.currentTarget.getBoundingClientRect();
         setSignupRipple({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         setTimeout(() => {

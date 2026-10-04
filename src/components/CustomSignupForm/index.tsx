@@ -9,6 +9,7 @@ import { useUser } from '@/redux/hooks/use-user';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { isProviderConflictError } from '@/utils/authHelpers';
 import { VITE_BACKEND_URL } from '@/constants';
+import { getAttribution, track } from '@/lib/analytics';
 
 interface CustomSignupFormProps {
   onSuccess?: () => void;
@@ -100,6 +101,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
           localStorage.setItem('auth_user', JSON.stringify(mappedUser));
           localStorage.setItem('auth_is_authenticated', 'true');
           
+          track('login_completed', { method: 'email' }, { beforeUnload: true });
           SuccessNotification('Login successful!');
           
           if (onSuccess) {
@@ -111,14 +113,18 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         }
       } else {
         // Handle signup
+        track('signup_started', { method: 'email' });
+        const attribution = getAttribution();
         const response = await Axios.post('/auth/signup', {
           name: values.name,
           email: values.email,
           password: values.password,
-          role: 'user'
+          role: 'user',
+          ...(attribution ? { attribution } : {})
         });
 
         if (response.data.success) {
+          track('signup_completed', { method: 'email' }, { beforeUnload: true });
           SuccessNotification('Account created successfully! Please check your email for verification.');
           
           // Show verification message and redirect to resend page after a delay
