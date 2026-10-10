@@ -5,6 +5,7 @@ import type { PreLoginHeaderProps } from '@/types/header';
 import NavigationDropdown from '@/components/UI/NavigationDropdown';
 import { navItems } from './pre-login-nav-items';
 import { track } from '@/lib/analytics';
+import { claims } from '@/content/claims';
 
 const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
     const navigate = useNavigate();
@@ -16,7 +17,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
 
     const handleSignupClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-        track('cta_clicked', { location: 'header' });
+        track('cta_clicked', { location: e.currentTarget.dataset.ctaLocation || 'header' });
         const rect = e.currentTarget.getBoundingClientRect();
         setSignupRipple({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         setTimeout(() => {
@@ -106,6 +107,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                 ) : (
                                     <NavLink
                                         to={item.href}
+                                        onClick={item.href === '/viral-hooks' ? () => track('cta_clicked', { location: 'nav_free_hooks' }) : undefined}
                                         className="text-sm flex items-center gap-2 text-light-gray hover:text-white transition-all duration-200 cursor-pointer px-4 py-2 rounded-lg hover:bg-white/20"
                                     >
                                         {item.label}
@@ -158,6 +160,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                         </button>
                         <button
                             type="button"
+                            data-cta-location="header_mobile"
                             onClick={handleSignupClick}
                             className="btn-primary text-sm px-3 py-2 rounded-lg font-semibold whitespace-nowrap min-h-[40px]"
                         >
@@ -216,9 +219,12 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                             <NavLink
                                 to="/viral-hooks"
                                 className="flex items-center min-h-[48px] text-base text-light-gray hover:text-white border-b border-white/10"
-                                onClick={closeMobileMenu}
+                                onClick={() => {
+                                    track('cta_clicked', { location: 'nav_free_hooks_mobile' });
+                                    closeMobileMenu();
+                                }}
                             >
-                                119 Free Hooks
+                                {claims.hookCount} Free Hooks
                             </NavLink>
                             <NavLink
                                 to="/login"

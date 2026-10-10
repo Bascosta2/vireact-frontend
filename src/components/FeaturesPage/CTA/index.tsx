@@ -8,8 +8,7 @@ function CTA({ ctaHeading }: CTAProps) {
     return (
         <div className="w-full max-w-7xl mx-auto py-16">
             <h1 className="font-bold mb-8 text-center">{ctaHeading}</h1>
-            <UploadCTA 
-            />
+            <UploadCTA location="features_bottom" />
         </div>
     )
 }

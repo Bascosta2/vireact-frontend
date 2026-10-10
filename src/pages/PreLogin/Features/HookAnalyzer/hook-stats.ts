@@ -1,24 +1,25 @@
 import { IoFish, IoEye, IoThumbsUp, IoCheckmarkCircle } from "react-icons/io5";
+import { claims } from "@/content/claims";
 
 export const hookStats = [
     {
         Icon: IoFish,
-        achievement: "95%",
+        achievement: claims.featureStats.hookAnalyzer[0],
         subheading: "Hook Effectiveness"
     },
     {
         Icon: IoEye,
-        achievement: "4X",
+        achievement: claims.featureStats.hookAnalyzer[1],
         subheading: "More Views"
     },
     {
         Icon: IoThumbsUp,
-        achievement: "80%",
+        achievement: claims.featureStats.hookAnalyzer[2],
         subheading: "Higher Retention"
     },
     {
         Icon: IoCheckmarkCircle,
-        achievement: "90%",
+        achievement: claims.featureStats.hookAnalyzer[3],
         subheading: "Hook Optimization"
     }
 ]

@@ -1,75 +1,30 @@
-import { useEffect, useState, useRef } from "react";
 import { Upload, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/redux/hooks/use-auth";
 import { motion } from "framer-motion";
 import HeroAvatarStack from "@/components/Home/HeroAvatarStack";
 import { track } from "@/lib/analytics";
+import { claims } from "@/content/claims";
+import { primaryCtaPath } from "@/funnel/cta";
 
-const TYPING_PHRASES = [
-  "Drop an Instagram Reel Link",
-  "Drop a YouTube Shorts Link",
-  "Drop a TikTok Link",
-];
+const RATING_TITLE = `Rated ${claims.rating} by ${claims.reviewCount} creators`;
 
 function Hero() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [typedText, setTypedText] = useState("");
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const [phase, setPhase] = useState<"typing" | "pause" | "deleting">("typing");
-  const [isFocused, setIsFocused] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handlePrimaryAction = () => {
     track('cta_clicked', { location: 'hero', authenticated: isAuthenticated });
-    if (isAuthenticated) {
-      navigate("/dashboard");
-    } else {
-      navigate("/signup");
-    }
+    navigate(isAuthenticated ? "/dashboard" : primaryCtaPath());
   };
 
   const handleReviewClick = () => {
     document.getElementById("creator-stories")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Typing animation: type 2s, pause 2s, delete 1.5s
-  useEffect(() => {
-    if (isFocused) return;
-    const target = TYPING_PHRASES[phraseIndex];
-    if (phase === "typing") {
-      if (typedText.length < target.length) {
-        const t = setTimeout(() => setTypedText(target.slice(0, typedText.length + 1)), 50);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => setPhase("pause"), 0);
-      return () => clearTimeout(t);
-    }
-    if (phase === "pause") {
-      const t = setTimeout(() => setPhase("deleting"), 2000);
-      return () => clearTimeout(t);
-    }
-    if (phase === "deleting") {
-      if (typedText.length > 0) {
-        const t = setTimeout(() => setTypedText(typedText.slice(0, -1)), 40);
-        return () => clearTimeout(t);
-      }
-      setPhase("typing");
-      setPhraseIndex((phraseIndex + 1) % TYPING_PHRASES.length);
-    }
-  }, [typedText, phraseIndex, phase, isFocused]);
-
-  useEffect(() => {
-    if (!isFocused && phase === "typing") {
-      setTypedText("");
-    }
-  }, [phraseIndex, isFocused]);
-
   return (
     <div
-      className="relative overflow-hidden md:min-h-screen pb-0 max-w-[100vw]"
+      className="relative overflow-hidden md:min-h-screen pb-0 md:pb-[300px] max-w-[100vw]"
       style={{ background: 'transparent' }}
     >
       <div className="relative z-10 max-w-7xl mx-auto px-4 max-md:px-4 pt-4 sm:pt-6 md:pt-8 lg:pt-10">
@@ -95,7 +50,7 @@ function Hero() {
               transition: { duration: 0.3 },
             }}
           >
-            #1 CREATOR TRUSTED SHORT FORM CONTENT TOOL
+            {claims.heroBadge}
           </motion.span>
         </motion.div>
 
@@ -157,54 +112,25 @@ function Hero() {
           </button>
         </motion.div>
 
-        {/* Desktop: input + or + upload — unchanged */}
+        {/* Desktop primary CTA */}
         <motion.div
-          className="hidden md:flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-2xl mx-auto mb-8 px-4"
+          className="hidden md:flex items-center justify-center max-w-2xl mx-auto mb-8 px-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <motion.div
-            className="relative flex-1 w-full max-w-[500px]"
-            onClick={handlePrimaryAction}
-            onFocus={(e) => {
-              e.currentTarget.querySelector("input")?.focus();
-            }}
-            initial={false}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              placeholder={isFocused ? "" : typedText || " "}
-              className="w-full h-[60px] pl-5 pr-5 rounded-xl bg-gray-900/80 border-2 border-white/20 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(34,211,238,0.3)] text-sm sm:text-base cursor-pointer transition-all duration-300"
-              style={{ caretColor: isFocused ? "#22d3ee" : "transparent" }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handlePrimaryAction();
-              }}
-              aria-label="Paste your video link or click to sign up"
-            />
-          </motion.div>
-
-          <span className="text-gray-500 text-sm font-medium animate-pulse" style={{ opacity: 0.6 }}>
-            or
-          </span>
-
           <motion.button
             type="button"
             onClick={handlePrimaryAction}
-            className="flex items-center justify-center gap-2 h-[60px] w-[160px] rounded-xl bg-white text-black font-bold text-sm sm:text-base px-4 cursor-pointer border-0 shadow-lg hover:shadow-xl hover:bg-gray-50 active:bg-gray-100 transition-shadow"
+            className="flex items-center justify-center gap-2 h-[60px] px-8 rounded-xl text-white font-bold text-base cursor-pointer border-0 shadow-lg hover:shadow-xl transition-shadow"
+            style={{
+              background: "linear-gradient(90deg, #FF4757 0%, #FF6B35 50%, #FFA502 100%)",
+            }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
-            aria-label="Upload video, redirects to signup"
           >
             <Upload className="w-5 h-5 flex-shrink-0" aria-hidden />
-            Upload Here
+            Free content analysis
           </motion.button>
         </motion.div>
 
@@ -223,7 +149,7 @@ function Hero() {
             onClick={handleReviewClick}
             className="rating-section flex min-w-0 shrink flex-row flex-nowrap items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
           >
-            <div className="flex shrink-0 items-center justify-center gap-0.5" title="Rated 4.6/5 by 1000+ creators">
+            <div className="flex shrink-0 items-center justify-center gap-0.5" title={RATING_TITLE}>
               {[1, 2, 3, 4].map((star) => (
                 <Star key={star} className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#eab308', fill: '#eab308' }} aria-hidden />
               ))}
@@ -235,8 +161,8 @@ function Hero() {
               </span>
             </div>
             <span className="text-xs leading-tight whitespace-nowrap">
-              <span className="font-medium text-white">4.6/5</span>{" "}
-              <span className="font-normal text-gray-400">based on 1000+ reviews</span>
+              <span className="font-medium text-white">{claims.rating}</span>{" "}
+              <span className="font-normal text-gray-400">based on {claims.reviewCount} reviews</span>
             </span>
           </button>
         </motion.div>
@@ -253,7 +179,7 @@ function Hero() {
             onClick={handleReviewClick}
             className="rating-section order-2 md:order-1 flex flex-col md:flex-row md:flex-wrap md:items-center gap-1 md:gap-1 cursor-pointer hover:opacity-90 transition-opacity text-center md:text-left"
           >
-            <div className="flex items-center justify-center gap-1" title="Rated 4.6/5 by 1000+ creators">
+            <div className="flex items-center justify-center gap-1" title={RATING_TITLE}>
               {[1, 2, 3, 4].map((star) => (
                 <Star key={star} className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: '#eab308', fill: '#eab308' }} aria-hidden />
               ))}
@@ -265,8 +191,8 @@ function Hero() {
               </span>
             </div>
             <span className="text-white font-medium text-xs md:text-sm">
-              <span className="text-white">4.6/5</span>{" "}
-              <span className="text-gray-400 font-normal">based on 1000+ reviews</span>
+              <span className="text-white">{claims.rating}</span>{" "}
+              <span className="text-gray-400 font-normal">based on {claims.reviewCount} reviews</span>
             </span>
           </button>
           <div className="creators-section order-1 md:order-2 flex items-center justify-center gap-3">

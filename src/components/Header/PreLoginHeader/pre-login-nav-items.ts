@@ -1,4 +1,5 @@
 import type { PreLoginNavItem } from "@/types/header";
+import { claims } from "@/content/claims";
 import { FaVideo, FaChartLine, FaYoutube, FaStar, FaSlidersH, FaHeadphones } from "react-icons/fa";
 
 export const navItems: PreLoginNavItem[] = [
@@ -55,5 +56,5 @@ export const navItems: PreLoginNavItem[] = [
     { label: 'Pricing', href: '/pricing' },
     { label: 'FAQs', href: '/frequently-asked-questions' },
     { label: 'Get in touch', href: '/contact' },
-    { label: '119 Free Hooks', href: '/viral-hooks' }
+    { label: `${claims.hookCount} Free Hooks`, href: '/viral-hooks' }
 ];

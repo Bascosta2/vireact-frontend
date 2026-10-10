@@ -1,6 +1,7 @@
 import { Brain, Target, Clock, Users } from 'lucide-react';
 import FeatureCardWrapper from './FeatureCardWrapper';
 import PersonalizedCoachingVisual from './PersonalizedCoachingVisual';
+import { claims } from '@/content/claims';
 
 function CardPersonalizedCoaching({
   isFocused,
@@ -35,15 +36,15 @@ function CardPersonalizedCoaching({
           <ul className="space-y-1.5 mb-6 w-full text-left text-[11px] text-zinc-400" style={{ lineHeight: 1.4 }}>
             <li className="flex items-start gap-2">
               <Target className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" aria-hidden />
-              <span>Fast cuts (0.8–1.2s) work 3.2x better for you</span>
+              <span>{claims.demoWidgets.contentDna[0]}</span>
             </li>
             <li className="flex items-start gap-2">
               <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" aria-hidden />
-              <span>You excel at 2.8s cut frequency</span>
+              <span>{claims.demoWidgets.contentDna[1]}</span>
             </li>
             <li className="flex items-start gap-2">
               <Users className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" aria-hidden />
-              <span>Your audience responds best to &lt;1s opening shots</span>
+              <span>{claims.demoWidgets.contentDna[2]}</span>
             </li>
           </ul>
         </div>

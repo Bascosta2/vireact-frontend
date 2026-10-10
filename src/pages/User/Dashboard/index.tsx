@@ -14,7 +14,7 @@ const steps = [
   {
     step: 1,
     title: 'Upload Your Video',
-    description: 'Drop a file or paste a TikTok, Reel, or Shorts link',
+    description: 'Drop a TikTok, Reel, or Shorts video file',
     benefit: 'Supports MP4, MOV, AVI, MKV • URLs from TikTok, Reels & Shorts',
     href: '/upload',
     navigable: true,
@@ -46,7 +46,7 @@ const steps = [
 ] as const;
 
 const MOBILE_STEP_LABELS: ReadonlyArray<{ title: string; description: string }> = [
-  { title: 'Upload', description: 'Drop a video or paste a link' },
+  { title: 'Upload', description: 'Drop a video file' },
   { title: 'Select features', description: 'Choose what to analyze' },
   { title: 'Analyze', description: 'AI breaks it down frame by frame' },
   { title: 'Review', description: 'Get scores, fixes, and predictions' },

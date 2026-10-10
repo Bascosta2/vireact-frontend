@@ -1,4 +1,4 @@
-import { BrowserRouter } from "react-router-dom"
+import { BrowserRouter, useLocation } from "react-router-dom"
 import { useEffect } from "react"
 import BaseRoutes from '@/routes/index.tsx'
 import { store, type RootState } from "@/redux/store"
@@ -10,7 +10,8 @@ import ScrollToTop from "@/utils/ScrollToTop"
 import { VITE_BACKEND_URL } from "@/constants"
 import { useAuth } from "@/redux/hooks/use-auth"
 import { useSubscription } from "@/redux/hooks/use-subscription"
-import { getAttribution, identifyUser } from "@/lib/analytics"
+import { identify, page } from "@/lib/analytics"
+import { getAttribution } from "@/funnel/attribution"
 import Axios from "@/api"
 
 // Setup auth interceptors
@@ -70,7 +71,7 @@ const AnalyticsIdentity = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
-    identifyUser(userId);
+    identify(userId);
 
     // Covers Google OAuth signups; the backend only writes if nothing is stored yet.
     const attribution = getAttribution();
@@ -81,6 +82,14 @@ const AnalyticsIdentity = () => {
       .catch(() => undefined);
   }, [isAuthenticated, userId, role]);
 
+  return null;
+};
+
+const PageviewTracker = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    page(pathname);
+  }, [pathname]);
   return null;
 };
 
@@ -97,6 +106,7 @@ function App() {
           {/* <StateInitializer> */}
             <SubscriptionBootstrap />
             <AnalyticsIdentity />
+            <PageviewTracker />
             <Toaster
               position="bottom-center"
               toastOptions={{ duration: 4000 }} />

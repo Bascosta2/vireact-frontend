@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Scissors, TrendingUp, Lightbulb } from 'lucide-react';
+import { claims } from '@/content/claims';
 
 type Accent = 'green' | 'pink' | 'blue';
 
@@ -20,14 +21,14 @@ const CARDS: CardData[] = [
     {
         icon: Scissors,
         accent: 'green',
-        heading: '119 PROVEN HOOKS',
+        heading: `${claims.hookCount} PROVEN HOOKS`,
         body: 'Categorized by emotion: suspense, controversy, urgency, surprise, danger, relatability. Copy-paste ready for your next script.',
     },
     {
         icon: TrendingUp,
         accent: 'pink',
         heading: 'THE VIRAL STRUCTURE',
-        body: 'The 6-step storytelling frame behind 200M+ views. Works for personal brand or faceless channels.',
+        body: `The ${claims.storytellingSteps} storytelling frame behind ${claims.viralHooksViews} views. Works for personal brand or faceless channels.`,
     },
     {
         icon: Lightbulb,

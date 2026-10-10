@@ -30,19 +30,26 @@ function WinsSection() {
   useEffect(() => {
     const el = testimonialScrollRef.current;
     if (!el) return;
-    const setMid = () => {
+    // Width of one full set of cards. Looping at a card boundary (not scrollWidth / 2,
+    // which includes the container padding) keeps the first visible card unclipped.
+    const loopPoint = () => {
+      const first = el.children[0] as HTMLElement | undefined;
+      const firstOfCopy = el.children[winsData.length] as HTMLElement | undefined;
+      return first && firstOfCopy ? firstOfCopy.offsetLeft - first.offsetLeft : el.scrollWidth / 2;
+    };
+    const setStart = () => {
       if (el.scrollWidth > el.clientWidth) {
-        el.scrollLeft = el.scrollWidth / 2;
+        el.scrollLeft = loopPoint();
       }
     };
-    setMid();
-    requestAnimationFrame(setMid);
+    setStart();
+    requestAnimationFrame(setStart);
     const id = window.setInterval(() => {
       if (isPausedTestimonial.current) return;
       if (el.scrollWidth <= el.clientWidth) return;
       el.scrollLeft -= 1;
       if (el.scrollLeft <= 0) {
-        el.scrollLeft = el.scrollWidth / 2;
+        el.scrollLeft = loopPoint();
       }
     }, 20);
     return () => window.clearInterval(id);

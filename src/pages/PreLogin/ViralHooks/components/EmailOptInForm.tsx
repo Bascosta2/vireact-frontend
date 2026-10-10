@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { subscribeEmail } from '@/api/subscribe';
 import { EMAIL_REGEX } from '@/constants';
+import { track } from '@/lib/analytics';
 
 interface EmailOptInFormProps {
     /** Distinguishes the above-fold form from the bottom-of-page repeat so each
@@ -16,7 +17,7 @@ interface EmailOptInFormProps {
  * /viral-hooks/thank-you on success. Inline error on failure — never
  * redirects on failure.
  *
- * Visual styling mirrors the homepage hero's "Drop a YouTube Shorts Link"
+ * Visual styling mirrors the homepage hero's former link input
  * input + orange-gradient "Sign up - It's FREE" button so the page feels
  * native to the rest of the site.
  */
@@ -37,6 +38,7 @@ function EmailOptInForm({ formId }: EmailOptInFormProps) {
             return;
         }
 
+        track('cta_clicked', { location: `viral_hooks_optin_${formId}` });
         setIsSubmitting(true);
         try {
             const res = await subscribeEmail(trimmed);

@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
+import { claims } from '@/content/claims';
+import { track } from '@/lib/analytics';
 
 /**
  * /viral-hooks/thank-you
@@ -80,7 +82,7 @@ function ViralHooksThankYouPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
                     >
-                        The 119 hooks + storytelling structure PDF is being delivered to the email you submitted. If you don't see it within a few minutes, check your spam folder.
+                        The {claims.hookCount} hooks + storytelling structure PDF is being delivered to the email you submitted. If you don't see it within a few minutes, check your spam folder.
                     </motion.p>
                 </section>
 
@@ -114,7 +116,7 @@ function ViralHooksThankYouPage() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        The hooks and structure in that PDF are what I scored my own videos against to find the patterns that worked. I built Vireact to do that scoring automatically. Paste a YouTube Short or upload a clip and it tells you whether the hook lands, where retention will drop, and exactly what to fix. Two free uploads, no credit card.
+                        The hooks and structure in that PDF are what I scored my own videos against to find the patterns that worked. I built Vireact to do that scoring automatically. Upload a clip and it tells you whether the hook lands, where retention will drop, and exactly what to fix. {claims.freeOffer}
                     </motion.p>
 
                     {/* Large, prominent gradient button — the only place app is hard-pitched */}
@@ -127,6 +129,7 @@ function ViralHooksThankYouPage() {
                     >
                         <Link
                             to="/"
+                            onClick={() => track('cta_clicked', { location: 'viral_hooks_thank_you' })}
                             className="btn-primary btn-primary-hero-nav relative overflow-hidden inline-flex items-center justify-center h-14 md:h-16 px-8 md:px-10 text-base md:text-lg"
                         >
                             Try Vireact free →
@@ -135,7 +138,7 @@ function ViralHooksThankYouPage() {
 
                     {/* Trust line */}
                     <div className="flex flex-row flex-wrap items-center justify-center gap-2 text-xs md:text-sm text-gray-400">
-                        <span>Used by 1,000+ creators.</span>
+                        <span>Used by {claims.creatorCount.toLocaleString()}+ creators.</span>
                         <span className="inline-flex items-center gap-1">
                             <span className="inline-flex items-center" aria-hidden>
                                 {[1, 2, 3, 4].map((s) => (
@@ -148,7 +151,7 @@ function ViralHooksThankYouPage() {
                                     </span>
                                 </span>
                             </span>
-                            <span>4.6/5 rating.</span>
+                            <span>{claims.rating} rating.</span>
                         </span>
                     </div>
                 </section>

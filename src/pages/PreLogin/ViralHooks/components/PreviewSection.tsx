@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText } from 'lucide-react';
+import { claims } from '@/content/claims';
 
 /**
  * Single blurred / partial-page preview of the PDF. The actual asset is a
@@ -34,7 +35,7 @@ function PreviewSection() {
                     {!imageFailed ? (
                         <img
                             src="/pdf-preview.png"
-                            alt="Preview of page 5 of the 119 Viral Hooks PDF"
+                            alt={`Preview of page 5 of the ${claims.hookCount} Viral Hooks PDF`}
                             className="block w-full h-auto object-cover"
                             style={{ filter: 'blur(0.6px)' }}
                             onError={() => setImageFailed(true)}

@@ -1,6 +1,7 @@
 import { TrendingUp } from 'lucide-react';
 import FeatureCardWrapper from './FeatureCardWrapper';
 import ViralityRangeWidget from './ViralityRangeWidget';
+import { claims } from '@/content/claims';
 
 function CardViralityPrediction({
   isFocused,
@@ -35,7 +36,7 @@ function CardViralityPrediction({
 
         <div className="flex-shrink-0">
           <p className="text-sm text-zinc-400 leading-relaxed text-left w-full mb-3" style={{ lineHeight: 1.5 }}>
-            AI benchmarks your content against 15M+ similar videos to predict your view range before you post. Our model is trained on short form videos across TikTok, Reels, and Shorts. You get a confidence scored range of conservative, expected, and optimistic before you hit post.
+            AI benchmarks your content against {claims.similarVideosCount} similar videos to predict your view range before you post. Our model is trained on short form videos across TikTok, Reels, and Shorts. You get a confidence scored range of conservative, expected, and optimistic before you hit post.
           </p>
         </div>
 

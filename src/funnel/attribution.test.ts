@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAttribution } from './analytics';
+import { parseAttribution } from './attribution';
 
 const HOST = 'vireact.io';
 
@@ -17,6 +17,13 @@ describe('parseAttribution', () => {
       utm_campaign: 'launch',
       referrer: 'www.tiktok.com',
       landing_path: '/pricing',
+    });
+  });
+
+  it('captures a ref code on its own', () => {
+    expect(parseAttribution('?ref=creator42', '', '/viral-hooks', HOST)).toEqual({
+      ref: 'creator42',
+      landing_path: '/viral-hooks',
     });
   });
 

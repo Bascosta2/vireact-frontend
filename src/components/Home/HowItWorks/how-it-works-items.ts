@@ -14,7 +14,7 @@ export  const howItWorksSteps: HowItWorksStep[] = [
         id: 1,
         icon: IoCloudUpload,
         title: "Upload A Video",
-        description: "Drop your video file or share a link from TikTok, YouTube Shorts, Instagram, or Facebook."
+        description: "Upload your short video file (5–60s) from TikTok, YouTube Shorts, Instagram, or Facebook."
     },
     {
         id: 2,

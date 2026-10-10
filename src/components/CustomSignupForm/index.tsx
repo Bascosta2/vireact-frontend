@@ -9,7 +9,8 @@ import { useUser } from '@/redux/hooks/use-user';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { isProviderConflictError } from '@/utils/authHelpers';
 import { VITE_BACKEND_URL } from '@/constants';
-import { getAttribution, track } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
+import { getAttribution } from '@/funnel/attribution';
 
 interface CustomSignupFormProps {
   onSuccess?: () => void;

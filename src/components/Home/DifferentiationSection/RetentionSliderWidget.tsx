@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { claims } from '@/content/claims';
 
-const ACTIONABLE_FIX_ROTATION = [
-  '✂  Cut your intro from 4s → 1.5s for +31% retention',
-  '🎵  Background music too loud at 0:07 — lower by 40%',
-  '📌  Add caption at 0:03 — viewers drop off without text',
-] as const;
+const ACTIONABLE_FIX_ROTATION = claims.demoWidgets.actionableFixes;
 
 export type RetentionSliderWidgetProps = {
   className?: string;

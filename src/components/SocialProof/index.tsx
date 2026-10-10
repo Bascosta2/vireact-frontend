@@ -1,4 +1,5 @@
 import React from 'react';
+import { claims } from '@/content/claims';
 import { 
     SiIheartradio, 
     SiNvidia, 
@@ -191,11 +192,11 @@ const SocialProof: React.FC<SocialProofProps> = ({ className = '' }) => {
             <div className="mb-12 text-center">
             <div className="inline-flex items-center px-6 py-2 bg-gray bg-dark-primary border border-green-500 rounded-full mb-4">
                     <span className="text-sm text-green-500 uppercase">
-                        #1 AI short form content tool
+                        {claims.authBadge}
                     </span>
                 </div>
                 <h2 className="text-5xl font-bold text-white leading-tight">
-                    Trusted by 10K+ creators and businesses worldwide
+                    {claims.authHeadline}
                 </h2>
             </div>
 

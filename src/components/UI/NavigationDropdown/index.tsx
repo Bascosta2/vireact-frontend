@@ -1,5 +1,5 @@
     import React, { useEffect, useRef } from 'react';
-    import { NavLink } from 'react-router-dom';
+    import { NavLink, useLocation } from 'react-router-dom';
 
     export interface DropdownItem {
         id: number;
@@ -45,6 +45,22 @@
             };
         }, [isOpen, onClose]);
 
+        // Close on route change and on scroll so the menu never sits over page content.
+        const { pathname } = useLocation();
+        const openedAtPath = useRef(pathname);
+        useEffect(() => {
+            if (isOpen) openedAtPath.current = pathname;
+        }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+        useEffect(() => {
+            if (isOpen && pathname !== openedAtPath.current) onClose();
+        }, [pathname, isOpen, onClose]);
+        useEffect(() => {
+            if (!isOpen) return;
+            const handleScroll = () => onClose();
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            return () => window.removeEventListener('scroll', handleScroll);
+        }, [isOpen, onClose]);
+
         // Close dropdown on escape key
         useEffect(() => {
             function handleEscapeKey(event: KeyboardEvent) {
@@ -70,11 +86,11 @@
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
                 className={`
-                    absolute top-[140%] -left-12 mt-2 
-                    w-[380px] sm:w-[580px] lg:w-[700px]
+                    absolute top-full -left-12 mt-3
+                    w-[380px] sm:w-[580px] lg:w-[700px] max-w-[calc(100vw-2rem)]
                     bg-[#1a1a1a] backdrop-blur-3xl border border-white/10 
                     rounded-2xl shadow-2xl 
-                    z-50
+                    z-[60]
                     ${className}
                 `}
             >   

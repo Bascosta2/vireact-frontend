@@ -1,24 +1,25 @@
 import { IoVolumeHigh, IoMusicalNote, IoTrendingUp, IoCheckmarkCircle } from "react-icons/io5";
+import { claims } from "@/content/claims";
 
 export const audioStats = [
     {
         Icon: IoVolumeHigh,
-        achievement: "90%",
+        achievement: claims.featureStats.audioInsight[0],
         subheading: "Audio Quality Score"
     },
     {
         Icon: IoMusicalNote,
-        achievement: "3X",
+        achievement: claims.featureStats.audioInsight[1],
         subheading: "Better Sound Clarity"
     },
     {
         Icon: IoTrendingUp,
-        achievement: "85%",
+        achievement: claims.featureStats.audioInsight[2],
         subheading: "Engagement Boost"
     },
     {
         Icon: IoCheckmarkCircle,
-        achievement: "95%",
+        achievement: claims.featureStats.audioInsight[3],
         subheading: "Audio Optimization"
     }
 ]

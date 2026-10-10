@@ -1,10 +1,14 @@
 import { cn } from '@/lib/utils';
+import { claims } from '@/content/claims';
 
-export const VIRALITY_SCENARIOS = [
-  { label: 'Conservative', range: '45–65K', prob: '15%', color: 'text-yellow-400', bg: 'bg-yellow-500/8' },
-  { label: 'Expected', range: '75–95K', prob: '89%', color: 'text-blue-400', bg: 'bg-blue-500/8' },
-  { label: 'Optimistic', range: '150–180K', prob: '35%', color: 'text-green-400', bg: 'bg-green-500/8' },
+const DEMO = claims.demoWidgets.virality;
+const SCENARIO_STYLES = [
+  { color: 'text-yellow-400', bg: 'bg-yellow-500/8' },
+  { color: 'text-blue-400', bg: 'bg-blue-500/8' },
+  { color: 'text-green-400', bg: 'bg-green-500/8' },
 ] as const;
+
+const VIRALITY_SCENARIOS = DEMO.scenarios.map((s, i) => ({ ...s, ...SCENARIO_STYLES[i] }));
 
 export type ViralityRangeWidgetProps = {
   className?: string;
@@ -22,12 +26,12 @@ function ViralityRangeWidget({
   return (
     <div className={cn('mt-3 mb-2', className)}>
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[10px] text-zinc-600">45K</span>
+        <span className="text-[10px] text-zinc-600">{DEMO.low}</span>
         <div className="text-center">
-          <span className="text-xl font-bold text-white">110K</span>
+          <span className="text-xl font-bold text-white">{DEMO.expected}</span>
           <span className="text-[10px] text-zinc-400 ml-1">expected</span>
         </div>
-        <span className="text-[10px] text-zinc-600">180K</span>
+        <span className="text-[10px] text-zinc-600">{DEMO.high}</span>
       </div>
       <div className="relative h-1.5 rounded-full bg-white/[0.06]">
         <div
@@ -45,7 +49,7 @@ function ViralityRangeWidget({
       </div>
       {!hideConfidenceSummary ? (
         <p className="text-[10px] text-zinc-500">
-          89% Confidence · 15.2M similar videos · Top 12% in niche
+          {DEMO.summary}
         </p>
       ) : null}
       {!hideScenarioBreakdown ? (

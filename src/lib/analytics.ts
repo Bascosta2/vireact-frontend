@@ -1,4 +1,5 @@
-import posthog from 'posthog-js';
+import type { PostHog } from 'posthog-js';
+import { getAttribution } from '@/funnel/attribution';
 
 export type AnalyticsEvent =
   | 'landing_viewed'
@@ -9,101 +10,45 @@ export type AnalyticsEvent =
   | 'pricing_viewed'
   | 'checkout_started';
 
-export type CtaLocation = 'hero' | 'header' | 'pricing' | 'upload_cta';
+const MAX_QUEUED_CALLS = 100;
 
-export interface Attribution {
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  utm_term?: string;
-  utm_content?: string;
-  referrer?: string;
-  landing_path?: string;
-  captured_at?: string;
-}
+let client: PostHog | null = null;
+let loading: Promise<PostHog | null> | null = null;
+const queue: Array<(posthog: PostHog) => void> = [];
 
-export const ATTRIBUTION_STORAGE_KEY = 'vireact_attribution';
-const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const;
-const MAX_FIELD_LENGTH = 200;
+const posthogKey = (): string | undefined =>
+  (import.meta.env.VITE_POSTHOG_KEY as string | undefined) || undefined;
 
-let initialized = false;
-
-const clip = (value: string | null | undefined): string | undefined => {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, MAX_FIELD_LENGTH) : undefined;
-};
-
-/** External referrer host only; same-site and empty referrers are dropped. */
-const referrerHost = (referrer: string, currentHost: string): string | undefined => {
-  if (!referrer) return undefined;
-  try {
-    const host = new URL(referrer).hostname;
-    return host && host !== currentHost ? clip(host) : undefined;
-  } catch {
-    return undefined;
+/** Runs now if PostHog is loaded, queues while it loads, and drops calls when analytics is off. */
+const withClient = (fn: (posthog: PostHog) => void): void => {
+  if (client) {
+    fn(client);
+    return;
   }
+  if (loading && queue.length < MAX_QUEUED_CALLS) queue.push(fn);
 };
 
-export const parseAttribution = (
-  search: string,
-  referrer: string,
-  pathname: string,
-  currentHost: string
-): Attribution | null => {
-  const params = new URLSearchParams(search);
-  const result: Attribution = {};
-  for (const key of UTM_KEYS) {
-    const value = clip(params.get(key));
-    if (value) result[key] = value;
-  }
-  const ref = referrerHost(referrer, currentHost);
-  if (ref) result.referrer = ref;
-  if (Object.keys(result).length === 0) return null;
-  result.landing_path = clip(pathname);
-  return result;
-};
-
-/** First-touch: an existing stored attribution is never overwritten. */
-export const captureAttribution = (): void => {
-  if (typeof window === 'undefined') return;
-  try {
-    if (localStorage.getItem(ATTRIBUTION_STORAGE_KEY)) return;
-    const parsed = parseAttribution(
-      window.location.search,
-      document.referrer,
-      window.location.pathname,
-      window.location.hostname
-    );
-    if (!parsed) return;
-    parsed.captured_at = new Date().toISOString();
-    localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(parsed));
-  } catch {
-    // Storage may be unavailable (private mode); attribution is best-effort.
-  }
-};
-
-export const getAttribution = (): Attribution | null => {
-  try {
-    const raw = localStorage.getItem(ATTRIBUTION_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Attribution) : null;
-  } catch {
-    return null;
-  }
-};
-
+/** Lazy-loads posthog-js only when VITE_POSTHOG_KEY is set; otherwise every call is a no-op. */
 export const initAnalytics = (): void => {
-  if (initialized || typeof window === 'undefined') return;
-  const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-  if (!key) return;
-  posthog.init(key, {
-    api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
-    person_profiles: 'identified_only',
-    autocapture: false,
-    capture_pageview: 'history_change',
-    disable_session_recording: true,
-  });
-  initialized = true;
+  const key = posthogKey();
+  if (loading || typeof window === 'undefined' || !key) return;
+  loading = import('posthog-js')
+    .then(({ default: posthog }) => {
+      posthog.init(key, {
+        api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
+        person_profiles: 'identified_only',
+        autocapture: false,
+        capture_pageview: false,
+        disable_session_recording: true,
+      });
+      client = posthog;
+      queue.splice(0).forEach((fn) => fn(posthog));
+      return posthog;
+    })
+    .catch(() => {
+      queue.length = 0;
+      return null;
+    });
 };
 
 /** Pass `beforeUnload: true` when a full page navigation follows immediately. */
@@ -112,23 +57,36 @@ export const track = (
   properties: Record<string, unknown> = {},
   options: { beforeUnload?: boolean } = {}
 ): void => {
-  if (!initialized) return;
-  posthog.capture(
-    event,
-    properties,
-    options.beforeUnload ? { transport: 'sendBeacon', send_instantly: true } : undefined
+  withClient((posthog) =>
+    posthog.capture(
+      event,
+      properties,
+      options.beforeUnload ? { transport: 'sendBeacon', send_instantly: true } : undefined
+    )
   );
 };
 
+/** Pageview for the current route; called on every route change. */
+export const page = (path: string = typeof window === 'undefined' ? '' : window.location.pathname): void => {
+  withClient((posthog) => posthog.capture('$pageview', { path }));
+};
+
 /** Identify by internal user id only; never pass email or name. */
-export const identifyUser = (userId: string | null | undefined): void => {
-  if (!initialized || !userId) return;
-  if (posthog.get_distinct_id() === userId) return;
-  const attribution = getAttribution();
-  posthog.identify(userId, undefined, attribution ? { initial_attribution: attribution } : undefined);
+export const identify = (userId: string | null | undefined): void => {
+  if (!userId) return;
+  withClient((posthog) => {
+    if (posthog.get_distinct_id() === userId) return;
+    const attribution = getAttribution();
+    posthog.identify(userId, undefined, attribution ? { initial_attribution: attribution } : undefined);
+  });
+};
+
+/** Links an earlier anonymous id (e.g. a funnel session id) to the current distinct id. */
+export const alias = (aliasId: string | null | undefined): void => {
+  if (!aliasId) return;
+  withClient((posthog) => posthog.alias(aliasId));
 };
 
 export const resetAnalytics = (): void => {
-  if (!initialized) return;
-  posthog.reset();
+  withClient((posthog) => posthog.reset());
 };

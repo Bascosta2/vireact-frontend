@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { captureAttribution, initAnalytics } from './lib/analytics'
+import { initAnalytics } from './lib/analytics'
+import { captureAttribution } from './funnel/attribution'
 
 captureAttribution()
 initAnalytics()

@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import HeroAvatarStack from '@/components/Home/HeroAvatarStack';
+import { claims } from '@/content/claims';
 
 /**
  * Reuses the homepage hero's social-proof pattern (4 solid + 1 partial star,
- * avatar stack, "Used by 1,000+ creators"). Two layouts: a tight mobile
+ * avatar stack, creator count). Two layouts: a tight mobile
  * column and the wider row on md+.
  */
 function SocialProofRow() {
@@ -21,7 +22,7 @@ function SocialProofRow() {
                     <HeroAvatarStack variant="heroMobileCompact" />
                 </div>
                 <div className="rating-section flex min-w-0 shrink flex-row flex-nowrap items-center justify-center gap-3">
-                    <div className="flex shrink-0 items-center justify-center gap-0.5" title="Rated 4.6/5 by 1000+ creators">
+                    <div className="flex shrink-0 items-center justify-center gap-0.5" title={`Rated ${claims.rating} by ${claims.reviewCount} creators`}>
                         {[1, 2, 3, 4].map((star) => (
                             <Star
                                 key={star}
@@ -38,8 +39,8 @@ function SocialProofRow() {
                         </span>
                     </div>
                     <span className="text-xs leading-tight whitespace-nowrap">
-                        <span className="font-medium text-white">4.6/5</span>{' '}
-                        <span className="font-normal text-gray-400">based on 1000+ reviews</span>
+                        <span className="font-medium text-white">{claims.rating}</span>{' '}
+                        <span className="font-normal text-gray-400">based on {claims.reviewCount} reviews</span>
                     </span>
                 </div>
             </motion.div>
@@ -52,7 +53,7 @@ function SocialProofRow() {
                 transition={{ duration: 0.5, delay: 0.4 }}
             >
                 <div className="rating-section flex flex-row flex-wrap items-center gap-1">
-                    <div className="flex items-center justify-center gap-1" title="Rated 4.6/5 by 1000+ creators">
+                    <div className="flex items-center justify-center gap-1" title={`Rated ${claims.rating} by ${claims.reviewCount} creators`}>
                         {[1, 2, 3, 4].map((star) => (
                             <Star
                                 key={star}
@@ -72,8 +73,8 @@ function SocialProofRow() {
                         </span>
                     </div>
                     <span className="text-white font-medium text-xs md:text-sm">
-                        <span className="text-white">4.6/5</span>{' '}
-                        <span className="text-gray-400 font-normal">based on 1000+ reviews</span>
+                        <span className="text-white">{claims.rating}</span>{' '}
+                        <span className="text-gray-400 font-normal">based on {claims.reviewCount} reviews</span>
                     </span>
                 </div>
                 <div className="creators-section flex items-center justify-center gap-3">

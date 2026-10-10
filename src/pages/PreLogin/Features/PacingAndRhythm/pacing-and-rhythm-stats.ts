@@ -1,24 +1,25 @@
 import { IoPlay, IoTime, IoTrendingUp, IoCheckmarkCircle } from "react-icons/io5";
+import { claims } from "@/content/claims";
 
 export const flowStats = [
     {
         Icon: IoPlay,
-        achievement: "85%",
+        achievement: claims.featureStats.pacingAndRhythm[0],
         subheading: "Flow Quality Score"
     },
     {
         Icon: IoTime,
-        achievement: "3X",
+        achievement: claims.featureStats.pacingAndRhythm[1],
         subheading: "Better Retention"
     },
     {
         Icon: IoTrendingUp,
-        achievement: "90%",
+        achievement: claims.featureStats.pacingAndRhythm[2],
         subheading: "Viewer Engagement"
     },
     {
         Icon: IoCheckmarkCircle,
-        achievement: "88%",
+        achievement: claims.featureStats.pacingAndRhythm[3],
         subheading: "Content Flow"
     }
 ]

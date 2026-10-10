@@ -5,13 +5,15 @@ import EmailOptInForm from './components/EmailOptInForm';
 import SocialProofRow from './components/SocialProofRow';
 import InsideCards from './components/InsideCards';
 import PreviewSection from './components/PreviewSection';
+import { claims } from '@/content/claims';
+import { track } from '@/lib/analytics';
 
 /**
- * /viral-hooks — focused single-offer lead-gen page for the 119 Viral Hooks
+ * /viral-hooks — focused single-offer lead-gen page for the Viral Hooks
  * PDF.
  *
  * Audience: pre-warmed DM traffic (users who commented "free resources" on
- * social posts) plus general site visitors via the "119 Free Hooks" nav link.
+ * social posts) plus general site visitors via the "Free Hooks" nav link.
  *
  * Cold traffic still lands on the homepage, not here.
  *
@@ -57,7 +59,7 @@ function ViralHooksPage() {
                                     boxShadow: '0 0 15px rgba(74, 222, 128, 0.3)',
                                 }}
                             >
-                                FREE PDF — NO SIGN-UP, NO PAYWALL
+                                {claims.viralHooksBadge}
                             </span>
                         </motion.div>
 
@@ -82,7 +84,7 @@ function ViralHooksPage() {
                                     backgroundClip: 'text',
                                 }}
                             >
-                                119 VIRAL HOOKS THAT GOT 200M+ VIEWS IN A YEAR
+                                {claims.hookCount} VIRAL HOOKS THAT GOT {claims.viralHooksViews} VIEWS IN A YEAR
                             </span>
                         </motion.h1>
 
@@ -94,7 +96,7 @@ function ViralHooksPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.2 }}
                         >
-                            The exact hooks, storytelling structure, and plot-twist formula behind every short. Drops to your inbox in 10 seconds.
+                            The exact hooks, storytelling structure, and plot-twist formula behind every short. Drops to your inbox in {claims.pdfDeliveryTime}.
                         </motion.p>
 
                         {/* Email opt-in */}
@@ -121,6 +123,7 @@ function ViralHooksPage() {
                         Want the framework applied automatically? Vireact scores your videos against this exact structure.{' '}
                         <Link
                             to="/"
+                            onClick={() => track('cta_clicked', { location: 'viral_hooks_app_link' })}
                             className="text-gray-200 underline underline-offset-4 decoration-gray-500 hover:text-white hover:decoration-white transition-colors"
                         >
                             See how it works →
@@ -142,7 +145,7 @@ function ViralHooksPage() {
                             Get the PDF now
                         </h2>
                         <p className="text-sm text-gray-400 mt-2">
-                            Drops to your inbox in 10 seconds.
+                            Drops to your inbox in {claims.pdfDeliveryTime}.
                         </p>
                     </div>
                     <EmailOptInForm formId="bottom" />

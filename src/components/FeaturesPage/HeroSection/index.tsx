@@ -30,17 +30,7 @@ function HeroSection({ badge = "Your Shortcut to Viral Content", heading = "Turn
                 {description}
             </p>
 
-            <UploadCTA />
-
-            {/* Rating */}
-            {/* <div className="flex items-center justify-center gap-3 mb-8">
-                    <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                            <FaStar key={i} className="w-5 h-5 text-gray-400" />
-                        ))}
-                    </div>
-                    <span className="text-sm text-gray-300">4.9/5 based on 1000+ reviews</span>
-                </div> */}
+            <UploadCTA location="features_hero" />
         </div>
     )
 }

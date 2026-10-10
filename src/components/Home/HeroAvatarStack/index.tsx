@@ -1,6 +1,7 @@
 import { useState, useEffect, cloneElement } from 'react';
 import type { ReactNode } from 'react';
 import { profileData } from '@/components/FeaturesPage/CreatorsAndBusinesses/profile-data';
+import { claims } from '@/content/claims';
 
 const AVATAR_COUNT = 5;
 
@@ -9,22 +10,25 @@ export type HeroAvatarStackProps = {
   variant?: 'default' | 'heroMobileCompact';
 };
 
+const BASE_COUNT = claims.creatorCount;
+const HOVER_MAX = claims.creatorCountHoverMax;
+
 function HeroAvatarStack({ variant = 'default' }: HeroAvatarStackProps): ReactNode {
-  const [counter, setCounter] = useState(1000);
+  const [counter, setCounter] = useState<number>(BASE_COUNT);
   const [hoverStack, setHoverStack] = useState(false);
 
   useEffect(() => {
     if (!hoverStack) {
-      setCounter(1000);
+      setCounter(BASE_COUNT);
       return;
     }
     const id = setInterval(() => {
-      setCounter((c) => (c >= 1247 ? 1000 : c + 25));
+      setCounter((c) => (c >= HOVER_MAX ? BASE_COUNT : c + 25));
     }, 40);
     return () => clearInterval(id);
   }, [hoverStack]);
 
-  const displayCount = hoverStack ? counter : 1000;
+  const displayCount = hoverStack ? counter : BASE_COUNT;
   const compact = true; // compact layout for hero
   const isMobileCompact = variant === 'heroMobileCompact';
 
@@ -42,7 +46,7 @@ function HeroAvatarStack({ variant = 'default' }: HeroAvatarStackProps): ReactNo
       className={`flex items-center shrink-0 transition-[gap] duration-300 ${hoverStack ? gapWhenHover : overlap}`}
       onMouseEnter={() => setHoverStack(true)}
       onMouseLeave={() => setHoverStack(false)}
-      title="Join 1,000+ creators"
+      title={`Join ${BASE_COUNT.toLocaleString()}+ creators`}
     >
       {profileData.slice(0, AVATAR_COUNT).map((profile) => (
         <div

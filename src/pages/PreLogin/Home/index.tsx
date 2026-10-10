@@ -4,7 +4,6 @@ import HeroSection from '@/components/Home/HeroSection';
 import DifferentiationSection from '@/components/Home/DifferentiationSection';
 import WinsSection from '@/components/Home/WinsSection';
 import ViralPredictionsSection from '@/components/Home/ViralPredictionsSection';
-import FeaturesSection from '@/components/Home/FeaturesSection';
 import HowItWorksSection from '@/components/Home/HowItWorks';
 import WhyChooseUsSection from '@/components/Home/WhyChooseUsSection';
 import FAQSection from '@/components/Home/FAQSection';
@@ -70,7 +69,6 @@ function Home() {
 
                 <section style={{ background: 'transparent' }}>
                     <HowItWorksSection />
-                    <FeaturesSection />
                     <WhyChooseUsSection />
                     <FAQSection />
                 </section>

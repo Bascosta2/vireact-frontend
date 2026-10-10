@@ -1,24 +1,25 @@
 import { IoText, IoEye, IoThumbsUp, IoCheckmarkCircle } from "react-icons/io5";
+import { claims } from "@/content/claims";
 
 export const captionStats = [
     {
         Icon: IoText,
-        achievement: "80%",
+        achievement: claims.featureStats.captionClarity[0],
         subheading: "Caption Clarity Score"
     },
     {
         Icon: IoEye,
-        achievement: "2.5X",
+        achievement: claims.featureStats.captionClarity[1],
         subheading: "More Views"
     },
     {
         Icon: IoThumbsUp,
-        achievement: "70%",
+        achievement: claims.featureStats.captionClarity[2],
         subheading: "Higher Engagement"
     },
     {
         Icon: IoCheckmarkCircle,
-        achievement: "92%",
+        achievement: claims.featureStats.captionClarity[3],
         subheading: "Caption Optimization"
     }
 ]

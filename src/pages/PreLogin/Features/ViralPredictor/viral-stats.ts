@@ -1,24 +1,25 @@
 import { IoChatbubble, IoBarChart, IoTimer, IoCheckmarkCircle } from "react-icons/io5";
+import { claims } from "@/content/claims";
 
 export const viralStats = [
     {
         Icon: IoChatbubble,
-        achievement: "75%",
+        achievement: claims.featureStats.viralPredictor[0],
         subheading: "Better Engagement"
     },
     {
         Icon: IoBarChart,
-        achievement: "2X",
+        achievement: claims.featureStats.viralPredictor[1],
         subheading: "Higher Viral Potential"
     },
     {
         Icon: IoTimer,
-        achievement: "1MIN",
+        achievement: claims.featureStats.viralPredictor[2],
         subheading: "Instant Insights"
     },
     {
         Icon: IoCheckmarkCircle,
-        achievement: "99%",
+        achievement: claims.featureStats.viralPredictor[3],
         subheading: "Accurate AI Feedback"
     }
 ]
