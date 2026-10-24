@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { VITE_GOOGLE_CLIENT_ID } from '@/constants';
-import Axios from '@/api';
+import { googleAuthUrl } from '@/funnel/google-auth';
 
 interface GoogleOneTapProps {
   onSuccess?: () => void;
@@ -27,11 +27,7 @@ function GoogleOneTap({
   const divRef = useRef<HTMLDivElement>(null);
 
   const handleGoogleAuth = () => {
-    const currentUrl = window.location.href;
-    const redirectUrl = encodeURIComponent(currentUrl);
-    
-    // Redirect to your backend's Google OAuth endpoint
-    window.location.href = `${Axios.defaults.baseURL}/auth/google?redirect=${redirectUrl}`;
+    window.location.href = googleAuthUrl(window.location.href);
   };
 
   useEffect(() => {
@@ -71,11 +67,7 @@ function GoogleOneTap({
       try {
         // Since your backend uses OAuth flow, we'll redirect to the OAuth endpoint
         // The backend will handle the authentication and redirect back to the callback
-        const currentUrl = window.location.href;
-        const redirectUrl = encodeURIComponent(currentUrl);
-        
-        // Redirect to your backend's Google OAuth endpoint
-        window.location.href = `${Axios.defaults.baseURL}/auth/google?redirect=${redirectUrl}`;
+        window.location.href = googleAuthUrl(window.location.href);
 
         // Call success callback if provided
         if (onSuccess) {

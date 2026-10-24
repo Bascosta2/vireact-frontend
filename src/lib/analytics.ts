@@ -8,7 +8,15 @@ export type AnalyticsEvent =
   | 'signup_completed'
   | 'login_completed'
   | 'pricing_viewed'
-  | 'checkout_started';
+  | 'checkout_started'
+  | 'quiz_started'
+  | 'quiz_step_answered'
+  | 'quiz_completed'
+  | 'results_viewed'
+  | 'hook_copied'
+  | 'hook_rewrite_used'
+  | 'results_email_captured'
+  | 'book_call_clicked';
 
 const MAX_QUEUED_CALLS = 100;
 

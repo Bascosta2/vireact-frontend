@@ -4,6 +4,9 @@ import { useAuth } from '@/redux/hooks/use-auth';
 import { useUser } from '@/redux/hooks/use-user';
 import Axios from '@/api';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
+import { track } from '@/lib/analytics';
+import { isFunnelV2Enabled } from '@/funnel/cta';
+import { safePostAuthPath } from '@/funnel/redirect';
 
 type Options = {
     redirectOnSuccess?: string;
@@ -43,6 +46,15 @@ export const useOAuthHydration = (opts: Options = {}) => {
         const authStatus = params.get('auth');
         const dataParam = params.get('data');
         const errorParam = params.get('error');
+        // Set by the backend Google callback: `new=1` for a just-created account,
+        // `next` for the funnel post-auth destination (only when Funnel V2 is on).
+        const isNewGoogleUser = params.get('new') === '1';
+        const successPath = isFunnelV2Enabled()
+            ? safePostAuthPath(params.get('next'), redirectOnSuccess)
+            : redirectOnSuccess;
+        const trackGoogleAuth = () => {
+            track(isNewGoogleUser ? 'signup_completed' : 'login_completed', { method: 'google' });
+        };
 
         if (!authStatus && !errorParam) return;
         ran.current = true;
@@ -127,9 +139,10 @@ export const useOAuthHydration = (opts: Options = {}) => {
             }
             try {
                 await hydrateViaCookie();
+                trackGoogleAuth();
                 stripQuery();
                 if (showToastOnSuccess) SuccessNotification('Login successful!');
-                navigate(redirectOnSuccess, { replace: true });
+                navigate(successPath, { replace: true });
             } catch (e) {
                 console.error('[OAuth] cookie hydration failed', e);
                 ErrorNotification('Login failed. Please try again.');

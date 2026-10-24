@@ -10,8 +10,10 @@ import ScrollToTop from "@/utils/ScrollToTop"
 import { VITE_BACKEND_URL } from "@/constants"
 import { useAuth } from "@/redux/hooks/use-auth"
 import { useSubscription } from "@/redux/hooks/use-subscription"
-import { identify, page } from "@/lib/analytics"
+import { alias, identify, page } from "@/lib/analytics"
 import { getAttribution } from "@/funnel/attribution"
+import { isFunnelV2Enabled } from "@/funnel/cta"
+import { getFunnelSessionId, markAliased } from "@/funnel/session"
 import Axios from "@/api"
 
 // Setup auth interceptors
@@ -72,6 +74,10 @@ const AnalyticsIdentity = () => {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
     identify(userId);
+
+    // Merge the anonymous quiz session's events into this user (once per session id).
+    const funnelSessionId = isFunnelV2Enabled() && role === "user" ? getFunnelSessionId() : null;
+    if (funnelSessionId && markAliased(funnelSessionId)) alias(funnelSessionId);
 
     // Covers Google OAuth signups; the backend only writes if nothing is stored yet.
     const attribution = getAttribution();

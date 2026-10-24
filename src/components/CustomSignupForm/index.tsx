@@ -11,6 +11,15 @@ import { isProviderConflictError } from '@/utils/authHelpers';
 import { VITE_BACKEND_URL } from '@/constants';
 import { track } from '@/lib/analytics';
 import { getAttribution } from '@/funnel/attribution';
+import { isFunnelV2Enabled } from '@/funnel/cta';
+import { getFunnelSessionId } from '@/funnel/session';
+import { resolvePostAuthPath } from '@/hooks/useFunnelRedirect';
+
+/** Quiz session to link on signup/login; only sent when Funnel V2 is on. */
+const funnelLinkBody = (): { funnelSessionId?: string } => {
+  const funnelSessionId = isFunnelV2Enabled() ? getFunnelSessionId() : null;
+  return funnelSessionId ? { funnelSessionId } : {};
+};
 
 interface CustomSignupFormProps {
   onSuccess?: () => void;
@@ -68,7 +77,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         const response = await Axios.post('/auth/login', {
           email: values.email,
           password: values.password,
-          role: 'user'
+          role: 'user',
+          ...funnelLinkBody()
         });
 
         if (response.data.success) {
@@ -109,8 +119,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
             onSuccess();
           }
           
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
+          window.location.href = await resolvePostAuthPath('/dashboard');
         }
       } else {
         // Handle signup
@@ -121,7 +130,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
           email: values.email,
           password: values.password,
           role: 'user',
-          ...(attribution ? { attribution } : {})
+          ...(attribution ? { attribution } : {}),
+          ...funnelLinkBody()
         });
 
         if (response.data.success) {
