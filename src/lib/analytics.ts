@@ -4,6 +4,8 @@ import { getAttribution } from '@/funnel/attribution';
 export type AnalyticsEvent =
   | 'landing_viewed'
   | 'cta_clicked'
+  | 'section_viewed'
+  | 'faq_opened'
   | 'signup_started'
   | 'signup_completed'
   | 'login_completed'

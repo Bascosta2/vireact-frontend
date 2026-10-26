@@ -33,6 +33,46 @@ export const claims = {
   authBadge: '#1 AI short form content tool',
   authHeadline: 'Trusted by 10K+ creators and businesses worldwide',
 
+  // ── Landing V3 (founder-led page) ──
+  // VERIFY: founder identity. Used on the new home hero and FounderCredibility section.
+  founderName: '',
+  // VERIFY: number of accounts the founder has grown. Used in hero subline and proof blocks.
+  founderAccountCount: null as number | null,
+  // VERIFY: total followers and views across founder-run or advised accounts. Strings so formatting is explicit.
+  founderTotalFollowers: '',
+  founderTotalViews: '',
+  // VERIFY: per-account stats. Each entry renders only when all fields are set.
+  founderAccounts: [] as Array<{
+    platform: 'tiktok' | 'instagram' | 'youtube';
+    handle: string;
+    followers: string;
+    pfpSlot: 'account-1-pfp' | 'account-2-pfp' | 'account-3-pfp' | 'account-4-pfp';
+    url: string;
+  }>,
+  // VERIFY: headline result counter in the ResultsBand ("X views analysed/generated").
+  headlineViews: { value: '', label: '', verified: false as boolean },
+  // VERIFY: views behind the hook & story library (from the hooks PDF or later library stats).
+  libraryViews: '',
+  // VERIFY: total creators helped. The number renders only when verified is true.
+  creatorCountSummary: { value: '', verified: false as boolean },
+  // VERIFY: rating + review count for the "Used by X creators" row. Hidden when verified is false.
+  ratingSummary: { value: '', count: '', verified: false as boolean },
+  // VERIFY: before/after views for a representative video. Hidden when verified is false.
+  beforeAfter: {
+    before: { views: '' },
+    after: { views: '' },
+    verified: false as boolean,
+  },
+  // VERIFY: value anchors for free items, e.g. "$99 value — FREE". Hidden unless verified is true.
+  valueAnchors: {
+    quiz: { amount: '', verified: false as boolean },
+    rewriter: { amount: '', verified: false as boolean },
+    library: { amount: '', verified: false as boolean },
+    analysis: { amount: '', verified: false as boolean },
+  },
+  // VERIFY: optional launch offer deadline. When null, no urgency UI is shown.
+  launchOfferEndsAt: null as string | null,
+
   // VERIFY: size of the prediction benchmark set. CardViralityPrediction.tsx said "15M+",
   // ViralityRangeWidget.tsx said "15.2M"; both now render this value.
   similarVideosCount: '15M+',

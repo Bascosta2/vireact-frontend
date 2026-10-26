@@ -1,8 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom"
 import Fallback from "@/components/Fallback";
+import { isLandingV3Enabled } from '@/pages/Home/LandingV3';
 
 const Home = lazy(() => import('@/pages/PreLogin/Home'));
+const LandingV3 = lazy(() => import('@/pages/Home/LandingV3'));
 const Pricing = lazy(() => import('@/pages/PreLogin/Pricing'));
 const Login = lazy(() => import('@/pages/PreLogin/Login'));
 const Signup = lazy(() => import('@/pages/PreLogin/Signup'));
@@ -38,7 +40,7 @@ function PublicRoutes() {
         <Suspense fallback={<Fallback />}>
             <Routes>
                 <Route path='*' element={<Navigate to="/" />} />
-                <Route path='/' element={<Home />} />
+                <Route path='/' element={isLandingV3Enabled() ? <LandingV3 /> : <Home />} />
                 <Route path='/pricing' element={<Pricing />} />
                 <Route path='/auth/google/callback' element={<GoogleCallback />} />
                 <Route path='/login' element={<Login />} />
