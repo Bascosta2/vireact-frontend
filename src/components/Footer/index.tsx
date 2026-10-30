@@ -55,7 +55,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
             </div>
             </div>
             <div className="md:hidden py-6 px-4 border-t border-gray-800">
-                <p className="text-center text-xs text-gray-500 font-heading font-semibold">
+                <p className="text-center text-xs text-gray-400 font-heading font-semibold">
                     © {new Date().getFullYear()} Vireact. All rights reserved.
                 </p>
             </div>

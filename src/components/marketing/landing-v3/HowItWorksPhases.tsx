@@ -4,6 +4,7 @@ import { PrimaryCta } from './PrimaryCta';
 import { demoFeedback } from '@/content/demoFeedback';
 import { Highlight } from './Highlight';
 import { claims } from '@/content/claims';
+import { assetExists } from '@/content/assets.manifest';
 
 const Bullet = ({ icon: Icon, children }: { icon: typeof ListChecks; children: React.ReactNode }) => (
   <li className="flex items-start gap-3 text-sm text-zinc-200">
@@ -25,13 +26,17 @@ const PhaseCard = ({
   bullets: React.ReactNode;
   visual: React.ReactNode;
 }) => (
-  <div className="grid gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 p-6 shadow-sm shadow-black/40 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+  <div
+    className={`grid gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 p-6 shadow-sm shadow-black/40 ${
+      visual ? 'md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]' : ''
+    }`}
+  >
     <div className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-200">Step {step}</p>
       <h3 className="text-xl font-semibold text-white">{title}</h3>
       <ul className="mt-2 space-y-2">{bullets}</ul>
     </div>
-    <div className="md:pl-4">{visual}</div>
+    {visual && <div className="md:pl-4">{visual}</div>}
   </div>
 );
 
@@ -61,6 +66,9 @@ const ScriptDiffDemo = () => (
 );
 
 export function HowItWorksPhases() {
+  // Placeholders stay visible in dev so missing assets are obvious; production hides the empty visual.
+  const hasBeforeAfter =
+    !import.meta.env.PROD || (assetExists('before-after-before') && assetExists('before-after-after'));
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 md:py-20">
       <header className="mb-8 max-w-2xl space-y-3 text-center md:text-left">
@@ -105,7 +113,7 @@ export function HowItWorksPhases() {
                 Each fix points at an exact second in the video and hands you the replacement line.
               </Bullet>
               <Bullet icon={Sparkles}>
-                You can paste your own hook and get three AI rewrites tailored to your niche.
+                Paste your own hook and get AI rewrites tailored to your niche.
               </Bullet>
             </>
           }
@@ -114,24 +122,19 @@ export function HowItWorksPhases() {
 
         <PhaseCard
           step="03"
-          title={
-            <>
-              Predict, post, and repeat{' '}
-              <span className="text-zinc-400 text-sm font-normal">(with a before / after you can feel)</span>
-            </>
-          }
+          title="Predict, post, and repeat"
           bullets={
             <>
-              <Bullet icon={Target}>See a realistic view-range band before you post, grounded in similar videos.</Bullet>
-              <Bullet icon={ListChecks}>
-                Compare how your “before” and “after” hooks perform so you can double down on what works.
+              <Bullet icon={Target}>
+                See an approximate view range before you post, based on similar videos. It is an estimate, not a promise.
               </Bullet>
-              <Bullet icon={Sparkles}>
-                Every new upload feeds back into the system, so your next prediction is sharper.
+              <Bullet icon={ListChecks}>
+                Compare your “before” and “after” hooks so you can double down on what works.
               </Bullet>
             </>
           }
           visual={
+            !hasBeforeAfter ? null : (
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -155,6 +158,7 @@ export function HowItWorksPhases() {
                 </div>
               </div>
             </div>
+            )
           }
         />
       </div>

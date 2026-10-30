@@ -42,7 +42,10 @@ const withClient = (fn: (posthog: PostHog) => void): void => {
 export const initAnalytics = (): void => {
   const key = posthogKey();
   if (loading || typeof window === 'undefined' || !key) return;
-  loading = import('posthog-js')
+  // Calls made before the library loads are queued (see withClient), so loading can wait until after
+  // the page's own load event without losing events; this keeps the 100KB+ SDK off the first-paint path.
+  loading = afterPageLoad()
+    .then(() => import('posthog-js'))
     .then(({ default: posthog }) => {
       posthog.init(key, {
         api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
@@ -60,6 +63,17 @@ export const initAnalytics = (): void => {
       return null;
     });
 };
+
+/** Resolves shortly after window `load`, preferring an idle moment. */
+const afterPageLoad = (): Promise<void> =>
+  new Promise((resolve) => {
+    const idle = () => {
+      if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(() => resolve(), { timeout: 3000 });
+      else setTimeout(resolve, 1000);
+    };
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
+  });
 
 /** Pass `beforeUnload: true` when a full page navigation follows immediately. */
 export const track = (

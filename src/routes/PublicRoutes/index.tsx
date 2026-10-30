@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom"
 import Fallback from "@/components/Fallback";
-import { isLandingV3Enabled } from '@/pages/Home/LandingV3';
+import { isLandingV3Enabled } from '@/pages/Home/landing-flag';
+// Imported statically on purpose: the hero is the LCP element and a lazy route chunk adds a full extra
+// network round trip before it can paint. Everything below the hero is split out (see BelowFold).
+import LandingV3 from '@/pages/Home/LandingV3';
 
 const Home = lazy(() => import('@/pages/PreLogin/Home'));
-const LandingV3 = lazy(() => import('@/pages/Home/LandingV3'));
 const Pricing = lazy(() => import('@/pages/PreLogin/Pricing'));
 const Login = lazy(() => import('@/pages/PreLogin/Login'));
 const Signup = lazy(() => import('@/pages/PreLogin/Signup'));

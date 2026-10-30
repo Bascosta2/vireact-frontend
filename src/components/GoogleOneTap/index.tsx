@@ -17,6 +17,23 @@ declare global {
   }
 }
 
+const GSI_SRC = 'https://accounts.google.com/gsi/client';
+
+/** Loads Google Identity Services on demand so public pages that never show Google sign-in don't pay for it. */
+const loadGoogleIdentity = (): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (window.google) return resolve();
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${GSI_SRC}"]`);
+    const script = existing ?? document.createElement('script');
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => reject(new Error('Google Identity Services failed to load')), { once: true });
+    if (!existing) {
+      script.src = GSI_SRC;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  });
+
 function GoogleOneTap({ 
   onSuccess, 
   onError, 
@@ -83,11 +100,16 @@ function GoogleOneTap({
       }
     };
 
-    // Initialize when component mounts
-    const timer = setTimeout(initializeGoogleOneTap, 100);
+    // Load the GSI script (once), then initialize when the component mounts
+    let cancelled = false;
+    loadGoogleIdentity()
+      .then(() => {
+        if (!cancelled) initializeGoogleOneTap();
+      })
+      .catch((error) => console.error(error));
 
     return () => {
-      clearTimeout(timer);
+      cancelled = true;
       // Clean up Google One Tap
       if (window.google && window.google.accounts) {
         window.google.accounts.id.cancel();

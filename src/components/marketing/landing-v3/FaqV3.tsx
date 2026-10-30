@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { claims } from '@/content/claims';
 import { track } from '@/lib/analytics';
+import { PrimaryCta } from './PrimaryCta';
 
 const isTrialBillingEnabled = (): boolean =>
   String(import.meta.env.VITE_TRIAL_BILLING ?? '').toLowerCase() === 'true';
@@ -8,120 +10,111 @@ interface FaqItem {
   id: string;
   question: string;
   answer: string;
-  showWhenTrialOn?: boolean;
 }
 
-const buildFaqItems = (): FaqItem[] => {
-  const trialOn = isTrialBillingEnabled();
+/** Answers follow the current access model: with trial billing off the free tier is `claims.freeOffer`. */
+export const buildFaqItems = (trialOn: boolean = isTrialBillingEnabled()): FaqItem[] => {
   const items: FaqItem[] = [
     {
       id: 'followers',
       question: 'Do I need followers to start?',
       answer:
-        "No. Vireact works even if you’re starting from zero. The quiz and hook analysis are based on your niche and content, not just your current follower count.",
+        'No. The quiz and the hook analysis work from your niche, platform and the video itself, not your follower count.',
     },
     {
       id: 'free',
       question: 'Is it really free?',
       answer: trialOn
-        ? 'Yes. The quiz, personalized hook plan, and first AI hook rewrite are free. When trial billing is on, deeper frame-by-frame analysis and predictions unlock with a 7-day trial — you can see what you get before you decide to start it.'
-        : 'Yes. The quiz, personalized hook plan, first AI hook rewrite, and initial video analyses are available on the free tier. Higher limits and team features live on paid plans, but you can see real results before upgrading.',
+        ? 'The quiz, your personalized hook plan and one AI hook rewrite are free. Frame-by-frame analysis of your own videos comes with the 7-day free trial, so you see the results before you decide to keep a plan.'
+        : `The quiz, your personalized hook plan and one AI hook rewrite are free. ${claims.freeOffer} Higher limits and advanced analysis are on paid plans.`,
     },
     {
       id: 'platforms',
       question: 'Which platforms does it work for?',
-      answer: 'Vireact is built for short-form TikTok, Instagram Reels, and YouTube Shorts (and Facebook Reels by extension).',
+      answer: 'TikTok, Instagram Reels and YouTube Shorts.',
     },
     {
       id: 'uploads',
       question: 'What videos can I upload?',
-      answer:
-        'Short-form clips between roughly 5–60 seconds, up to 200MB per file. Supported formats: MP4, MOV, WEBM, AVI, and MKV.',
+      answer: 'MP4, MOV, WEBM, AVI or MKV files up to 200MB, roughly 5 to 60 seconds long.',
     },
     {
       id: 'privacy',
       question: 'Is my video private?',
       answer:
-        'Yes. Your videos are processed to generate analysis and hook suggestions, but they are not made public or shared with other creators. They are used only to improve your own recommendations.',
+        'Your videos and reports are only visible inside your account; Vireact does not publish them or show them to other users. The Privacy Policy explains how data is processed.',
     },
     {
       id: 'difference',
       question: 'How is this different from generic AI tools?',
       answer:
-        'Generic chatbots guess based on prompts. Vireact runs frame-level analysis, tracks exactly where viewers drop, and hands you timestamped fixes and replacement lines grounded in a library of proven hooks.',
-    },
-    {
-      id: 'cancel',
-      question: 'Can I cancel?',
-      showWhenTrialOn: true,
-      answer:
-        'Yes. When trials and plans are enabled you will be able to cancel anytime from your account settings. Access continues until the trial or billing period ends.',
+        'Vireact works frame by frame. Every fix points at an exact timestamp and gives you the literal replacement line, grounded in a library of hooks that have worked, instead of general advice like “make the hook stronger”.',
     },
     {
       id: 'after-click',
-      question: 'What happens after I click the button?',
+      question: 'What happens after I click?',
       answer:
-        'You’ll answer six quick questions, get your personalized hook plan and free rewrite, then create an account to unlock deeper analysis and predictions. No surprises and no hidden extra steps.',
+        'You answer six quick questions, see your results and a free hook rewrite, then create an account to analyze your own video.',
     },
   ];
 
-  return items.filter((item) => !item.showWhenTrialOn || trialOn);
+  if (trialOn) {
+    items.splice(6, 0, {
+      id: 'cancel',
+      question: 'Can I cancel?',
+      answer:
+        'Yes, anytime from your account settings. Access continues until the end of your trial or billing period.',
+    });
+  }
+  return items;
 };
 
 export function FaqV3() {
   const items = buildFaqItems();
+  const baseId = useId();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set());
 
-  const handleToggle = (item: FaqItem) => {
-    const nextOpen = openId === item.id ? null : item.id;
-    setOpenId(nextOpen);
-    if (nextOpen && !trackedIds.has(item.id)) {
-      track('faq_opened', { question: item.id });
-      setTrackedIds(new Set(trackedIds).add(item.id));
-    }
+  const toggle = (item: FaqItem) => {
+    const opening = openId !== item.id;
+    setOpenId(opening ? item.id : null);
+    if (opening) track('faq_opened', { question: item.question });
   };
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-14 md:py-20">
-      <header className="mb-6 text-center md:text-left">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-200">FAQ</p>
-        <h2 className="mt-2 text-3xl font-extrabold text-white sm:text-4xl">
-          Answers before you upload a single video.
-        </h2>
-        <p className="mt-2 text-sm text-zinc-300">
-          If something here isn’t clear, you’ll be able to get in touch from inside the app.
-        </p>
-      </header>
-      <div className="divide-y divide-white/5 rounded-2xl border border-white/10 bg-zinc-950/70">
+    <section className="mx-auto max-w-3xl px-4 py-16 md:py-24" aria-labelledby={`${baseId}-title`}>
+      <h2 id={`${baseId}-title`} className="mb-6 text-center !text-4xl md:text-left">
+        Questions before you start
+      </h2>
+      <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.04]">
         {items.map((item) => {
           const open = openId === item.id;
+          const panelId = `${baseId}-${item.id}`;
           return (
             <div key={item.id}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left md:px-6 md:py-5"
-                onClick={() => handleToggle(item)}
-                aria-expanded={open}
-              >
-                <span className="text-sm font-medium text-white">{item.question}</span>
-                <span
-                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-white/15 text-xs text-zinc-200"
-                  aria-hidden="true"
+              <h3 className="m-0">
+                <button
+                  type="button"
+                  className="flex min-h-[56px] w-full items-center justify-between gap-3 px-4 py-4 text-left text-base font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pink-400 md:px-6"
+                  onClick={() => toggle(item)}
+                  aria-expanded={open}
+                  aria-controls={panelId}
                 >
-                  {open ? '−' : '+'}
-                </span>
-              </button>
-              {open && (
-                <div className="px-4 pb-4 text-sm text-zinc-300 md:px-6">
-                  <p>{item.answer}</p>
-                </div>
-              )}
+                  <span>{item.question}</span>
+                  <span aria-hidden="true" className="text-xl text-zinc-300">
+                    {open ? '−' : '+'}
+                  </span>
+                </button>
+              </h3>
+              <div id={panelId} role="region" hidden={!open} className="px-4 pb-4 text-zinc-300 md:px-6">
+                <p>{item.answer}</p>
+              </div>
             </div>
           );
         })}
       </div>
+      <div className="mt-8 flex justify-center md:justify-start">
+        <PrimaryCta location="faq" />
+      </div>
     </section>
   );
 }
-

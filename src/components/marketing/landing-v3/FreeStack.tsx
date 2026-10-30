@@ -46,8 +46,8 @@ const Card = ({
 };
 
 export function FreeStack() {
-  const hookCountLabel = claims.hookCount;
   const libraryViews = claims.libraryViews;
+  const trialOn = String(import.meta.env.VITE_TRIAL_BILLING ?? '').toLowerCase() === 'true';
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 md:py-20">
@@ -73,7 +73,7 @@ export function FreeStack() {
         <Card
           step={2}
           title="A free AI hook rewrite"
-          body="Paste your current opening line and get three rewritten hooks you can say on camera today, each designed to hold attention better than the last."
+          body="Paste your current opening line and get rewritten hooks you can say on camera today."
           when="Right after your results"
           valueKey="rewriter"
           slotId="stack-rewriter"
@@ -81,7 +81,7 @@ export function FreeStack() {
         <Card
           step={3}
           title="The viral hook & story library"
-          body={`A growing library of hooks and storytelling structures behind ${libraryViews || 'short-form'} views, so you’re never starting from a blank page again.`}
+          body={`A growing library of hooks and storytelling structures${libraryViews ? ` behind ${libraryViews} views` : ''}, so you’re never starting from a blank page.`}
           when="As soon as you create your account"
           valueKey="library"
           slotId="stack-library"
@@ -90,7 +90,7 @@ export function FreeStack() {
           step={4}
           title="Frame-by-frame video analysis"
           body="Upload a video and see the exact timestamp viewers drop, the specific line that lost them, and the exact script to replace it with."
-          when="With your free account (trial billing turns this into your 7-day trial later)"
+          when={trialOn ? 'With your 7-day free trial' : 'With your free account'}
           valueKey="analysis"
           slotId="stack-analysis"
         />
@@ -98,9 +98,6 @@ export function FreeStack() {
       <div className="mt-8 flex justify-center md:justify-start">
         <PrimaryCta location="free_stack" />
       </div>
-      <p className="mt-2 text-center text-xs text-zinc-500 md:text-left">
-        Hook count today: {hookCountLabel}. Once the library is live, this will update automatically from real usage.
-      </p>
     </section>
   );
 }

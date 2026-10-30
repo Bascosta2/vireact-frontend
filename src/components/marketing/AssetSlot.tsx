@@ -37,15 +37,15 @@ export function AssetSlot({ id, alt, aspect, className, rounded = true, priority
           'flex items-center justify-center border-dashed bg-gradient-to-br from-zinc-900/80 to-zinc-800/60'
         )}
         style={style}
-        aria-label={alt}
+        {...(import.meta.env.PROD ? { 'aria-hidden': true } : { role: 'img', 'aria-label': alt })}
       >
         {!import.meta.env.PROD && (
           <div className="px-4 text-center text-xs text-zinc-300 space-y-1">
             <div className="font-medium text-zinc-100">{id}</div>
-            <div className="text-zinc-400">
+            <div className="text-zinc-300">
               {slot ? slot.recommended : 'Add this slot to assets.manifest.ts'}
             </div>
-            {slot && <div className="text-zinc-500">{slot.description}</div>}
+            {slot && <div className="text-zinc-400">{slot.description}</div>}
           </div>
         )}
       </div>

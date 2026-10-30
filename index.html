@@ -9,14 +9,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=fragment-mono@500,600&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
+  <!-- Font stylesheets load without blocking first paint (all use display=swap); noscript keeps them working without JS. -->
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=fragment-mono@500,600&display=swap">
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" media="print" onload="this.media='all'"
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&display=swap">
+  <noscript>
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=fragment-mono@500,600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&display=swap">
+  </noscript>
   <!-- Fonts End -->
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Google Identity Services is loaded on demand by components/GoogleOneTap -->
   <title>Vireact — Find the exact second viewers swipe</title>
   <meta
     name="description"
@@ -30,14 +34,14 @@
   />
   <meta property="og:url" content="https://www.vireact.io/" />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="/brand/og-image.png" />
+  <meta property="og:image" content="https://www.vireact.io/brand/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Vireact — Find the exact second viewers swipe" />
   <meta
     name="twitter:description"
     content="Short-form creators use Vireact to pinpoint where viewers drop, fix their hooks, and predict view ranges before they post."
   />
-  <meta name="twitter:image" content="/brand/og-image.png" />
+  <meta name="twitter:image" content="https://www.vireact.io/brand/og-image.png" />
 </head>
 
 <body>

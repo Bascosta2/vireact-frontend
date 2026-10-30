@@ -1,66 +1,81 @@
 import { useEffect, useRef, useState } from 'react';
 import { claims } from '@/content/claims';
 
-const usePrefersReducedMotion = (): boolean => {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersReducedMotion = (): boolean =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Splits "200M+" into prefix, number and suffix so the number can count up. */
+export const splitCount = (value: string): { prefix: string; target: number; suffix: string; decimals: number } | null => {
+  const match = /^([^\d]*)(\d[\d,]*(?:\.\d+)?)(.*)$/.exec(value.trim());
+  if (!match) return null;
+  const numeric = match[2].replace(/,/g, '');
+  const decimals = numeric.includes('.') ? numeric.split('.')[1].length : 0;
+  return { prefix: match[1], target: Number(numeric), suffix: match[3], decimals };
 };
 
-export function ResultsBand() {
-  const viewsClaim = claims.headlineViews;
-  if (!viewsClaim?.value || !viewsClaim.label || !viewsClaim.verified) return null;
-
-  const [displayValue, setDisplayValue] = useState<string>(viewsClaim.value);
-  const [hasAnimated, setHasAnimated] = useState<boolean>(false);
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const ref = useRef<HTMLDivElement | null>(null);
+/** Count-up that starts when scrolled into view; renders the final value under reduced motion. */
+export function CountUp({ value, className }: { value: string; className?: string }) {
+  const parts = splitCount(value);
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const [current, setCurrent] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!ref.current || hasAnimated) return;
-    let timeoutId: number | null = null;
+    const node = ref.current;
+    if (!node || !parts || prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return;
+    let frame = 0;
+    setCurrent(0);
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setHasAnimated(true);
-            observer.disconnect();
-            if (!prefersReducedMotion) {
-              // Very lightweight count-up: just swap from "0" to the final value after a short delay.
-              setDisplayValue('0');
-              timeoutId = window.setTimeout(() => {
-                setDisplayValue(viewsClaim.value);
-              }, 600);
-            }
-          }
-        });
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        const start = performance.now();
+        const step = (now: number) => {
+          const t = Math.min((now - start) / 1400, 1);
+          setCurrent(parts.target * (1 - Math.pow(1 - t, 3)));
+          if (t < 1) frame = requestAnimationFrame(step);
+        };
+        frame = requestAnimationFrame(step);
       },
       { threshold: 0.5 }
     );
-
-    observer.observe(ref.current);
+    observer.observe(node);
     return () => {
       observer.disconnect();
-      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      cancelAnimationFrame(frame);
     };
-  }, [prefersReducedMotion, hasAnimated, viewsClaim.value]);
+    // parts is derived from value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  if (!parts) return <span className={className}>{value}</span>;
+  const shown = current === null ? parts.target : current;
+  return (
+    <span ref={ref} className={className} aria-label={value}>
+      <span aria-hidden="true">
+        {parts.prefix}
+        {shown.toLocaleString('en-US', { minimumFractionDigits: parts.decimals, maximumFractionDigits: parts.decimals })}
+        {parts.suffix}
+      </span>
+    </span>
+  );
+}
+
+export function ResultsBand() {
+  const { value, label, verified } = claims.headlineViews;
+  if (!verified || !value || !label) return null;
 
   return (
     <section
-      ref={ref}
-      className="border-y border-white/5 bg-gradient-to-r from-pink-500/10 via-fuchsia-600/10 to-orange-500/10 py-8 md:py-10"
+      aria-label="Results"
+      data-section="results_band"
+      className="border-y border-white/10 bg-gradient-to-r from-pink-500/10 via-fuchsia-600/10 to-orange-500/10 py-10"
     >
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-center md:flex-row md:text-left">
-        <div className="text-sm font-medium uppercase tracking-[0.2em] text-pink-200">
-          Real results, not guesses
-        </div>
-        <div className="flex flex-col items-center gap-2 md:flex-row md:gap-4">
-          <div className="text-3xl font-extrabold tabular-nums text-white sm:text-4xl">
-            {displayValue}
-          </div>
-          <div className="max-w-md text-sm text-zinc-300">{viewsClaim.label}</div>
-        </div>
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 text-center">
+        <CountUp value={value} className="text-5xl font-extrabold tabular-nums text-white md:text-6xl" />
+        <p className="max-w-md text-base text-zinc-200">{label}</p>
       </div>
     </section>
   );
 }
-

@@ -1,5 +1,5 @@
+import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/UI/button';
 import { primaryCtaHref } from '@/funnel/cta';
 import { track } from '@/lib/analytics';
 
@@ -21,27 +21,19 @@ interface PrimaryCtaProps {
 
 export const PRIMARY_CTA_LABEL = 'Get my free hook analysis';
 
+const baseClass =
+  'inline-flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-orange-700 px-6 text-base font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+
+/** The one primary CTA. A real link (not a button wrapping a link) so it is a single focus stop. */
 export function PrimaryCta({ location, className }: PrimaryCtaProps) {
-  const href = primaryCtaHref();
-
-  const handleClick = () => {
-    track('cta_clicked', { location });
-  };
-
   return (
-    <Button
-      asChild
-      size="lg"
-      className={className ?? 'min-h-[56px] px-6 text-base font-semibold shadow-lg shadow-pink-500/30'}
-      onClick={handleClick}
+    <Link
+      to={primaryCtaHref()}
+      className={className ? `${baseClass} ${className}` : baseClass}
+      onClick={() => track('cta_clicked', { location })}
     >
-      <Link to={href}>
-        <span>{PRIMARY_CTA_LABEL}</span>
-        <span aria-hidden="true" className="ml-2 inline-flex h-5 w-5 items-center justify-center">
-          →
-        </span>
-      </Link>
-    </Button>
+      <span>{PRIMARY_CTA_LABEL}</span>
+      <ArrowRight className="h-5 w-5" aria-hidden="true" />
+    </Link>
   );
 }
-
