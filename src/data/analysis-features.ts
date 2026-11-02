@@ -2,26 +2,39 @@ import type { ComponentType } from 'react';
 import { Zap, MessageSquare, Activity, Volume2, Eye, BarChart2 } from 'lucide-react';
 import { FEATURES_IDS } from '@/constants';
 
+export type FeatureTier = 'free' | 'pro';
+
 export type AnalysisFeatureUi = {
+  /** Backend feature key sent in `selectedFeatures`. */
   id: string;
-  name: string;
-  Icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  label: string;
+  Icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string; 'aria-hidden'?: boolean }>;
   description: string;
-  /** Gated to Pro+ in UI and (where applicable) pipeline; extend for future Pro-only analyzers. */
-  proOnly: boolean;
+  tier: FeatureTier;
 };
 
+/** Single source for feature names, icons and tiers on every logged-in page. */
 export const ANALYSIS_FEATURES_UI: AnalysisFeatureUi[] = [
-  { id: FEATURES_IDS.HOOK, name: 'Hook', Icon: Zap, description: 'Analyze your opening hook strength', proOnly: false },
-  { id: FEATURES_IDS.CAPTION, name: 'Caption', Icon: MessageSquare, description: 'Caption readability and impact', proOnly: false },
-  { id: FEATURES_IDS.PACING_RHYTHM, name: 'Pacing & Rhythm', Icon: Activity, description: 'Video pacing and rhythm', proOnly: false },
-  { id: FEATURES_IDS.AUDIO, name: 'Audio', Icon: Volume2, description: 'Audio quality and engagement', proOnly: false },
-  { id: FEATURES_IDS.VIEWS, name: 'Views', Icon: Eye, description: 'View prediction analytics', proOnly: false },
+  { id: FEATURES_IDS.HOOK, label: 'Hook', Icon: Zap, description: 'How strong your first seconds are', tier: 'free' },
+  { id: FEATURES_IDS.CAPTION, label: 'Captions', Icon: MessageSquare, description: 'Whether captions are easy to read', tier: 'free' },
+  { id: FEATURES_IDS.PACING_RHYTHM, label: 'Pacing', Icon: Activity, description: 'Cuts, pauses and dead time', tier: 'free' },
+  { id: FEATURES_IDS.AUDIO, label: 'Audio', Icon: Volume2, description: 'Voice, music and sound levels', tier: 'free' },
+  { id: FEATURES_IDS.VIEWS, label: 'Views prediction', Icon: Eye, description: 'An estimated view range', tier: 'free' },
   {
     id: FEATURES_IDS.ADVANCED_ANALYTICS,
-    name: 'Advanced Analytics',
+    label: 'Advanced analytics',
     Icon: BarChart2,
-    description: 'Deep performance insights',
-    proOnly: true,
+    description: 'Emotional triggers, retention drivers and your weakest moment',
+    tier: 'pro',
   },
 ];
+
+const LEGACY_KEYS: Record<string, string> = { viewsPredictor: FEATURES_IDS.VIEWS, advanced: FEATURES_IDS.ADVANCED_ANALYTICS };
+
+export const findFeature = (key: string): AnalysisFeatureUi | undefined =>
+  ANALYSIS_FEATURES_UI.find((f) => f.id === (LEGACY_KEYS[key] ?? key));
+
+export const featureLabel = (key: string): string => findFeature(key)?.label ?? key.replace(/_/g, ' ');
+
+export const featuresForPlan = (canUsePro: boolean): AnalysisFeatureUi[] =>
+  ANALYSIS_FEATURES_UI.filter((f) => f.tier === 'free' || canUsePro);
