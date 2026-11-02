@@ -48,7 +48,7 @@ export const buildFaqItems = (trialOn: boolean = isTrialBillingEnabled()): FaqIt
       id: 'difference',
       question: 'How is this different from generic AI tools?',
       answer:
-        'Vireact works frame by frame. Every fix points at an exact timestamp and gives you the literal replacement line, grounded in a library of hooks that have worked, instead of general advice like “make the hook stronger”.',
+        'Vireact works frame by frame. Every fix is tied to a timestamp and gives you the actual line to use, based on a library of hooks that have worked. It also predicts a view range before you post. No general advice like “make the hook stronger.”',
     },
     {
       id: 'after-click',

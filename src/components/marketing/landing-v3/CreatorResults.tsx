@@ -13,7 +13,7 @@ export function CreatorResults() {
           {count ? `${count} creators use Vireact to fix their videos.` : 'Creators use Vireact to fix their videos.'}
         </h2>
         <p className="text-zinc-300">
-          Real channels that tightened their hooks, fixed pacing and worked out why some videos take off.
+          Real channels that fixed their hooks and pacing and figured out why some videos take off.
         </p>
       </header>
 

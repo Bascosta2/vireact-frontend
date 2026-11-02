@@ -63,14 +63,16 @@ export const claims = {
     after: { views: '' },
     verified: false as boolean,
   },
-  // VERIFY: before/after follower growth for the step 01 slider on Landing V3. One entry per creator;
-  // needs brand assets growth-N-before.webp and growth-N-after.webp (profile screenshots). Each slide
+  // VERIFY: before/after follower growth for the strip above the 3 steps on Landing V3. One entry per creator;
+  // needs brand assets growth-N-before.webp and growth-N-after.webp (profile screenshots). Each card
   // stays hidden in production until verified is true and both images exist.
   growthComparisons: [
     { slot: 1, name: '', beforeFollowers: '', afterFollowers: '', verified: false as boolean },
     { slot: 2, name: '', beforeFollowers: '', afterFollowers: '', verified: false as boolean },
     { slot: 3, name: '', beforeFollowers: '', afterFollowers: '', verified: false as boolean },
-  ] as Array<{ slot: 1 | 2 | 3; name: string; beforeFollowers: string; afterFollowers: string; verified: boolean }>,  // VERIFY: value anchors for free items, e.g. "$99 value — FREE". Hidden unless verified is true.
+  ] as Array<{ slot: 1 | 2 | 3; name: string; beforeFollowers: string; afterFollowers: string; verified: boolean }>,
+
+  // VERIFY: value anchors for free items, e.g. "$99 value — FREE". Hidden unless verified is true.
   valueAnchors: {
     quiz: { amount: '', verified: false as boolean },
     rewriter: { amount: '', verified: false as boolean },

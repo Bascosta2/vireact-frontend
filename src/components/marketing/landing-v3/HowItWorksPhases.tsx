@@ -1,11 +1,34 @@
-import { ListChecks, Wand2, Sparkles, Clock3, Target } from 'lucide-react';
+import {
+  ListChecks,
+  Sparkles,
+  Clock3,
+  Target,
+  Gauge,
+  BarChart3,
+  ListOrdered,
+  MessageCircle,
+  BookOpen,
+  History,
+  RefreshCw,
+  Rocket,
+  Eye,
+} from 'lucide-react';
 import { AssetSlot } from '@/components/marketing/AssetSlot';
 import { PrimaryCta } from './PrimaryCta';
 import { demoFeedback } from '@/content/demoFeedback';
 import { Highlight } from './Highlight';
 import { claims } from '@/content/claims';
 import { assetExists } from '@/content/assets.manifest';
-import { Step1Slider } from './Step1Slider';
+import { GrowthStrip } from './GrowthStrip';
+
+const ReportVisual = () => (
+  <figure className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+    <div className="w-full max-w-[210px] sm:max-w-[240px]">
+      <AssetSlot id="phase-1" alt="Vireact analysis report with virality, hook, pacing, audio and caption scores" aspect="4 / 5" />
+    </div>
+    <figcaption className="text-center text-xs text-zinc-300">Your analysis report: every score in one place</figcaption>
+  </figure>
+);
 
 const Bullet = ({ icon: Icon, children }: { icon: typeof ListChecks; children: React.ReactNode }) => (
   <li className="flex items-start gap-3 text-sm text-zinc-200">
@@ -41,28 +64,42 @@ const PhaseCard = ({
   </div>
 );
 
+const clock = (seconds: number) => `0:${String(seconds).padStart(2, '0')}`;
+
 const ScriptDiffDemo = () => (
-  <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-50">
-    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-      Frame-by-frame fix example
-    </p>
-    <ul className="space-y-3">
-      {demoFeedback.map((item, idx) => (
-        <li key={idx} className="space-y-1.5">
-          <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300">
-            {item.timestampStart.toFixed(0)}s–{item.timestampEnd.toFixed(0)}s · {item.type ?? 'note'}
-          </div>
-          {item.before && (
-            <div className="rounded-md bg-zinc-900/80 px-2 py-1.5 text-[13px] text-zinc-200 line-through">
-              {item.before}
-            </div>
-          )}
-          <div className="rounded-md bg-emerald-500/15 px-2 py-1.5 text-[13px] text-emerald-50">
-            {item.after}
-          </div>
+  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-emerald-50">
+    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-300">Frame-by-frame fix example</p>
+    <ul className="space-y-2.5">
+      {demoFeedback.map((item) => (
+        <li key={item.timestampStart} className="space-y-1">
+          <p className="text-[11px] font-semibold text-emerald-300">
+            <span className="font-mono">
+              {clock(item.timestampStart)} to {clock(item.timestampEnd)}
+            </span>{' '}
+            · {item.label}
+          </p>
+          {item.before && <p className="text-xs text-zinc-400 line-through">{item.before}</p>}
+          <p className="rounded-md bg-emerald-500/15 px-2 py-1 text-[13px] leading-snug">{item.after}</p>
         </li>
       ))}
     </ul>
+  </div>
+);
+
+const StrategistVisual = () => (
+  <div className="mx-auto max-w-[420px] space-y-3 md:max-w-none">
+    <figure className="space-y-2">
+      <div className="overflow-hidden rounded-xl border border-white/10">
+        <AssetSlot
+          id="step2-chat"
+          alt="Vireact coach answering “how exactly should I cut my intro to optimize views?” with fixes based on the video’s hook, pacing and caption scores"
+          aspect="1134 / 1002"
+          rounded={false}
+        />
+      </div>
+      <figcaption className="text-center text-xs text-zinc-300">A real answer from the Vireact coach</figcaption>
+    </figure>
+    <ScriptDiffDemo />
   </div>
 );
 
@@ -72,66 +109,73 @@ export function HowItWorksPhases() {
     !import.meta.env.PROD || (assetExists('before-after-before') && assetExists('before-after-after'));
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 md:py-20">
+      <GrowthStrip />
       <header className="mb-8 max-w-2xl space-y-3 text-center md:text-left">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-200">
           3 steps to your next viral video
         </p>
         <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-          Turn <Highlight>one upload</Highlight> into a repeatable process.
+          <Highlight>Upload once.</Highlight> Know what to post next.
         </h2>
         <p className="text-sm text-zinc-300">
-          Vireact doesn’t just grade your video and move on — it gives you a diagnosis, concrete script fixes, and a
-          clear prediction so you know what to publish next.
+          Vireact predicts how your video will do, shows where viewers drop off, and tells you what to change before
+          you post.
         </p>
       </header>
 
       <div className="space-y-6">
         <PhaseCard
           step="01"
-          title="Diagnose where you’re losing viewers"
+          title="Upload a video"
           bullets={
             <>
-              <Bullet icon={ListChecks}>Answer six questions about your niche, cadence, and goals.</Bullet>
-              <Bullet icon={Target}>
-                Vireact pinpoints whether you’re bleeding attention in the first three seconds, mid-video, or at the
-                payoff.
+              <Bullet icon={Eye}>
+                Stop guessing what the algorithm wants. See what keeps people watching before you spend hours posting.
               </Bullet>
-              <Bullet icon={Sparkles}>You get a simple, deterministic diagnosis instead of vague “do better hooks”.</Bullet>
+              <Bullet icon={Gauge}>Get a Virality Score from 0 to 100, so you know if a video is ready.</Bullet>
+              <Bullet icon={BarChart3}>
+                Your hook, pacing, audio and captions each get their own score. Your weakest spot jumps out.
+              </Bullet>
+              <Bullet icon={Target}>See your Hook Swipe Rate: how many viewers are likely to scroll past your opening.</Bullet>
+              <Bullet icon={ListOrdered}>Every problem is ranked by how much it hurts, so you fix the biggest one first.</Bullet>
             </>
           }
-          visual={<Step1Slider />}
+          visual={<ReportVisual />}
         />
 
         <PhaseCard
           step="02"
-          title="Fix the script, not just the thumbnail"
+          title="Your personalized creative strategist"
           bullets={
             <>
-              <Bullet icon={Wand2}>
-                Upload your video and get timestamped feedback cards that call out exactly what to change.
+              <Bullet icon={MessageCircle}>
+                Ask anything about your video. Every answer uses its real scores and every scene.
               </Bullet>
+              <Bullet icon={Sparkles}>It tells you why each score is what it is, in plain words.</Bullet>
               <Bullet icon={Clock3}>
-                Each fix points at an exact second in the video and hands you the replacement line.
+                Every fix comes with a timestamp and the new line, cut or caption to use.
               </Bullet>
-              <Bullet icon={Sparkles}>
-                Paste your own hook and get AI rewrites tailored to your niche.
-              </Bullet>
+              <Bullet icon={BookOpen}>Its advice comes from a library of hooks that already worked.</Bullet>
+              <Bullet icon={History}>Your chat stays saved with each video, so you can pick up where you left off.</Bullet>
             </>
           }
-          visual={<ScriptDiffDemo />}
+          visual={<StrategistVisual />}
         />
 
         <PhaseCard
           step="03"
-          title="Predict, post, and repeat"
+          title="Check the crystal ball, then post"
           bullets={
             <>
               <Bullet icon={Target}>
-                See an approximate view range before you post, based on similar videos. It is an estimate, not a promise.
+                Get a predicted view range before you post, based on how similar videos performed. It’s an estimate, not a guarantee.
               </Bullet>
               <Bullet icon={ListChecks}>
-                Compare your “before” and “after” hooks so you can double down on what works.
+                Compare your old and new hooks and keep what works.
               </Bullet>
+              <Bullet icon={BarChart3}>See a low, expected and high range, so you know the realistic floor and ceiling.</Bullet>
+              <Bullet icon={RefreshCw}>Made changes? Upload the new cut and check if your scores went up.</Bullet>
+              <Bullet icon={Rocket}>Post the version with the best predicted range. Skip the ones likely to flop.</Bullet>
             </>
           }
           visual={

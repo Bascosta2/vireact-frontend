@@ -32,6 +32,7 @@ export type AssetId =
   | 'stack-library'
   | 'stack-analysis'
   | 'phase-1'
+  | 'step2-chat'
   | 'growth-1-before'
   | 'growth-1-after'
   | 'growth-2-before'
@@ -175,6 +176,14 @@ export const brandAssetManifest: BrandAssetSlot[] = [
     '1080×1350 WebP (4:5)',
     'Screenshot of the analysis report scores (not the quiz: quiz questions only appear after the CTA).',
     { width: 1080, height: 1350 }
+  ),
+  slot(
+    'step2-chat',
+    'step2-chat.webp',
+    'image',
+    '1134×1002 WebP, ≤120 KB',
+    'Real chatbot reply cropped to one question and answer (how to cut the intro to get more views).',
+    { width: 1134, height: 1002 }
   ),
   ...([1, 2, 3] as const).flatMap((n) =>
     (['before', 'after'] as const).map((when) =>

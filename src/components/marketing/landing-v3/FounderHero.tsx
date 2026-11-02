@@ -33,10 +33,10 @@ export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
 
       <div className="w-full space-y-6 md:order-1 md:w-1/2">
         <div className="inline-flex items-center rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1 text-xs font-medium text-pink-200">
-          Free AI video analysis for short-form creators
+          Free crystal ball for short-form creators
         </div>
         <h1 className="!text-4xl font-extrabold tracking-tight text-white sm:!text-5xl md:!text-6xl">
-          Find the exact second viewers swipe — and the exact line to <Highlight>replace it with.</Highlight>
+          <Highlight>Predict your views.</Highlight> Fix the swipe. Then post.
         </h1>
         {subline && (
           <p className="max-w-xl text-base text-zinc-300">
