@@ -167,7 +167,7 @@ export const brandAssetManifest: BrandAssetSlot[] = [
     'phase-1.webp',
     'image',
     '1080×1350 WebP (4:5)',
-    'Screenshot of the quiz in progress (phone mockup or similar).',
+    'Screenshot of the analysis report scores (not the quiz: quiz questions only appear after the CTA).',
     { width: 1080, height: 1350 }
   ),
   slot(

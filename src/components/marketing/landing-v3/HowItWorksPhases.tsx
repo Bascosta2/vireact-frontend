@@ -98,7 +98,7 @@ export function HowItWorksPhases() {
               <Bullet icon={Sparkles}>You get a simple, deterministic diagnosis instead of vague “do better hooks”.</Bullet>
             </>
           }
-          visual={<AssetSlot id="phase-1" alt="Quiz in progress on a phone" aspect="4 / 5" />}
+          visual={<AssetSlot id="phase-1" alt="Vireact analysis report with hook, pacing, audio and caption scores" aspect="4 / 5" />}
         />
 
         <PhaseCard
