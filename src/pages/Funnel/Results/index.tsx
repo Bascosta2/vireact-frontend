@@ -9,6 +9,7 @@ import { track } from '@/lib/analytics';
 import HookCard from './components/HookCard';
 import HookRewriter from './components/HookRewriter';
 import EmailResults from './components/EmailResults';
+import UnlockedStack from './components/UnlockedStack';
 
 const PLAN_LABELS: Record<FunnelResults['recommendedPlan'], string> = { premium: 'Premium', pro: 'Pro' };
 
@@ -115,8 +116,10 @@ function ResultsPage() {
         )}
       </section>
 
+      <UnlockedStack hooksHidden={results.hooksHidden} rewriteUsed={results.rewritesUsed > 0} isAuthenticated={isAuthenticated} />
+
       <section aria-labelledby="hooks-heading" className="flex flex-col gap-3">
-        <h3 id="hooks-heading" className="text-lg font-semibold">Hooks to try on your next video</h3>
+        <h3 id="hooks-heading" className="text-lg font-semibold scroll-mt-20">Hooks to try on your next video</h3>
         {results.hooksHidden ? (
           <p className="text-sm text-white/60">
             Hook picks for your answers aren't available yet. You can still rewrite your own hook below.
@@ -133,7 +136,9 @@ function ResultsPage() {
         )}
       </section>
 
-      <HookRewriter sessionId={sessionId} initiallyUsed={results.rewritesUsed > 0} isAuthenticated={isAuthenticated} />
+      <div id="hook-rewriter" className="scroll-mt-20">
+        <HookRewriter sessionId={sessionId} initiallyUsed={results.rewritesUsed > 0} isAuthenticated={isAuthenticated} />
+      </div>
 
       <section aria-labelledby="next-heading" className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6 flex flex-col gap-4">
         <h3 id="next-heading" className="text-lg font-semibold">Your next step</h3>

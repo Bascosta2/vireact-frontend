@@ -32,6 +32,12 @@ export type AssetId =
   | 'stack-library'
   | 'stack-analysis'
   | 'phase-1'
+  | 'growth-1-before'
+  | 'growth-1-after'
+  | 'growth-2-before'
+  | 'growth-2-after'
+  | 'growth-3-before'
+  | 'growth-3-after'
   | 'og-image';
 
 const basePath = '/brand';
@@ -169,6 +175,20 @@ export const brandAssetManifest: BrandAssetSlot[] = [
     '1080×1350 WebP (4:5)',
     'Screenshot of the analysis report scores (not the quiz: quiz questions only appear after the CTA).',
     { width: 1080, height: 1350 }
+  ),
+  ...([1, 2, 3] as const).flatMap((n) =>
+    (['before', 'after'] as const).map((when) =>
+      slot(
+        `growth-${n}-${when}` as AssetId,
+        `growth-${n}-${when}.webp`,
+        'image',
+        '800×800 WebP (1:1), ≤120 KB',
+        when === 'before'
+          ? `Creator ${n} profile screenshot BEFORE (follower count visible). Pairs with claims.growthComparisons.`
+          : `Creator ${n} profile screenshot AFTER growth (follower count visible). Pairs with claims.growthComparisons.`,
+        { width: 800, height: 800 }
+      )
+    )
   ),
   slot(
     'og-image',

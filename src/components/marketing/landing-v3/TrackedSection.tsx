@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { track } from '@/lib/analytics';
 
 interface TrackedSectionProps {
-  /** Stable analytics id, e.g. "free_stack". */
+  /** Stable analytics id, e.g. "how_it_works". */
   section: string;
   id?: string;
   children: ReactNode;

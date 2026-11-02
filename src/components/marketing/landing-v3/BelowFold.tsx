@@ -1,4 +1,3 @@
-import { FreeStack } from './FreeStack';
 import { HowItWorksPhases } from './HowItWorksPhases';
 import { FounderCredibility } from './FoundationCredibility';
 import { CreatorResults } from './CreatorResults';
@@ -11,9 +10,6 @@ import { TrackedSection } from './TrackedSection';
 export default function BelowFold() {
   return (
     <>
-      <TrackedSection section="free_stack">
-        <FreeStack />
-      </TrackedSection>
       <TrackedSection section="how_it_works" id="how-it-works-v3">
         <HowItWorksPhases />
       </TrackedSection>

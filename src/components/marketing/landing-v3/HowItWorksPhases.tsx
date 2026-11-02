@@ -5,6 +5,7 @@ import { demoFeedback } from '@/content/demoFeedback';
 import { Highlight } from './Highlight';
 import { claims } from '@/content/claims';
 import { assetExists } from '@/content/assets.manifest';
+import { Step1Slider } from './Step1Slider';
 
 const Bullet = ({ icon: Icon, children }: { icon: typeof ListChecks; children: React.ReactNode }) => (
   <li className="flex items-start gap-3 text-sm text-zinc-200">
@@ -27,7 +28,7 @@ const PhaseCard = ({
   visual: React.ReactNode;
 }) => (
   <div
-    className={`grid gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 p-6 shadow-sm shadow-black/40 ${
+    className={`grid gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 p-4 shadow-sm sm:p-6 shadow-black/40 ${
       visual ? 'md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]' : ''
     }`}
   >
@@ -98,7 +99,7 @@ export function HowItWorksPhases() {
               <Bullet icon={Sparkles}>You get a simple, deterministic diagnosis instead of vague “do better hooks”.</Bullet>
             </>
           }
-          visual={<AssetSlot id="phase-1" alt="Vireact analysis report with hook, pacing, audio and caption scores" aspect="4 / 5" />}
+          visual={<Step1Slider />}
         />
 
         <PhaseCard
@@ -136,7 +137,7 @@ export function HowItWorksPhases() {
           visual={
             !hasBeforeAfter ? null : (
             <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="mx-auto grid max-w-[320px] grid-cols-2 gap-3 md:max-w-none">
                 <div className="space-y-2">
                   <AssetSlot
                     id="before-after-before"
