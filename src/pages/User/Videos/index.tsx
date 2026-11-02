@@ -1,43 +1,71 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Library, Plus, Search } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos, deleteVideo, reanalyzeVideo, type Video } from '@/api/video';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { UPLOAD_STATUS, ANALYSIS_STATUS } from '@/constants';
 import VideoCard from '@/components/UI/VideoCard';
-import { SlidersHorizontal, Search, Upload as UploadIcon } from 'lucide-react';
+import { PageHeader } from '@/components/app/PageHeader';
+import { Button, ButtonLink } from '@/components/app/Button';
+import { EmptyState } from '@/components/app/EmptyState';
+import { Skeleton } from '@/components/app/Skeleton';
+import { useDelayedFlag } from '@/hooks/useDelayedFlag';
+import { useToast } from '@/components/app/Toast';
+import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
+import { cleanVideoTitle } from '@/lib/video-file';
 
-type SortOption = 'date' | 'name' | 'status';
+type SortOption = 'date' | 'name' | 'status' | 'score';
+
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: ANALYSIS_STATUS.COMPLETED, label: 'Ready' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: ANALYSIS_STATUS.FAILED, label: 'Failed' },
+];
+
+const IN_PROGRESS = [ANALYSIS_STATUS.PENDING, ANALYSIS_STATUS.QUEUED, ANALYSIS_STATUS.PROCESSING] as string[];
+
+const selectClass =
+  'app-focus h-11 min-w-0 flex-1 rounded-lg border border-control bg-surface px-2 text-sm text-fg sm:flex-none sm:px-3';
 
 function Videos() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [reanalyzingVideoId, setReanalyzingVideoId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterFeature, setFilterFeature] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const showSkeleton = useDelayedFlag(isLoading);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const fetchVideos = useCallback(async () => {
     setError(null);
     try {
       const videoList = await getUserVideos();
-      const validVideos = videoList.filter((v) => v.uploadStatus !== UPLOAD_STATUS.FAILED);
-      setVideos(validVideos);
+      if (!mounted.current) return;
+      setVideos(videoList.filter((v) => v.uploadStatus !== UPLOAD_STATUS.FAILED));
     } catch (err: unknown) {
       const errorMessage =
-        (err as { response?: { data?: { message?: string }; message?: string }; message?: string })
-          ?.response?.data?.message ||
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
         (err as { message?: string })?.message ||
         'Failed to fetch videos';
+      if (!mounted.current) return;
       setError(errorMessage);
-      ErrorNotification(errorMessage);
     } finally {
-      setIsLoading(false);
+      if (mounted.current) setIsLoading(false);
     }
   }, []);
 
@@ -53,12 +81,7 @@ function Videos() {
   }, [fetchVideos]);
 
   useEffect(() => {
-    const hasPending = videos.some(
-      (v) =>
-        v.analysisStatus === ANALYSIS_STATUS.PENDING ||
-        v.analysisStatus === ANALYSIS_STATUS.QUEUED ||
-        v.analysisStatus === ANALYSIS_STATUS.PROCESSING
-    );
+    const hasPending = videos.some((v) => IN_PROGRESS.includes(v.analysisStatus));
     if (!hasPending) return;
     const interval = setInterval(() => {
       fetchVideos();
@@ -66,9 +89,15 @@ function Videos() {
     return () => clearInterval(interval);
   }, [videos, fetchVideos]);
 
-  const filteredVideos = videos.filter((video) => {
-    if (searchQuery && !video.filename.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (filterStatus !== 'all' && video.analysisStatus !== filterStatus) return false;
+  const visible = videos.filter((v) => !hiddenIds.includes(v._id));
+
+  const filteredVideos = visible.filter((video) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!video.filename.toLowerCase().includes(q) && !cleanVideoTitle(video.filename).toLowerCase().includes(q)) return false;
+    }
+    if (filterStatus === 'in_progress' && !IN_PROGRESS.includes(video.analysisStatus)) return false;
+    if (filterStatus !== 'all' && filterStatus !== 'in_progress' && video.analysisStatus !== filterStatus) return false;
     if (filterFeature !== 'all' && !(video.selectedFeatures || []).includes(filterFeature)) return false;
     return true;
   });
@@ -78,33 +107,40 @@ function Videos() {
       case 'date':
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       case 'name':
-        return a.filename.localeCompare(b.filename);
+        return cleanVideoTitle(a.filename).localeCompare(cleanVideoTitle(b.filename));
       case 'status':
         return (a.analysisStatus || '').localeCompare(b.analysisStatus || '');
+      case 'score':
+        return (b.viralityScore ?? -1) - (a.viralityScore ?? -1);
       default:
         return 0;
     }
   });
 
+  /** Hides the card at once and only calls the API once the undo window closes. */
   const handleDelete = useCallback(
-    async (videoId: string) => {
-      if (!confirm('Are you sure you want to delete this video?')) return;
-      setDeletingVideoId(videoId);
-      try {
-        await deleteVideo(videoId);
-        setVideos((prev) => prev.filter((v) => v._id !== videoId));
-        SuccessNotification('Video deleted successfully');
-      } catch (err: unknown) {
-        const msg =
-          (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
-          (err as { message?: string })?.message ||
-          'Failed to delete video';
-        ErrorNotification(msg);
-      } finally {
-        setDeletingVideoId(null);
-      }
+    (videoId: string) => {
+      setHiddenIds((prev) => [...prev, videoId]);
+      toast.show({
+        message: 'Video deleted',
+        actionLabel: 'Undo',
+        onAction: () => setHiddenIds((prev) => prev.filter((id) => id !== videoId)),
+        onExpire: async () => {
+          try {
+            await deleteVideo(videoId);
+            if (mounted.current) setVideos((prev) => prev.filter((v) => v._id !== videoId));
+          } catch (err: unknown) {
+            const msg =
+              (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+              (err as { message?: string })?.message ||
+              'Failed to delete video';
+            ErrorNotification(msg);
+            if (mounted.current) setHiddenIds((prev) => prev.filter((id) => id !== videoId));
+          }
+        },
+      });
     },
-    []
+    [toast]
   );
 
   const handleReanalyze = useCallback(
@@ -120,7 +156,6 @@ function Videos() {
           (err as { message?: string })?.message ||
           'Re-analyze failed';
         ErrorNotification(msg);
-        console.error('Reanalyze failed:', err);
       } finally {
         setReanalyzingVideoId(null);
       }
@@ -140,273 +175,151 @@ function Videos() {
     [navigate, videos]
   );
 
-  const handleCardClick = useCallback(
-    (videoId: string) => {
-      navigate(`/videos/${videoId}`);
-    },
-    [navigate]
-  );
-
-  // Mobile-only: average virality across completed videos with a numeric score.
-  // Returns null when there are no eligible videos so the header can be omitted.
   const averageViralityScore = useMemo<number | null>(() => {
-    const scored = videos.filter(
-      (v) =>
-        v.analysisStatus === ANALYSIS_STATUS.COMPLETED &&
-        typeof v.viralityScore === 'number' &&
-        !isNaN(v.viralityScore)
+    const scored = visible.filter(
+      (v) => v.analysisStatus === ANALYSIS_STATUS.COMPLETED && typeof v.viralityScore === 'number' && !isNaN(v.viralityScore)
     );
     if (scored.length === 0) return null;
-    const sum = scored.reduce((acc, v) => acc + (v.viralityScore as number), 0);
-    return Math.round(sum / scored.length);
-  }, [videos]);
-  const averageScoreColor =
-    averageViralityScore == null
-      ? ''
-      : averageViralityScore >= 70
-        ? 'text-green-400'
-        : averageViralityScore >= 40
-          ? 'text-yellow-400'
-          : 'text-red-400';
+    return Math.round(scored.reduce((acc, v) => acc + (v.viralityScore as number), 0) / scored.length);
+  }, [visible]);
 
-  const allFeatures = ['hook', 'caption', 'pacing', 'audio', 'views_predictor', 'advanced_analytics'];
-  const allStatuses = [
-    ANALYSIS_STATUS.COMPLETED,
-    ANALYSIS_STATUS.PROCESSING,
-    ANALYSIS_STATUS.QUEUED,
-    ANALYSIS_STATUS.PENDING,
-    ANALYSIS_STATUS.FAILED,
-  ];
-  const hasActiveFilters = searchQuery || filterFeature !== 'all' || filterStatus !== 'all';
-  const isEmpty = sortedVideos.length === 0;
+  const hasActiveFilters = Boolean(searchQuery) || filterFeature !== 'all' || filterStatus !== 'all';
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterFeature('all');
+    setFilterStatus('all');
+  };
 
-  if (isLoading) {
-    return (
-      <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
-        <div className="pb-24 sm:pb-10">
-          <div className="max-w-6xl mx-auto">
-            <h1
-              className="text-3xl md:text-4xl font-bold uppercase mb-2 tracking-wide"
-              style={{
-                fontFamily: 'Impact, Anton, "Arial Black", sans-serif',
-                background: 'linear-gradient(90deg, #FF1B6B 0%, #FF4D4D 25%, #FF6B35 50%, #FFA500 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              MY VIDEOS
-            </h1>
-            <p className="text-gray-400 mb-8">Manage and view your analyzed short-form videos</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  const newButton = (
+    <ButtonLink to="/new">
+      <Plus className="h-4 w-4" aria-hidden="true" />
+      New analysis
+    </ButtonLink>
+  );
+
+  return (
+    <UserPage>
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">
+        <PageHeader
+          title="Library"
+          subtitle={
+            averageViralityScore != null ? (
+              <span className="tabular">Average virality score {averageViralityScore} across your ready videos.</span>
+            ) : (
+              'Every video you have analyzed.'
+            )
+          }
+          actions={visible.length > 0 ? newButton : undefined}
+        />
+
+        {isLoading ? (
+          showSkeleton ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading videos">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl overflow-hidden animate-pulse border border-white/5"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
-                  }}
-                >
-                  <div className="aspect-video bg-white/5" />
-                  <div className="p-4">
-                    <div className="h-4 bg-white/10 rounded mb-2 w-3/4" />
-                    <div className="h-3 bg-white/10 rounded w-1/2" />
+                <div key={i} className="flex gap-4 rounded-xl border border-line bg-surface p-3">
+                  <Skeleton className="h-[136px] w-[76px]" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </UserPage>
-    );
-  }
-
-  if (error && videos.length === 0) {
-    return (
-      <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
-        <div className="pb-24 sm:pb-10">
-          <div className="max-w-6xl mx-auto text-center py-20">
-            <p className="text-red-400 mb-4">{error}</p>
-            <button
-              onClick={() => { setIsLoading(true); fetchVideos(); }}
-              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </UserPage>
-    );
-  }
-
-  return (
-    <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
-      <div className="pb-24 sm:pb-10">
-          <div className="max-w-6xl mx-auto mb-8">
-          <h1
-            className="text-3xl md:text-4xl font-bold uppercase mb-2 tracking-wide"
-            style={{
-              fontFamily: 'Impact, Anton, "Arial Black", sans-serif',
-              background: 'linear-gradient(90deg, #FF1B6B 0%, #FF4D4D 25%, #FF6B35 50%, #FFA500 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            MY VIDEOS
-          </h1>
-          <p className="text-gray-400">Manage and view your analyzed short-form videos</p>
-        </div>
-
-        {averageViralityScore != null && (
-          <div className="max-w-6xl mx-auto mb-4">
-            <div
-              className="flex items-center justify-between rounded-xl px-4 py-3"
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+          ) : null
+        ) : error && videos.length === 0 ? (
+          <div role="alert" className="rounded-xl border border-danger/40 bg-surface p-6">
+            <p className="text-base font-medium text-fg">We couldn't load your videos.</p>
+            <p className="mt-1 text-sm text-fg-muted">{error}</p>
+            <Button
+              variant="secondary"
+              className="mt-4"
+              onClick={() => {
+                setIsLoading(true);
+                fetchVideos();
               }}
             >
-              <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
-                Average Virality Score
-              </span>
-              <span className={`text-3xl font-bold tabular-nums leading-none ${averageScoreColor}`}>
-                {averageViralityScore}
-              </span>
-            </div>
+              Try again
+            </Button>
           </div>
-        )}
-
-        <div className="max-w-6xl mx-auto mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search videos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}
-              />
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-4 py-3 rounded-lg text-white focus:outline-none focus:border-orange-500"
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
-            >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
-              <option value="status">Sort by Status</option>
-            </select>
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors ${
-                showFilters
-                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
-                  : 'text-gray-400 hover:bg-white/5 border border-white/[0.08]'
-              }`}
-              style={!showFilters ? { background: 'rgba(255, 255, 255, 0.04)' } : undefined}
-            >
-              <SlidersHorizontal className="w-5 h-5" />
-              Filters
-            </button>
-          </div>
-
-          {showFilters && (
-            <div
-              className="mt-4 p-4 rounded-lg"
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Filter by Feature</label>
-                  <select
-                    value={filterFeature}
-                    onChange={(e) => setFilterFeature(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
-                  >
-                    <option value="all">All Features</option>
-                    {allFeatures.map((f) => (
-                      <option key={f} value={f}>
-                        {f.replace('_', ' ')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Filter by Status</label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
-                  >
-                    <option value="all">All Statuses</option>
-                    {allStatuses.map((s) => (
-                      <option key={s} value={s}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="max-w-6xl mx-auto">
-          {isEmpty ? (
-            <div className="text-center py-20">
-              <UploadIcon className="w-24 h-24 text-gray-700 mx-auto mb-4" />
-              <h2
-                className="text-2xl md:text-3xl font-bold uppercase mb-2 text-gray-400"
-                style={{ fontFamily: 'Impact, Anton, "Arial Black", sans-serif' }}
-              >
-                {hasActiveFilters ? 'NO VIDEOS MATCH YOUR FILTERS' : 'NO VIDEOS YET'}
-              </h2>
-              <p className="text-gray-500 text-lg mb-8">
-                {hasActiveFilters
-                  ? 'Try adjusting your search or filters'
-                  : 'Start by uploading your first short-form video for analysis'}
-              </p>
-              {!hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/upload')}
-                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-semibold text-lg hover:shadow-lg hover:shadow-orange-500/30 hover:scale-105 transition-all"
-                >
-                  Upload Your First Video
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-              {sortedVideos.map((video) => (
-                <VideoCard
-                  key={video._id}
-                  video={video}
-                  onDelete={handleDelete}
-                  onReanalyze={handleReanalyze}
-                  onChatClick={handleChatClick}
-                  onCardClick={handleCardClick}
-                  deletingVideoId={deletingVideoId}
-                  reanalyzingVideoId={reanalyzingVideoId}
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={<Library className="h-10 w-10" aria-hidden="true" />}
+            title="No videos yet"
+            body="Your analyzed videos will appear here."
+            action={newButton}
+          />
+        ) : (
+          <>
+            <div role="search" className="mb-6 flex flex-wrap items-center gap-3">
+              <div className="relative basis-full sm:min-w-[200px] sm:flex-1 sm:basis-0">
+                <label htmlFor="library-search" className="sr-only">
+                  Search videos
+                </label>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" aria-hidden="true" />
+                <input
+                  id="library-search"
+                  type="search"
+                  placeholder="Search videos"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="app-focus h-11 w-full rounded-lg border border-control bg-surface pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle"
                 />
-              ))}
+              </div>
+              <label className="sr-only" htmlFor="library-sort">Sort</label>
+              <select id="library-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} className={selectClass}>
+                <option value="date">Newest</option>
+                <option value="score">Top score</option>
+                <option value="name">Name</option>
+                <option value="status">Status</option>
+              </select>
+              <label className="sr-only" htmlFor="library-status">Status</label>
+              <select id="library-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={selectClass}>
+                {STATUS_FILTERS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <label className="sr-only" htmlFor="library-feature">Check</label>
+              <select id="library-feature" value={filterFeature} onChange={(e) => setFilterFeature(e.target.value)} className={selectClass}>
+                <option value="all">All checks</option>
+                {ANALYSIS_FEATURES_UI.map((f) => (
+                  <option key={f.id} value={f.id}>{f.label}</option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
+
+            <p className="sr-only" role="status">
+              {sortedVideos.length} {sortedVideos.length === 1 ? 'video' : 'videos'}
+            </p>
+
+            {sortedVideos.length === 0 ? (
+              <EmptyState
+                title="No videos match"
+                body="Try a different search or clear the filters."
+                action={
+                  hasActiveFilters ? (
+                    <Button variant="secondary" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {sortedVideos.map((video) => (
+                  <li key={video._id}>
+                    <VideoCard
+                      video={video}
+                      onDelete={handleDelete}
+                      onReanalyze={handleReanalyze}
+                      onChatClick={handleChatClick}
+                      reanalyzingVideoId={reanalyzingVideoId}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
       </div>
     </UserPage>
   );
