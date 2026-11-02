@@ -1,245 +1,137 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Home,
-  Video,
-  User,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
-  Upload,
-  Sparkles,
-} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { LogOut, ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react';
 import { useLogout } from '@/hooks/useLogout';
 import ConfirmationModal from '@/components/UI/ConfirmationModal';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
+import { UsageMeter } from '@/components/app/UsageMeter';
+import { APP_NAV_ITEMS, isNavActive } from '@/lib/app-nav';
+import { cn } from '@/lib/utils';
 
-interface NavigationItem {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-}
-
-const navigationItems: NavigationItem[] = [
-  { id: 'home', name: 'Home', icon: Home, href: '/dashboard' },
-  { id: 'upload', name: 'Upload', icon: Upload, href: '/upload' },
-  { id: 'features', name: 'Features', icon: Sparkles, href: '/features' },
-  { id: 'videos', name: 'Your Videos', icon: Video, href: '/videos' },
-  { id: 'profile', name: 'Profile', icon: User, href: '/profile' },
-  { id: 'settings', name: 'Settings', icon: Settings, href: '/settings' },
-];
-
-function pathMatchesItem(pathname: string, href: string): boolean {
-  if (href === '/videos') return pathname === '/videos' || pathname.startsWith('/videos/');
-  return pathname === href;
-}
-
+/** Desktop navigation (768 px and up). Below that, `BottomNav` takes over. */
 export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar();
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState<string>('home');
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { pathname } = useLocation();
   const { logout } = useLogout();
-
-  useEffect(() => {
-    const pathname = location.pathname;
-    const match = navigationItems.find((item) => pathMatchesItem(pathname, item.href));
-    if (match) setActiveItem(match.id);
-  }, [location.pathname]);
-
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const handleItemClick = (itemId: string) => {
-    if (itemId === 'logout') {
-      setIsConfirmModalOpen(true);
-      return;
-    }
-    setActiveItem(itemId);
-    const navItem = navigationItems.find((item) => item.id === itemId);
-    if (navItem) navigate(navItem.href);
-    if (typeof window !== 'undefined' && window.innerWidth < 768) setIsOpen(false);
-  };
-
-  const handleConfirmLogout = () => {
-    setIsConfirmModalOpen(false);
-    logout();
-  };
-
-  const handleCloseModal = () => {
-    setIsConfirmModalOpen(false);
-  };
-
-  const expandedW = 'w-56';
-  const collapsedW = 'w-20';
+  const { inProgressCount } = useActiveAnalyses();
 
   return (
     <>
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-6 left-6 z-50 p-3 rounded-lg bg-gray-900 shadow-lg border border-gray-800 md:hidden hover:bg-gray-800 transition-all duration-200"
-        aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        {isOpen ? <X className="h-5 w-5 text-gray-300" /> : <Menu className="h-5 w-5 text-gray-300" />}
-      </button>
-
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 md:hidden" onClick={toggleSidebar} />
-      )}
-
       <aside
-        className={`
-          fixed top-0 left-0 h-screen
-          transition-all duration-300 ease-in-out z-40
-          flex flex-col backdrop-blur-md
-          ${isCollapsed ? collapsedW : expandedW}
-          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}
-        style={{
-          background: 'rgba(10, 10, 15, 0.88)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.06)',
-          boxShadow: 'inset -1px 0 0 0 transparent',
-        }}
+        aria-label="Main"
+        className={cn(
+          'fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-line bg-canvas md:flex',
+          isCollapsed ? 'w-[72px]' : 'w-60'
+        )}
       >
-        <div
-          className="pointer-events-none absolute top-0 right-0 bottom-0 w-px z-10"
-          style={{
-            background: 'linear-gradient(180deg, rgba(255, 27, 107, 0.35) 0%, rgba(255, 107, 53, 0.12) 45%, transparent 100%)',
-          }}
-          aria-hidden
-        />
-
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/[0.06] relative z-20">
+        <div className={cn('flex h-16 items-center border-b border-line px-4', isCollapsed ? 'justify-center' : 'justify-between')}>
+          <Link to="/dashboard" className="app-focus rounded" aria-label="Vireact home">
+            <span className="text-brand-gradient font-heading text-2xl leading-none tracking-wide">{isCollapsed ? 'V' : 'VIREACT'}</span>
+          </Link>
           {!isCollapsed && (
-            <div className="flex items-center min-w-0">
-              <span
-                className="uppercase truncate"
-                style={{
-                  fontFamily: 'Impact, Anton, "Arial Black", sans-serif',
-                  fontSize: 'clamp(1.35rem, 2.2vw, 1.75rem)',
-                  fontWeight: '900',
-                  letterSpacing: 'normal',
-                  background: 'linear-gradient(90deg, #FF1B6B 0%, #FF4D4D 25%, #FF6B35 50%, #FFA500 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  lineHeight: '1',
-                  display: 'inline-block',
-                }}
-              >
-                VIREACT
-              </span>
-            </div>
-          )}
-
-          {isCollapsed && (
-            <span
-              className="uppercase mx-auto"
-              style={{
-                fontFamily: 'Impact, Anton, "Arial Black", sans-serif',
-                fontSize: '1.5rem',
-                fontWeight: '900',
-                background: 'linear-gradient(90deg, #FF1B6B 0%, #FF4D4D 25%, #FF6B35 50%, #FFA500 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                display: 'inline-block',
-              }}
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(true)}
+              className="app-focus inline-flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-white/5 hover:text-fg"
+              aria-label="Collapse sidebar"
             >
-              V
-            </span>
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
           )}
-
-          <button
-            onClick={toggleCollapse}
-            className="hidden md:flex p-1.5 rounded-full hover:bg-white/5 transition-all duration-200 flex-shrink-0"
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4 text-gray-500" />
-            ) : (
-              <ChevronLeft className="h-4 w-4 text-gray-500" />
-            )}
-          </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1 relative z-20">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeItem === item.id;
+        <div className="p-3">
+          <Link
+            to="/new"
+            aria-current={pathname === '/new' ? 'page' : undefined}
+            aria-label={isCollapsed ? 'New analysis' : undefined}
+            className={cn(
+              'app-focus flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-gradient text-sm font-semibold text-on-brand hover:opacity-90',
+              !isCollapsed && 'px-4'
+            )}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {!isCollapsed && 'New analysis'}
+          </Link>
+        </div>
 
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label="Pages">
+          {APP_NAV_ITEMS.map((item) => {
+            const active = isNavActive(pathname, item.href);
+            const Icon = item.icon;
             return (
               <Link
                 key={item.id}
                 to={item.href}
-                onClick={() => handleItemClick(item.id)}
-                className={cnNavLink(isActive, isCollapsed)}
-                style={
-                  isActive
-                    ? {
-                        background: 'linear-gradient(135deg, #ef4444 0%, #f97316 50%, #ea580c 100%)',
-                        boxShadow: '-4px 0 14px -2px rgba(249, 115, 22, 0.35)',
-                      }
-                    : undefined
-                }
+                aria-current={active ? 'page' : undefined}
+                aria-label={isCollapsed ? item.name : undefined}
+                className={cn(
+                  'app-focus relative flex h-11 items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-100',
+                  isCollapsed ? 'justify-center' : 'px-3',
+                  active ? 'bg-accent-tint text-fg' : 'text-fg-muted hover:bg-white/5 hover:text-fg'
+                )}
               >
-                <Icon
-                  className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-orange-400/90'}`}
-                />
-                {!isCollapsed && (
-                  <span className={`ml-2.5 text-sm font-medium ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                    {item.name}
+                {active && <span aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent" />}
+                <Icon className={cn('h-5 w-5 shrink-0', active && 'text-accent')} aria-hidden="true" />
+                {!isCollapsed && <span className="flex-1">{item.name}</span>}
+                {item.id === 'library' && inProgressCount > 0 && !isCollapsed && (
+                  <span className="tabular inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                    <Loader2 className="h-3 w-3 motion-safe:animate-spin" aria-hidden="true" />
+                    {inProgressCount} analyzing
                   </span>
+                )}
+                {item.id === 'library' && inProgressCount > 0 && isCollapsed && (
+                  <span aria-hidden="true" className="absolute right-3 top-2.5 h-2 w-2 rounded-full bg-warning" />
+                )}
+                {item.id === 'library' && inProgressCount > 0 && isCollapsed && (
+                  <span className="sr-only">, {inProgressCount} analyzing</span>
                 )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto border-t border-white/[0.06] p-2 relative z-20">
+        <div className="space-y-2 border-t border-line p-3">
+          {!isCollapsed && <UsageMeter />}
+          {isCollapsed && (
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(false)}
+              className="app-focus flex h-11 w-full items-center justify-center rounded-lg text-fg-muted hover:bg-white/5 hover:text-fg"
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => handleItemClick('logout')}
-            className={`
-              w-full flex items-center rounded-full text-left transition-all duration-200 group
-              text-orange-500/90 hover:bg-orange-600/10 hover:text-orange-400
-              ${isCollapsed ? 'justify-center px-3 py-2.5' : 'px-3 py-2.5'}
-            `}
+            onClick={() => setConfirmOpen(true)}
+            aria-label={isCollapsed ? 'Log out' : undefined}
+            className={cn(
+              'app-focus flex h-11 w-full items-center gap-3 rounded-lg text-sm font-medium text-fg-muted hover:bg-white/5 hover:text-fg',
+              isCollapsed ? 'justify-center' : 'px-3'
+            )}
           >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            {!isCollapsed && <span className="ml-2.5 text-sm">Logout</span>}
+            <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+            {!isCollapsed && 'Log out'}
           </button>
         </div>
       </aside>
 
       <ConfirmationModal
-        isOpen={isConfirmModalOpen}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmLogout}
-        title="Confirm Logout"
-        message="Are you sure you want to logout? You will need to sign in again to access your account."
-        confirmText="Logout"
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          logout();
+        }}
+        title="Log out?"
+        message="You'll need to sign in again to see your videos."
+        confirmText="Log out"
         cancelText="Cancel"
       />
     </>
   );
-}
-
-function cnNavLink(isActive: boolean, isCollapsed: boolean) {
-  const base =
-    'group flex items-center text-left transition-all duration-200 rounded-full border border-transparent';
-  const pad = isCollapsed ? 'justify-center px-3 py-2.5' : 'px-3 py-2.5';
-  const activeCls = isActive ? 'text-white' : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200';
-  return `${base} ${pad} ${activeCls}`;
 }
