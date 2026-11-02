@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2, LogOut } from 'lucide-react';
+import { PageHeader } from '@/components/app/PageHeader';
+import { Button } from '@/components/app/Button';
+import { Tabs, type TabDef } from '@/components/app/Tabs';
+import ConfirmationModal from '@/components/UI/ConfirmationModal';
+import { useLogout } from '@/hooks/useLogout';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import UserPage from '@/components/Layout/UserPage';
@@ -30,21 +36,20 @@ interface PasswordFormValues {
 }
 
 const planNames: Record<'free' | 'premium' | 'pro' | 'enterprise', string> = {
-  free: 'FREE',
-  premium: 'PREMIUM',
-  pro: 'PRO',
-  enterprise: 'ENTERPRISE',
+  free: 'Free',
+  premium: 'Premium',
+  pro: 'Pro',
+  enterprise: 'Enterprise',
 };
 
-const planColors: Record<'free' | 'premium' | 'pro' | 'enterprise', string> = {
-  free: 'bg-gray-600',
-  premium: 'bg-blue-600',
-  pro: 'bg-gradient-to-r from-purple-500 to-pink-500',
-  enterprise: 'bg-gradient-to-r from-amber-500 to-red-500',
-};
+type SettingsTab = 'profile' | 'plan' | 'notifications' | 'password';
 
+/** Settings page (/settings). Profile, plan, notifications and password are tabs; `?tab=` selects one. */
 function Profile() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { logout } = useLogout();
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -230,13 +235,30 @@ function Profile() {
   const calculatePercentage = (used: number, limit: number | null) =>
     limit != null && limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
 
+
+  const tabs: TabDef<SettingsTab>[] = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'plan', label: 'Plan' },
+    { id: 'notifications', label: 'Emails' },
+    ...(user?.provider === 'local' ? [{ id: 'password' as const, label: 'Password' }] : []),
+  ];
+  const requestedTab = searchParams.get('tab') as SettingsTab | null;
+  const activeTab: SettingsTab = tabs.some((t) => t.id === requestedTab) ? (requestedTab as SettingsTab) : 'profile';
+  const setActiveTab = (tab: SettingsTab) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'profile') next.delete('tab');
+    else next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
+
   if (isLoading) {
     return (
       <UserPage>
-        <div className="px-4 py-8">
-          <h1 className="text-white text-2xl font-bebas-neue mb-4">Profile</h1>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <div className="mx-auto w-full max-w-3xl px-4 py-8 md:px-8 md:py-10">
+          <PageHeader title="Settings" />
+          <div className="flex justify-center py-8" role="status">
+            <Loader2 className="h-6 w-6 text-fg-muted motion-safe:animate-spin" aria-hidden="true" />
+            <span className="sr-only">Loading settings</span>
           </div>
         </div>
       </UserPage>
@@ -246,15 +268,14 @@ function Profile() {
   if (!user) {
     return (
       <UserPage>
-        <div className="px-4 py-8">
-          <h1 className="text-white text-2xl font-bebas-neue mb-4">Profile</h1>
-          <p className="text-gray-300">Failed to load profile information.</p>
+        <div className="mx-auto w-full max-w-3xl px-4 py-8 md:px-8 md:py-10">
+          <PageHeader title="Settings" />
+          <p role="alert" className="text-fg-muted">We couldn't load your profile. Refresh the page to try again.</p>
         </div>
       </UserPage>
     );
   }
 
-  const isLocalUser = user.provider === 'local';
   const isGoogleUser = user.provider === 'google';
   const hasSubscriptionData = subPlan != null && lastFetchedAt != null;
   const subscription = hasSubscriptionData
@@ -284,404 +305,270 @@ function Profile() {
   const subscriptionLoadError = subError && !lastFetchedAt;
 
   return (
-    <UserPage mainClassName="pt-8 md:pt-10 px-6 md:px-8">
-      <div className="max-w-6xl mx-auto pb-8">
-        <button
-          onClick={() => navigate('/settings')}
-          className="text-gray-400 hover:text-white mb-4 flex items-center gap-2 transition-colors"
-        >
-          ← Back to Settings
-        </button>
+    <UserPage>
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 md:px-8 md:py-10">
+        <PageHeader title="Settings" />
 
-        <h1
-          className="text-3xl md:text-4xl font-black mb-8 uppercase tracking-wide"
-          style={{
-            background: 'linear-gradient(90deg, #ef4444, #ec4899, #f97316)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          PROFILE
-        </h1>
-
-        {/* Section 1: Profile Information */}
-        <section className="rounded-2xl border border-white/5 bg-gray-900/50 backdrop-blur-sm p-6 md:p-8 mb-6">
-          <h2 className="text-xl font-bold text-red-500 mb-6">PROFILE INFORMATION</h2>
-          <Formik
-            initialValues={profileInitialValues}
-            validationSchema={profileValidationSchema}
-            enableReinitialize
-            onSubmit={handleProfileSubmit}
-          >
-            {({ isSubmitting, isValid, dirty }) => (
-              <Form className="space-y-4">
-                <TextField
-                  field="name"
-                  label_text="Full Name"
-                  placeholder="Enter your full name"
-                  type="text"
-                  required
-                  autoComplete="name"
-                />
-
-                <TextField
-                  field="email"
-                  label_text="Email Address"
-                  placeholder="Enter your email"
-                  type="email"
-                  required
-                  isDisabled={isGoogleUser}
-                  helpText={isGoogleUser ? 'Email is managed by Google and cannot be changed' : undefined}
-                  autoComplete="email"
-                />
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting || isUpdatingProfile || !isValid || !dirty}
-                  className="w-full h-12 py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting || isUpdatingProfile ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Updating...
-                    </div>
-                  ) : (
-                    'Update Profile'
-                  )}
-                </button>
-              </Form>
-            )}
-          </Formik>
-        </section>
-
-        {/* Section 2: Subscription & Usage */}
-        <section className="rounded-2xl border border-white/5 bg-gray-900/50 backdrop-blur-sm p-6 md:p-8 mb-6">
-          <h2 className="text-xl font-bold text-red-500 mb-6">SUBSCRIPTION & USAGE</h2>
-
-          {subscriptionLoadError && !subscription ? (
-            <div className="text-red-400 text-sm py-4">Failed to load subscription data</div>
-          ) : subscription && limits ? (
-            <>
-              {/* Current Plan */}
-              <div
-                className="rounded-lg p-6 mb-6"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                }}
+        <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} label="Settings sections">
+          {activeTab === 'profile' && (
+            <section className={cardClass} aria-labelledby="settings-profile">
+              <h2 id="settings-profile" className={sectionTitleClass}>Profile</h2>
+              <Formik
+                initialValues={profileInitialValues}
+                validationSchema={profileValidationSchema}
+                enableReinitialize
+                onSubmit={handleProfileSubmit}
               >
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div>
-                    <h3 className="text-pink-500 font-bold text-sm mb-2">CURRENT PLAN</h3>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span
-                        className={`${
-                          planColors[subscription.plan]
-                        } text-white px-4 py-2 rounded-lg font-bold text-sm`}
-                      >
-                        {planNames[subscription.plan]}
-                      </span>
-                      <span className="text-green-400 text-sm">
-                        Status: {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
-                      </span>
-                    </div>
-                    <p className="text-gray-400 text-sm mt-2">
-                      Current period: {new Date(subscription.currentPeriodStart).toLocaleDateString()} -{' '}
-                      {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                    </p>
-                  </div>
+                {({ isSubmitting, isValid, dirty }) => (
+                  <Form className="space-y-4">
+                    <TextField
+                      field="name"
+                      label_text="Full name"
+                      placeholder="Enter your full name"
+                      type="text"
+                      required
+                      autoComplete="name"
+                    />
 
-                  {subscription.plan === 'free' && (
-                    <button
-                      onClick={handleUpgrade}
-                      className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90"
-                      style={{
-                        background: 'linear-gradient(135deg, #FF3CAC, #FF8C00)',
-                        border: 'none',
-                      }}
-                    >
-                      Upgrade Plan
-                    </button>
-                  )}
-                  {(subscription.plan === 'premium' || subscription.plan === 'pro') && (
-                    <div className="flex flex-col md:flex-row gap-3">
-                      <button
-                        onClick={() => navigate('/subscription-plans')}
-                        className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:opacity-90"
-                        style={{
-                          background: 'linear-gradient(135deg, #FF3CAC, #FF8C00)',
-                          border: 'none',
-                        }}
-                      >
-                        Change Plan
-                      </button>
-                      <button
-                        onClick={handleManageBilling}
-                        disabled={loadingPortal}
-                        className="px-6 py-2 text-white rounded-lg font-semibold text-sm transition-colors hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          background: 'transparent',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                        }}
-                      >
-                        {loadingPortal ? 'Opening...' : 'Manage Billing'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {portalError && (
-                  <div className="text-red-400 text-sm mt-3">{portalError}</div>
+                    <TextField
+                      field="email"
+                      label_text="Email address"
+                      placeholder="Enter your email"
+                      type="email"
+                      required
+                      isDisabled={isGoogleUser}
+                      helpText={isGoogleUser ? 'Email is managed by Google and cannot be changed' : undefined}
+                      autoComplete="email"
+                    />
+
+                    <Button type="submit" disabled={isSubmitting || isUpdatingProfile || !isValid || !dirty}>
+                      {isSubmitting || isUpdatingProfile ? 'Saving' : 'Save changes'}
+                    </Button>
+                  </Form>
                 )}
-              </div>
-
-              {subscription.plan === 'free' &&
-                lifetimeFreeVideoLimit != null &&
-                (lifetimeFreeVideosUsed ?? 0) < lifetimeFreeVideoLimit && (
-                  <div
-                    className="rounded-lg p-6 mb-4"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '12px',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                    }}
-                  >
-                    <h3 className="text-pink-500 font-bold text-sm mb-2">FREE TRIAL</h3>
-                    <p className="text-gray-200 text-sm">
-                      You have used {lifetimeFreeVideosUsed ?? 0} of {lifetimeFreeVideoLimit} free trial
-                      videos.{' '}
-                      <Link
-                        to="/subscription-plans"
-                        className="text-pink-400 font-semibold underline underline-offset-2 hover:text-pink-300"
-                      >
-                        Upgrade for unlimited monthly access
-                      </Link>
-                      .
-                    </p>
-                  </div>
-                )}
-
-              {subscription.plan === 'free' &&
-                lifetimeFreeVideoLimit != null &&
-                (lifetimeFreeVideosUsed ?? 0) >= lifetimeFreeVideoLimit && (
-                  <div
-                    className="rounded-lg p-6 mb-4"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '12px',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                    }}
-                  >
-                    <h3 className="text-pink-500 font-bold text-sm mb-2">FREE TRIAL</h3>
-                    <p className="text-gray-200 text-sm">
-                      You&apos;ve used your free trial.{' '}
-                      <Link
-                        to="/subscription-plans"
-                        className="text-pink-400 font-semibold underline underline-offset-2 hover:text-pink-300"
-                      >
-                        Upgrade to start analyzing more videos
-                      </Link>
-                      .
-                    </p>
-                  </div>
-                )}
-
-              {/* Video Analyses Usage */}
-              <div
-                className="rounded-lg p-6 mb-4"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-bold text-lg">VIDEO ANALYSES</h3>
-                  <span className="text-gray-400 text-sm">
-                    {subscription.usage.videosUsed} / {limits.videosPerMonth === null ? '∞' : limits.videosPerMonth}
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      calculatePercentage(subscription.usage.videosUsed, limits.videosPerMonth) >= 100
-                        ? 'bg-red-500'
-                        : calculatePercentage(subscription.usage.videosUsed, limits.videosPerMonth) >= 80
-                          ? 'bg-yellow-500'
-                          : 'bg-blue-500'
-                    }`}
-                    style={{
-                      width: `${calculatePercentage(
-                        subscription.usage.videosUsed,
-                        limits.videosPerMonth
-                      )}%`,
-                    }}
-                  />
-                </div>
-                {calculatePercentage(subscription.usage.videosUsed, limits.videosPerMonth) >= 100 && (
-                  <p className="text-red-400 text-sm mt-2">
-                    You&apos;ve reached your video limit for this period. Upgrade to analyze more videos.
-                  </p>
-                )}
-              </div>
-
-              {/* Chat Messages Usage */}
-              <div
-                className="rounded-lg p-6"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-bold text-lg">CHAT MESSAGES</h3>
-                  <span className="text-gray-400 text-sm">
-                    {subscription.usage.chatMessagesUsed} / {limits.chatMessagesPerMonth === null ? '∞' : limits.chatMessagesPerMonth}
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      calculatePercentage(subscription.usage.chatMessagesUsed, limits.chatMessagesPerMonth) >= 100
-                        ? 'bg-red-500'
-                        : calculatePercentage(
-                            subscription.usage.chatMessagesUsed,
-                            limits.chatMessagesPerMonth
-                          ) >= 80
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                    }`}
-                    style={{
-                      width: `${calculatePercentage(
-                        subscription.usage.chatMessagesUsed,
-                        limits.chatMessagesPerMonth
-                      )}%`,
-                    }}
-                  />
-                </div>
-                {calculatePercentage(
-                  subscription.usage.chatMessagesUsed,
-                  limits.chatMessagesPerMonth
-                ) >= 100 && (
-                  <p className="text-red-400 text-sm mt-2">
-                    You&apos;ve reached your chat message limit. Upgrade for more messages.
-                  </p>
-                )}
-              </div>
-
-              {/* Usage Reset Note */}
-              <div className="mt-6 flex items-start gap-3 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                <span className="text-2xl">💡</span>
-                <p className="text-blue-300 text-sm">
-                  <strong>Note:</strong> Usage resets on your subscription anniversary date (
-                  {new Date(subscription.currentPeriodEnd).toLocaleDateString()}).
-                  {subscription.plan === 'free' &&
-                    ' Upgrade to get more videos and chat messages per month!'}
-                </p>
-              </div>
-            </>
-          ) : (
-            <div className="text-gray-400 text-sm py-4">Loading subscription data...</div>
+              </Formik>
+            </section>
           )}
-        </section>
 
-        {/* Section 3: Email Notifications (Dark Theme) */}
-        <section className="rounded-2xl border border-white/5 bg-gray-900/50 backdrop-blur-sm p-6 md:p-8 mb-8">
-          <h2 className="text-xl font-bold text-red-500 mb-6">EMAIL NOTIFICATIONS</h2>
+          {activeTab === 'plan' && (
+            <section className={cardClass} aria-labelledby="settings-plan">
+              <h2 id="settings-plan" className={sectionTitleClass}>Plan and usage</h2>
 
-          <div className="space-y-0">
-            <NotificationToggle
-              title="Shorts ready"
-              description="Get notified when your Shorts are ready"
-              enabled={notifyShortsReady}
-              onToggle={() => toggleNotification('shorts')}
-              variant="dark"
-            />
-            <NotificationToggle
-              title="Export ready"
-              description="Get notified when your exports are ready"
-              enabled={notifyExportReady}
-              onToggle={() => toggleNotification('export')}
-              variant="dark"
-            />
-            <NotificationToggle
-              title="Product updates"
-              description="Get notified when we release new features"
-              enabled={notifyProductUpdates}
-              onToggle={() => toggleNotification('product')}
-              variant="dark"
-            />
-          </div>
-        </section>
+              {subscriptionLoadError && !subscription ? (
+                <p role="alert" className="text-sm text-danger">We couldn't load your plan. Refresh the page to try again.</p>
+              ) : subscription && limits ? (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-fg-muted">Current plan</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-3">
+                        <span className="text-lg font-semibold text-fg">{planNames[subscription.plan]}</span>
+                        <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+                          {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                        </span>
+                      </p>
+                      {subscription.currentPeriodStart && subscription.currentPeriodEnd && (
+                        <p className="tabular mt-1 text-sm text-fg-muted">
+                          {new Date(subscription.currentPeriodStart).toLocaleDateString()} to{' '}
+                          {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
 
-        {/* Section 4: Change Password (only for local users) */}
-        {isLocalUser && (
-          <section>
-            <h2 className="text-white text-xl font-semibold mb-4">Change Password</h2>
-            <Formik
-              initialValues={passwordInitialValues}
-              validationSchema={passwordValidationSchema}
-              onSubmit={handlePasswordSubmit}
-            >
-              {({ isSubmitting, isValid, dirty }) => (
-                <Form className="space-y-4">
-                  <PasswordField
-                    field="currentPassword"
-                    label_text="Current Password"
-                    placeholder="Enter your current password"
-                    required
-                    autoComplete="current-password"
-                  />
-
-                  <PasswordField
-                    field="newPassword"
-                    label_text="New Password"
-                    placeholder="Enter your new password"
-                    required
-                    autoComplete="new-password"
-                  />
-
-                  <PasswordField
-                    field="confirmPassword"
-                    label_text="Confirm New Password"
-                    placeholder="Confirm your new password"
-                    required
-                    autoComplete="new-password"
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || isUpdatingPassword || !isValid || !dirty}
-                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting || isUpdatingPassword ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Updating...
+                    {subscription.plan === 'free' && <Button onClick={handleUpgrade}>Upgrade</Button>}
+                    {(subscription.plan === 'premium' || subscription.plan === 'pro') && (
+                      <div className="flex flex-wrap gap-3">
+                        <Button onClick={() => navigate('/subscription-plans')}>Change plan</Button>
+                        <Button variant="secondary" onClick={handleManageBilling} disabled={loadingPortal}>
+                          {loadingPortal ? 'Opening' : 'Manage billing'}
+                        </Button>
                       </div>
-                    ) : (
-                      'Update Password'
                     )}
-                  </button>
-                </Form>
+                  </div>
+                  {portalError && <p role="alert" className="text-sm text-danger">{portalError}</p>}
+
+                  {subscription.plan === 'free' &&
+                    lifetimeFreeVideoLimit != null &&
+                    (lifetimeFreeVideosUsed ?? 0) < lifetimeFreeVideoLimit && (
+                      <p className="tabular rounded-lg border border-line bg-canvas p-4 text-sm text-fg">
+                        You have used {lifetimeFreeVideosUsed ?? 0} of {lifetimeFreeVideoLimit} free trial videos.{' '}
+                        <Link to="/subscription-plans" className="app-focus rounded font-medium text-accent underline underline-offset-2">
+                          Upgrade for monthly analyses
+                        </Link>
+                      </p>
+                    )}
+
+                  {subscription.plan === 'free' &&
+                    lifetimeFreeVideoLimit != null &&
+                    (lifetimeFreeVideosUsed ?? 0) >= lifetimeFreeVideoLimit && (
+                      <p className="rounded-lg border border-line bg-canvas p-4 text-sm text-fg">
+                        You&apos;ve used your free trial.{' '}
+                        <Link to="/subscription-plans" className="app-focus rounded font-medium text-accent underline underline-offset-2">
+                          Upgrade to analyze more videos
+                        </Link>
+                      </p>
+                    )}
+
+                  <UsageBar
+                    label="Video analyses"
+                    used={subscription.usage.videosUsed}
+                    limit={limits.videosPerMonth}
+                    atLimitText="You've reached your video limit for this period. Upgrade to analyze more videos."
+                    percent={calculatePercentage(subscription.usage.videosUsed, limits.videosPerMonth)}
+                  />
+                  <UsageBar
+                    label="Chat messages"
+                    used={subscription.usage.chatMessagesUsed}
+                    limit={limits.chatMessagesPerMonth}
+                    atLimitText="You've reached your chat message limit. Upgrade for more messages."
+                    percent={calculatePercentage(subscription.usage.chatMessagesUsed, limits.chatMessagesPerMonth)}
+                  />
+
+                  {subscription.currentPeriodEnd && (
+                    <p className="text-sm text-fg-muted">
+                      Usage resets on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p role="status" className="text-sm text-fg-muted">Loading your plan</p>
               )}
-            </Formik>
-          </section>
-        )}
+            </section>
+          )}
+
+          {activeTab === 'notifications' && (
+            <section className={cardClass} aria-labelledby="settings-notifications">
+              <h2 id="settings-notifications" className={sectionTitleClass}>Email notifications</h2>
+              <div className="space-y-0">
+                <NotificationToggle
+                  title="Shorts ready"
+                  description="Get notified when your Shorts are ready"
+                  enabled={notifyShortsReady}
+                  onToggle={() => toggleNotification('shorts')}
+                  variant="dark"
+                />
+                <NotificationToggle
+                  title="Export ready"
+                  description="Get notified when your exports are ready"
+                  enabled={notifyExportReady}
+                  onToggle={() => toggleNotification('export')}
+                  variant="dark"
+                />
+                <NotificationToggle
+                  title="Product updates"
+                  description="Get notified when we release new features"
+                  enabled={notifyProductUpdates}
+                  onToggle={() => toggleNotification('product')}
+                  variant="dark"
+                />
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'password' && user.provider === 'local' && (
+            <section className={cardClass} aria-labelledby="settings-password">
+              <h2 id="settings-password" className={sectionTitleClass}>Change password</h2>
+              <Formik
+                initialValues={passwordInitialValues}
+                validationSchema={passwordValidationSchema}
+                onSubmit={handlePasswordSubmit}
+              >
+                {({ isSubmitting, isValid, dirty }) => (
+                  <Form className="space-y-4">
+                    <PasswordField
+                      field="currentPassword"
+                      label_text="Current password"
+                      placeholder="Enter your current password"
+                      required
+                      autoComplete="current-password"
+                    />
+                    <PasswordField
+                      field="newPassword"
+                      label_text="New password"
+                      placeholder="Enter your new password"
+                      required
+                      autoComplete="new-password"
+                    />
+                    <PasswordField
+                      field="confirmPassword"
+                      label_text="Confirm new password"
+                      placeholder="Confirm your new password"
+                      required
+                      autoComplete="new-password"
+                    />
+                    <Button type="submit" disabled={isSubmitting || isUpdatingPassword || !isValid || !dirty}>
+                      {isSubmitting || isUpdatingPassword ? 'Updating' : 'Update password'}
+                    </Button>
+                  </Form>
+                )}
+              </Formik>
+            </section>
+          )}
+        </Tabs>
+
+        <div className="mt-10 border-t border-line pt-6 md:hidden">
+          <Button variant="secondary" fullWidth onClick={() => setLogoutOpen(true)}>
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Log out
+          </Button>
+        </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          logout();
+        }}
+        title="Log out?"
+        message="You'll need to sign in again to see your videos."
+        confirmText="Log out"
+        cancelText="Cancel"
+      />
     </UserPage>
+  );
+}
+
+const cardClass = 'rounded-xl border border-line bg-surface p-5 md:p-6';
+const sectionTitleClass = 'mb-5 text-lg font-semibold text-fg';
+
+function UsageBar({
+  label,
+  used,
+  limit,
+  percent,
+  atLimitText,
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+  percent: number;
+  atLimitText: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-4">
+        <h3 className="text-sm font-medium text-fg">{label}</h3>
+        <span className="tabular text-sm text-fg-muted">
+          {used} of {limit === null ? 'unlimited' : limit}
+        </span>
+      </div>
+      <div
+        className="h-2 overflow-hidden rounded-full bg-white/10"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+      >
+        <div
+          className={`h-full origin-left rounded-full ${percent >= 100 ? 'bg-danger' : percent >= 80 ? 'bg-warning' : 'bg-accent'}`}
+          style={{ transform: `scaleX(${percent / 100})` }}
+        />
+      </div>
+      {percent >= 100 && <p className="mt-2 text-sm text-danger">{atLimitText}</p>}
+    </div>
   );
 }
 

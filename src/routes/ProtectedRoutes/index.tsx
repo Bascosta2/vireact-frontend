@@ -8,6 +8,8 @@ import { useAuth } from '@/redux/hooks/use-auth'
 import { USER_ROLES } from '@/constants'
 import { SidebarProvider } from '@/contexts/SidebarContext'
 import { PendingUploadProvider } from '@/contexts/PendingUploadContext'
+import { ActiveAnalysesProvider } from '@/contexts/ActiveAnalysesContext'
+import { ToastProvider } from '@/components/app/Toast'
 // import BottomNav from '@/components/Header/UserHeader/BottomNav'
 
 const ProtectedRoutes = () => {
@@ -33,7 +35,11 @@ const ProtectedRoutes = () => {
                                 <>
                                     <SidebarProvider>
                                         <PendingUploadProvider>
-                                            <UserRoutes />
+                                            <ToastProvider>
+                                                <ActiveAnalysesProvider>
+                                                    <UserRoutes />
+                                                </ActiveAnalysesProvider>
+                                            </ToastProvider>
                                         </PendingUploadProvider>
                                     </SidebarProvider>
                                 </>
