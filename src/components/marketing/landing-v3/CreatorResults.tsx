@@ -1,6 +1,6 @@
 import { winsData } from '@/components/Home/WinsSection/wins-data';
 import { PrimaryCta } from './PrimaryCta';
-import { avatarThumb, verifiedCreatorCount } from './HeroProofRow';
+import { avatarThumb, verifiedCreatorCount } from './hero-data';
 
 export function CreatorResults() {
   const count = verifiedCreatorCount();
@@ -17,7 +17,11 @@ export function CreatorResults() {
         </p>
       </header>
 
-      <ul className="flex snap-x gap-4 overflow-x-auto pb-3 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible">
+      <ul
+        tabIndex={0}
+        aria-label="Creator testimonials"
+        className="flex snap-x gap-4 overflow-x-auto pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible"
+      >
         {winsData.map((win) => (
           <li
             key={win.name}

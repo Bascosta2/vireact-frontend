@@ -1,6 +1,8 @@
 import { HowItWorksPhases } from './HowItWorksPhases';
 import { FounderCredibility } from './FoundationCredibility';
 import { CreatorResults } from './CreatorResults';
+import { NicheVideoCarousel } from './NicheVideoCarousel';
+import { EasiestWayCards } from './EasiestWayCards';
 import { LibraryTeaser } from './LibraryTeaser';
 import { FaqV3 } from './FaqV3';
 import { FinalCta } from './FinalCta';
@@ -18,6 +20,12 @@ export default function BelowFold() {
       </TrackedSection>
       <TrackedSection section="creator_results">
         <CreatorResults />
+      </TrackedSection>
+      <TrackedSection section="niche_carousel">
+        <NicheVideoCarousel />
+      </TrackedSection>
+      <TrackedSection section="easiest_way">
+        <EasiestWayCards />
       </TrackedSection>
       <TrackedSection section="library_teaser">
         <LibraryTeaser />

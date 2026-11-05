@@ -11,12 +11,14 @@ interface AssetSlotProps {
   rounded?: boolean;
   /** When true, hints to the browser that this asset is likely to be shown above the fold. */
   priority?: boolean;
+  /** CSS object-position for the cropped image, e.g. "top". Defaults to centered. */
+  objectPosition?: string;
 }
 
 const cx = (...classes: Array<string | false | null | undefined>): string =>
   classes.filter(Boolean).join(' ');
 
-export function AssetSlot({ id, alt, aspect, className, rounded = true, priority }: AssetSlotProps) {
+export function AssetSlot({ id, alt, aspect, className, rounded = true, priority, objectPosition }: AssetSlotProps) {
   const slot = getAssetSlot(id);
   const hasAsset = slot ? assetExists(slot.id) : false;
 
@@ -70,13 +72,13 @@ export function AssetSlot({ id, alt, aspect, className, rounded = true, priority
 
   return (
     <div className={containerClasses} style={style}>
-      {/* eslint-disable-next-line jsx-a11y/alt-text */}
       <img
         src={slot.src}
         alt={alt}
         width={slot.width}
         height={slot.height}
         className={cx('h-full w-full object-cover', borderRadius)}
+        style={objectPosition ? { objectPosition } : undefined}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
       />

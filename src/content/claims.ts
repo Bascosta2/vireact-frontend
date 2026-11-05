@@ -2,8 +2,8 @@
  * Marketing numbers and claims shown on public pages. Components render these
  * values from here; do not hard-code a claim in a component.
  *
- * Nothing in this file is verified. Each entry carries a `// VERIFY` note with
- * where it renders and what the audit found (docs/audit/SITE_WALKTHROUGH.md,
+ * Only `ratingSummary` is owner-confirmed. Every other entry carries a `// VERIFY`
+ * note with where it renders and what the audit found (docs/audit/SITE_WALKTHROUGH.md,
  * "Claims inventory"). Change a value here only after the owner confirms it.
  *
  * History: until Funnel V2 Phase 2 the hook count was hard-coded as "119" in
@@ -55,17 +55,12 @@ export const claims = {
   libraryViews: '',
   // VERIFY: total creators helped. The number renders only when verified is true.
   creatorCountSummary: { value: '', verified: false as boolean },
-  // VERIFY: rating + review count for the "Used by X creators" row. Hidden when verified is false.
-  ratingSummary: { value: '', count: '', verified: false as boolean },
-  // VERIFY: before/after views for a representative video. Hidden when verified is false.
-  beforeAfter: {
-    before: { views: '' },
-    after: { views: '' },
-    verified: false as boolean,
-  },
-  // VERIFY: before/after follower growth for the strip above the 3 steps on Landing V3. One entry per creator;
-  // needs brand assets growth-N-before.webp and growth-N-after.webp (profile screenshots). Each card
-  // stays hidden in production until verified is true and both images exist.
+  // Rating + review count next to the hero avatars (stars render from `value`). Owner confirmed 4.6/5 from
+  // 1000+ reviews on 2026-11-05. Hidden when verified is false.
+  ratingSummary: { value: '4.6/5', count: '1000+ reviews', verified: true as boolean },
+  // VERIFY: before/after follower growth, shown as the first slides of the hero results carousel on Landing V3.
+  // One entry per creator; needs brand assets growth-N-before.webp and growth-N-after.webp (profile screenshots).
+  // Each card stays hidden in production until verified is true and both images exist.
   growthComparisons: [
     { slot: 1, name: '', beforeFollowers: '', afterFollowers: '', verified: false as boolean },
     { slot: 2, name: '', beforeFollowers: '', afterFollowers: '', verified: false as boolean },

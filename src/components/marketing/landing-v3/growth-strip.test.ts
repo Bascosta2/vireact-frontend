@@ -11,19 +11,19 @@ afterEach(() => {
 
 describe('Growth strip above the 3 steps', () => {
   it('shows no growth slides in production while claims are unverified', async () => {
-    const { visibleGrowthComparisons } = await import('./GrowthStrip');
+    const { visibleGrowthComparisons } = await import('./hero-data');
     expect(visibleGrowthComparisons(true)).toEqual([]);
   });
 
   it('needs a verified claim and both screenshots before a slide appears in production', async () => {
     Object.assign(items[0], { name: 'Test creator', beforeFollowers: '87', afterFollowers: '505K', verified: true });
-    const { visibleGrowthComparisons } = await import('./GrowthStrip');
+    const { visibleGrowthComparisons } = await import('./hero-data');
     // No growth-1 images on disk: still hidden.
     expect(visibleGrowthComparisons(true)).toEqual([]);
   });
 
   it('shows every slot in dev so missing assets are visible', async () => {
-    const { visibleGrowthComparisons } = await import('./GrowthStrip');
+    const { visibleGrowthComparisons } = await import('./hero-data');
     expect(visibleGrowthComparisons(false)).toHaveLength(3);
   });
 });

@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { claims } from '@/content/claims';
-
-const prefersReducedMotion = (): boolean =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+import { prefersReducedMotion } from '@/lib/motion';
 
 /** Splits "200M+" into prefix, number and suffix so the number can count up. */
 export const splitCount = (value: string): { prefix: string; target: number; suffix: string; decimals: number } | null => {

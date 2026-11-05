@@ -9,6 +9,7 @@ export type CtaLocation =
   | 'phases'
   | 'credibility'
   | 'results'
+  | 'easiest_way'
   | 'library_teaser'
   | 'faq'
   | 'final';

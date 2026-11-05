@@ -18,6 +18,8 @@ afterEach(() => {
 
 describe('HeroProofRow claims rule', () => {
   it('hides the count text but keeps avatars when creatorCountSummary is unverified', () => {
+    // Rating off so its "1000+ reviews" cannot mask a leaked creatorCount below.
+    rating.verified = false;
     creator.verified = false;
     creator.value = '5,000+';
     const html = renderToStaticMarkup(React.createElement(HeroProofRow));

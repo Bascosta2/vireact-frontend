@@ -25,8 +25,6 @@ export type AssetId =
   | 'account-3-pfp'
   | 'account-4-pfp'
   | 'proof-analytics'
-  | 'before-after-before'
-  | 'before-after-after'
   | 'stack-quiz'
   | 'stack-rewriter'
   | 'stack-library'
@@ -122,22 +120,6 @@ export const brandAssetManifest: BrandAssetSlot[] = [
     { width: 1600, height: 1000 }
   ),
   slot(
-    'before-after-before',
-    'before-after-before.webp',
-    'image',
-    '720×1280 WebP (9:16)',
-    'Thumbnail or first frame of a weaker video (before working with Vireact).',
-    { width: 720, height: 1280 }
-  ),
-  slot(
-    'before-after-after',
-    'before-after-after.webp',
-    'image',
-    '720×1280 WebP (9:16)',
-    'Thumbnail or first frame of an improved video that performed better.',
-    { width: 720, height: 1280 }
-  ),
-  slot(
     'stack-quiz',
     'stack-quiz.webp',
     'image',
@@ -193,8 +175,8 @@ export const brandAssetManifest: BrandAssetSlot[] = [
         'image',
         '800×800 WebP (1:1), ≤120 KB',
         when === 'before'
-          ? `Creator ${n} profile screenshot BEFORE (follower count visible). Pairs with claims.growthComparisons.`
-          : `Creator ${n} profile screenshot AFTER growth (follower count visible). Pairs with claims.growthComparisons.`,
+          ? `Creator ${n} profile screenshot BEFORE (follower count visible). Pairs with claims.growthComparisons; shown in the hero results carousel.`
+          : `Creator ${n} profile screenshot AFTER growth (follower count visible). Pairs with claims.growthComparisons; shown in the hero results carousel.`,
         { width: 800, height: 800 }
       )
     )

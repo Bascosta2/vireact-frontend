@@ -212,6 +212,11 @@
     opacity: 0;
   }
 }
+/* Landing V3 "easiest way" pipeline: a light beam crossing the connector line. */
+@keyframes v3-beam {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(500%); }
+}
 .animate-ripple {
   animation: ripple 0.2s ease-out forwards;
   transform: scale(0);
