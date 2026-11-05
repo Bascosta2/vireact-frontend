@@ -83,7 +83,7 @@ const StepCard = ({ step, index }: { step: EasyStep; index: number }) => {
   );
 };
 
-/** Futuristic take on the old "The Easiest Way to Go Viral" cards, placed under the video carousel. */
+/** Futuristic take on the old "The Easiest Way to Go Viral" cards; the how-it-works section under the hero. */
 export function EasiestWayCards() {
   return (
     <section className="relative mx-auto max-w-6xl px-4 py-14 md:py-20" aria-labelledby="easiest-way-title">

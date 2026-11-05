@@ -1,6 +1,7 @@
 import { winsData } from '@/components/Home/WinsSection/wins-data';
 import { PrimaryCta } from './PrimaryCta';
-import { avatarThumb, verifiedCreatorCount } from './hero-data';
+import { verifiedCreatorCount } from './hero-data';
+import { CreatorGrowthCard } from './CreatorGrowthCard';
 
 export function CreatorResults() {
   const count = verifiedCreatorCount();
@@ -20,31 +21,11 @@ export function CreatorResults() {
       <ul
         tabIndex={0}
         aria-label="Creator testimonials"
-        className="flex snap-x gap-4 overflow-x-auto pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible"
+        className="flex snap-x gap-4 overflow-x-auto pt-1 pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible"
       >
         {winsData.map((win) => (
-          <li
-            key={win.name}
-            className="min-w-[260px] flex-1 snap-start rounded-2xl border border-white/10 bg-zinc-950/70 p-4 text-sm text-zinc-200 shadow-sm shadow-black/40 md:min-w-0"
-          >
-            <div className="mb-3 flex items-center gap-3">
-              <img
-                src={avatarThumb(win.avatarSrc)}
-                alt=""
-                width={36}
-                height={36}
-                className="h-9 w-9 rounded-full border border-zinc-900 object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-              <div>
-                <p className="text-sm font-semibold text-white">{win.name}</p>
-                <p className="text-xs text-zinc-300">
-                  {win.platform} · {win.stat}
-                </p>
-              </div>
-            </div>
-            <blockquote>&ldquo;{win.quote}&rdquo;</blockquote>
+          <li key={win.name} className="min-w-[280px] flex-1 snap-start md:min-w-0">
+            <CreatorGrowthCard win={win} />
           </li>
         ))}
       </ul>

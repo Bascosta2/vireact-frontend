@@ -47,5 +47,44 @@ export const resultSlides = (growth: GrowthComparison[] = visibleGrowthCompariso
   ...winsData.map((win) => ({ kind: 'creator' as const, key: win.name, win })),
 ];
 
+const COUNT_UNITS: Record<string, number> = { K: 1e3, M: 1e6, B: 1e9 };
+
+/** "85.1K SUBS" -> 85100, "1,100" -> 1100. NaN when the text has no leading number. */
+export const parseCount = (text: string): number => {
+  const match = /^([\d,]*\.?\d+)\s*([KMB])?/i.exec(text.trim());
+  if (!match) return NaN;
+  return Number(match[1].replace(/,/g, '')) * (COUNT_UNITS[(match[2] ?? '').toUpperCase()] ?? 1);
+};
+
+/** Growth multiple rounded down so it never overstates (38.7 -> "38×", 3.57 -> "3.5×"). Null below 2×. */
+export const growthMultiple = (before: string, now: string): string | null => {
+  const ratio = parseCount(now) / parseCount(before);
+  if (!Number.isFinite(ratio) || ratio < 2) return null;
+  const shown = ratio >= 10 ? Math.floor(ratio + 1e-9) : Math.floor(ratio * 10 + 1e-9) / 10;
+  return `${shown}×`;
+};
+
+export interface CreatorGrowth {
+  before: string;
+  now: string;
+  unit: string;
+  multiple: string | null;
+  highlight: string;
+}
+
+/** Owner-confirmed before -> now growth for a creator card; null when the creator has no confirmed start. */
+export const creatorGrowth = (win: Win): CreatorGrowth | null => {
+  const entry = claims.creatorGrowth.verified ? claims.creatorGrowth.byHandle[win.platform] : undefined;
+  if (!entry?.before) return null;
+  const [now, ...unit] = win.stat.split(' ');
+  return {
+    before: entry.before,
+    now,
+    unit: unit.join(' ').toLowerCase(),
+    multiple: growthMultiple(entry.before, now),
+    highlight: entry.highlight,
+  };
+};
+
 /** Production drops the empty image column (and centers the hero) until hero-founder exists; dev keeps the placeholder visible. */
 export const showHeroImage = (isProd: boolean = import.meta.env.PROD): boolean => !isProd || assetExists('hero-founder');

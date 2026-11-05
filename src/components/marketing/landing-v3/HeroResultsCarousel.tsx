@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
 import { prefersReducedMotion } from '@/lib/motion';
-import { avatarThumb, resultSlides, type Win } from './hero-data';
+import { resultSlides } from './hero-data';
 import { GrowthCard } from './GrowthCard';
+import { CreatorGrowthCard } from './CreatorGrowthCard';
 
 const ROTATE_MS = 3500;
 /** After a swipe, tap or key press the carousel waits this long before rotating again. */
@@ -13,33 +14,6 @@ const stepWidth = (track: HTMLDivElement) => {
   const first = track.firstElementChild as HTMLElement | null;
   return first ? first.offsetWidth + GAP_PX : track.clientWidth;
 };
-
-const CreatorResultCard = ({ win }: { win: Win }) => (
-  <figure className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left backdrop-blur">
-    <div className="flex items-center gap-3">
-      <img
-        src={avatarThumb(win.avatarSrc)}
-        alt=""
-        width={40}
-        height={40}
-        loading="lazy"
-        decoding="async"
-        className="h-10 w-10 shrink-0 rounded-full border border-white/10 object-cover"
-      />
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-white">{win.name}</p>
-        <p className="truncate text-xs text-zinc-400">{win.platform}</p>
-      </div>
-    </div>
-    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-      <p className="bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent">
-        {win.stat}
-      </p>
-      <p className="text-xs text-zinc-400">{win.niche}</p>
-    </div>
-    <blockquote className="line-clamp-2 text-sm leading-snug text-zinc-300">&ldquo;{win.quote}&rdquo;</blockquote>
-  </figure>
-);
 
 /** Auto-rotating creator results under the hero proof row. Swipeable; pauses on hover, focus, touch and the pause button. */
 export function HeroResultsCarousel({ className = '' }: { className?: string }) {
@@ -141,7 +115,7 @@ export function HeroResultsCarousel({ className = '' }: { className?: string }) 
             aria-label={`${i + 1} of ${slides.length}`}
             className="w-[85%] shrink-0 snap-start sm:w-[calc(50%-6px)] lg:w-[calc((100%-24px)/3)]"
           >
-            {slide.kind === 'growth' ? <GrowthCard item={slide.item} /> : <CreatorResultCard win={slide.win} />}
+            {slide.kind === 'growth' ? <GrowthCard item={slide.item} /> : <CreatorGrowthCard win={slide.win} compact />}
           </div>
         ))}
       </div>

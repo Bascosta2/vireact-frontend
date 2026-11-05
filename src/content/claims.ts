@@ -2,7 +2,7 @@
  * Marketing numbers and claims shown on public pages. Components render these
  * values from here; do not hard-code a claim in a component.
  *
- * Only `ratingSummary` is owner-confirmed. Every other entry carries a `// VERIFY`
+ * Only `ratingSummary` and `creatorGrowth` are owner-confirmed. Every other entry carries a `// VERIFY`
  * note with where it renders and what the audit found (docs/audit/SITE_WALKTHROUGH.md,
  * "Claims inventory"). Change a value here only after the owner confirms it.
  *
@@ -58,6 +58,19 @@ export const claims = {
   // Rating + review count next to the hero avatars (stars render from `value`). Owner confirmed 4.6/5 from
   // 1000+ reviews on 2026-11-05. Hidden when verified is false.
   ratingSummary: { value: '4.6/5', count: '1000+ reviews', verified: true as boolean },
+  // Starting subscriber counts and one highlight per creator, keyed by the handle in wins-data.ts. Owner supplied
+  // these from their own records on 2026-11-05. Landing V3 creator cards render "before -> now" (now = wins-data stat).
+  creatorGrowth: {
+    verified: true as boolean,
+    byHandle: {
+      '@WealthGrowthLabb': { before: '15K', highlight: '' },
+      '@the.junktion': { before: '120K', highlight: '+50K subs from just 9 videos' },
+      '@Mystflix7': { before: '3.4K', highlight: '' },
+      '@FindMyPositivity': { before: '13.2K', highlight: '15× average views per video' },
+      '@DATARKMEDIA': { before: '352', highlight: '' },
+      '@FeatherFurFin': { before: '2.2K', highlight: '10M views in one month' },
+    } as Record<string, { before: string; highlight: string }>,
+  },
   // VERIFY: before/after follower growth, shown as the first slides of the hero results carousel on Landing V3.
   // One entry per creator; needs brand assets growth-N-before.webp and growth-N-after.webp (profile screenshots).
   // Each card stays hidden in production until verified is true and both images exist.

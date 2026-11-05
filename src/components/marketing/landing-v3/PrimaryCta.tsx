@@ -6,7 +6,6 @@ import { track } from '@/lib/analytics';
 export type CtaLocation =
   | 'sticky_bar'
   | 'hero'
-  | 'phases'
   | 'credibility'
   | 'results'
   | 'easiest_way'

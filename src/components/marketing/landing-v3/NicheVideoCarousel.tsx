@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Pause, Play } from 'lucide-react';
 import CustomMarquee from '@/components/UI/Marquee';
 import { nicheData } from '@/components/FeaturesPage/Niches/niche-data';
-import { useMobileHorizontalAutoScroll } from '@/hooks/useMobileHorizontalAutoScroll';
 import { prefersReducedMotion } from '@/lib/motion';
 import { Highlight } from './Highlight';
 
 type Niche = (typeof nicheData)[number];
+
+const CARD_SIZE = 'aspect-[9/16] w-[150px] md:aspect-auto md:h-[400px] md:w-[225px]';
 
 /** Category pill only: the old founder label carried an unverified follower count. */
 const VideoCard = ({ niche, className }: { niche: Niche; className: string }) => (
@@ -18,12 +18,12 @@ const VideoCard = ({ niche, className }: { niche: Niche; className: string }) =>
   </div>
 );
 
-/** "From idea to viral" niche thumbnails: marquee on desktop, swipeable auto-scroll row on phones. */
+/**
+ * "From idea to viral" niche thumbnails. Owner decision: the marquee never pauses on hover, tap or click so it
+ * reads as part of the page. Only the OS reduced-motion setting stops it (a still, swipeable row instead).
+ */
 export function NicheVideoCarousel() {
   const [reducedMotion] = useState(prefersReducedMotion);
-  const [paused, setPaused] = useState(false);
-  const stopped = paused || reducedMotion;
-  const mobileScroll = useMobileHorizontalAutoScroll(stopped);
 
   return (
     <section className="w-full overflow-hidden py-14 md:py-20" aria-labelledby="niche-carousel-title">
@@ -32,38 +32,25 @@ export function NicheVideoCarousel() {
         <h2 id="niche-carousel-title" className="!text-3xl sm:!text-4xl md:!text-5xl">
           From idea to viral, <Highlight>instant predictions made easy</Highlight>
         </h2>
-        {!reducedMotion && (
-          <button
-            type="button"
-            onClick={() => setPaused((p) => !p)}
-            aria-label={paused ? 'Play video carousel' : 'Pause video carousel'}
-            className="mt-1 flex h-8 items-center gap-1.5 rounded-full border border-white/10 px-3 text-xs text-zinc-300 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
-          >
-            {paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
-            {paused ? 'Play' : 'Pause'}
-          </button>
-        )}
       </header>
 
-      <div
-        ref={mobileScroll.scrollRef}
-        {...mobileScroll.touchHandlers}
-        tabIndex={0}
-        aria-label="Example videos by niche"
-        className="flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 md:hidden [&::-webkit-scrollbar]:hidden"
-      >
-        {nicheData.map((niche) => (
-          <VideoCard key={niche.id} niche={niche} className="aspect-[9/16] w-[150px]" />
-        ))}
-      </div>
-
-      <div className="hidden md:block">
-        <CustomMarquee speed={35} direction="right" pauseOnHover play={!stopped}>
+      {reducedMotion ? (
+        <div
+          tabIndex={0}
+          aria-label="Example videos by niche"
+          className="flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 md:gap-5 [&::-webkit-scrollbar]:hidden"
+        >
           {nicheData.map((niche) => (
-            <VideoCard key={niche.id} niche={niche} className="mx-2.5 h-[400px] w-[225px]" />
+            <VideoCard key={niche.id} niche={niche} className={CARD_SIZE} />
+          ))}
+        </div>
+      ) : (
+        <CustomMarquee speed={35} direction="right">
+          {nicheData.map((niche) => (
+            <VideoCard key={niche.id} niche={niche} className={`mx-1.5 md:mx-2.5 ${CARD_SIZE}`} />
           ))}
         </CustomMarquee>
-      </div>
+      )}
     </section>
   );
 }
