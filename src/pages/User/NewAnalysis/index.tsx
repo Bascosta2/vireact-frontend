@@ -6,6 +6,7 @@ import { Button } from '@/components/app/Button';
 import { Dropzone, type DropzoneHandle } from '@/components/app/Dropzone';
 import { PresetPicker } from '@/components/app/PresetPicker';
 import { FeatureChecklist } from '@/components/app/FeatureChecklist';
+import { AdvancedAnalyticsCallout } from '@/components/app/AdvancedAnalyticsCallout';
 import { ProgressPanel } from '@/components/app/ProgressPanel';
 import { useQuota } from '@/hooks/useQuota';
 import { presetFeatureIds, type PresetId } from '@/lib/analysis-presets';
@@ -206,6 +207,7 @@ function NewAnalysis() {
               />
             </div>
           )}
+          {preset !== 'custom' && <AdvancedAnalyticsCallout unlocked={canUsePro} />}
           {preset !== 'custom' && featureError && (
             <p role="alert" className="mt-2 text-sm font-medium text-danger">{featureError}</p>
           )}

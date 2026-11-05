@@ -7,7 +7,7 @@ const OPTIONS: { id: PresetId; label: string; description: (canUsePro: boolean) 
     id: 'full',
     label: 'Full analysis',
     description: (pro) =>
-      pro ? 'Recommended. All six checks, including advanced analytics.' : 'Recommended. Hook, captions, pacing, audio and views prediction.',
+      pro ? 'Recommended. All six checks, including advanced analytics.' : 'Recommended. Hook, captions, pacing, audio and views prediction. Advanced analytics is Pro.',
   },
   { id: 'hook', label: 'Hook check', description: () => 'Just the first seconds. Fastest.' },
   { id: 'custom', label: 'Custom', description: () => 'Pick the checks yourself' },

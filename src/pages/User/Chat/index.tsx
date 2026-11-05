@@ -549,6 +549,7 @@ function ScoreBar({
     delay = 0,
     tooltip,
     notAnalyzed = false,
+    locked = false,
 }: {
     icon: ReactNode;
     label: string;
@@ -556,18 +557,19 @@ function ScoreBar({
     delay?: number;
     tooltip?: string;
     notAnalyzed?: boolean;
+    locked?: boolean;
 }) {
     const [width, setWidth] = useState(0);
     useEffect(() => {
-        if (notAnalyzed) {
+        if (notAnalyzed || locked) {
             setWidth(0);
             return;
         }
         const t = setTimeout(() => setWidth(score), delay);
         return () => clearTimeout(t);
-    }, [score, delay, notAnalyzed]);
+    }, [score, delay, notAnalyzed, locked]);
 
-    const color = notAnalyzed ? '#52525b' : score > 75 ? '#22c55e' : score > 50 ? '#f97316' : '#ef4444';
+    const color = notAnalyzed || locked ? '#52525b' : score > 75 ? '#22c55e' : score > 50 ? '#f97316' : '#ef4444';
 
     return (
         <div className="flex items-center gap-3 mb-3">
@@ -592,15 +594,15 @@ function ScoreBar({
                         width: notAnalyzed ? '0%' : `${width}%`,
                         backgroundColor: color,
                         transition: 'width 0.8s ease',
-                        boxShadow: notAnalyzed ? 'none' : `0 0 6px ${color}80`,
+                        boxShadow: notAnalyzed || locked ? 'none' : `0 0 6px ${color}80`,
                     }}
                     className="h-full rounded-full"
                 />
             </div>
             <span
-                className={`text-xs font-semibold w-24 text-right ${notAnalyzed ? 'text-zinc-500' : 'text-white'}`}
+                className={`text-xs font-semibold w-24 text-right ${notAnalyzed || locked ? 'text-zinc-500' : 'text-white'}`}
             >
-                {notAnalyzed ? 'Not analyzed' : score}
+                {locked ? 'Pro' : notAnalyzed ? 'Not analyzed' : score}
             </span>
         </div>
     );
@@ -1666,8 +1668,9 @@ function Chat() {
                         label="Advanced"
                         score={dto?.scores?.advanced ?? 0}
                         delay={5}
-                        tooltip="Advanced Analytics score"
-                        notAnalyzed={dto?.scores?.advanced == null}
+                        tooltip="Advanced Analytics: emotional triggers, retention drivers and your weakest moment"
+                        notAnalyzed={dto?.scores?.advanced == null && reportSubscriptionPlan !== 'free' && reportSubscriptionPlan !== 'premium'}
+                        locked={reportSubscriptionPlan === 'free' || reportSubscriptionPlan === 'premium'}
                     />
                     <ScoreBar
                         icon={<SvgSwipeGesture />}

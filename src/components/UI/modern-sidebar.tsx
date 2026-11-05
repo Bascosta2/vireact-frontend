@@ -28,7 +28,7 @@ export function Sidebar() {
       >
         <div className={cn('flex h-16 items-center border-b border-line px-4', isCollapsed ? 'justify-center' : 'justify-between')}>
           <Link to="/dashboard" className="app-focus rounded" aria-label="Vireact home">
-            <span className="text-brand-gradient font-heading text-2xl leading-none tracking-wide">{isCollapsed ? 'V' : 'VIREACT'}</span>
+            <span className="font-heading text-2xl leading-none tracking-wide text-fg">{isCollapsed ? 'V' : 'VIREACT'}</span>
           </Link>
           {!isCollapsed && (
             <button
@@ -48,7 +48,7 @@ export function Sidebar() {
             aria-current={pathname === '/new' ? 'page' : undefined}
             aria-label={isCollapsed ? 'New analysis' : undefined}
             className={cn(
-              'app-focus flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-gradient text-sm font-semibold text-on-brand hover:opacity-90',
+              'app-focus app-primary flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold',
               !isCollapsed && 'px-4'
             )}
           >

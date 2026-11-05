@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/app/Skeleton';
 import { useDelayedFlag } from '@/hooks/useDelayedFlag';
 import { useToast } from '@/components/app/Toast';
 import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
+import { Select } from '@/components/app/Select';
 import { cleanVideoTitle } from '@/lib/video-file';
 
 type SortOption = 'date' | 'name' | 'status' | 'score';
@@ -25,9 +26,6 @@ const STATUS_FILTERS: { value: string; label: string }[] = [
 ];
 
 const IN_PROGRESS = [ANALYSIS_STATUS.PENDING, ANALYSIS_STATUS.QUEUED, ANALYSIS_STATUS.PROCESSING] as string[];
-
-const selectClass =
-  'app-focus h-11 min-w-0 flex-1 rounded-lg border border-control bg-surface px-2 text-sm text-fg sm:flex-none sm:px-3';
 
 function Videos() {
   const navigate = useNavigate();
@@ -265,26 +263,35 @@ function Videos() {
                   className="app-focus h-11 w-full rounded-lg border border-control bg-surface pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle"
                 />
               </div>
-              <label className="sr-only" htmlFor="library-sort">Sort</label>
-              <select id="library-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} className={selectClass}>
-                <option value="date">Newest</option>
-                <option value="score">Top score</option>
-                <option value="name">Name</option>
-                <option value="status">Status</option>
-              </select>
-              <label className="sr-only" htmlFor="library-status">Status</label>
-              <select id="library-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={selectClass}>
-                {STATUS_FILTERS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-              <label className="sr-only" htmlFor="library-feature">Check</label>
-              <select id="library-feature" value={filterFeature} onChange={(e) => setFilterFeature(e.target.value)} className={selectClass}>
-                <option value="all">All checks</option>
-                {ANALYSIS_FEATURES_UI.map((f) => (
-                  <option key={f.id} value={f.id}>{f.label}</option>
-                ))}
-              </select>
+              <Select
+                id="library-sort"
+                label="Sort"
+                value={sortBy}
+                onChange={(v) => setSortBy(v as SortOption)}
+                options={[
+                  { value: 'date', label: 'Newest' },
+                  { value: 'score', label: 'Top score' },
+                  { value: 'name', label: 'Name' },
+                  { value: 'status', label: 'Status' },
+                ]}
+              />
+              <Select
+                id="library-status"
+                label="Status"
+                value={filterStatus}
+                onChange={setFilterStatus}
+                options={STATUS_FILTERS}
+              />
+              <Select
+                id="library-feature"
+                label="Check"
+                value={filterFeature}
+                onChange={setFilterFeature}
+                options={[
+                  { value: 'all', label: 'All checks' },
+                  ...ANALYSIS_FEATURES_UI.map((f) => ({ value: f.id, label: f.label })),
+                ]}
+              />
             </div>
 
             <p className="sr-only" role="status">

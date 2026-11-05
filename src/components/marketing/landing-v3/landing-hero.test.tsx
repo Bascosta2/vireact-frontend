@@ -129,6 +129,11 @@ describe('below the hero', () => {
     expect(html.indexOf('id="easiest-way-title"')).toBeGreaterThan(anchor);
     expect(html.indexOf('id="easiest-way-title"')).toBeLessThan(html.indexOf('data-section="founder_credibility"'));
     expect(html.match(/id="easiest-way-title"/g)).toHaveLength(1);
+    expect(html).toContain('id="founder-playbook-title"');
+    expect(html).toContain('1.3M');
+    expect(html).toContain('40M+');
+    expect(html).toContain('Handwritten');
+    expect(html).not.toContain('Creators use Vireact to fix their videos.');
     expect(html).not.toContain('3 steps to your next viral video');
     expect(html).not.toContain('Know what to post next');
   });

@@ -2,7 +2,7 @@
  * Marketing numbers and claims shown on public pages. Components render these
  * values from here; do not hard-code a claim in a component.
  *
- * Only `ratingSummary` and `creatorGrowth` are owner-confirmed. Every other entry carries a `// VERIFY`
+ * Only `ratingSummary`, `creatorGrowth` and `founderReach` are owner-confirmed. Every other entry carries a `// VERIFY`
  * note with where it renders and what the audit found (docs/audit/SITE_WALKTHROUGH.md,
  * "Claims inventory"). Change a value here only after the owner confirms it.
  *
@@ -41,6 +41,13 @@ export const claims = {
   // VERIFY: total followers and views across founder-run or advised accounts. Strings so formatting is explicit.
   founderTotalFollowers: '',
   founderTotalViews: '',
+  // Owner stated on 2026-11-05: they generated 1.3M followers and consistently 40M+ views a month;
+  // Vireact is trained on their handwritten notes and those strategies. Used by FounderCredibility.
+  founderReach: {
+    verified: true as boolean,
+    followers: '1.3M',
+    monthlyViews: '40M+',
+  },
   // VERIFY: per-account stats. Each entry renders only when all fields are set.
   founderAccounts: [] as Array<{
     platform: 'tiktok' | 'instagram' | 'youtube';

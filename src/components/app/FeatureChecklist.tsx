@@ -99,12 +99,12 @@ function LockedFeature({ feature }: { feature: AnalysisFeatureUi }) {
           id={popId}
           role="dialog"
           aria-label={`${feature.label} is a Pro check`}
-          className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-line bg-surface-raised p-4 shadow-lg shadow-black/40"
+          className="app-glass absolute left-0 right-0 top-full z-20 mt-2 rounded-xl p-4"
         >
           <p className="text-sm text-fg">{feature.label} is part of Pro.</p>
           <Link
             to="/subscription-plans"
-            className="app-focus mt-3 inline-flex h-9 items-center rounded-lg bg-brand-gradient px-3 text-sm font-semibold text-on-brand"
+            className="app-focus app-primary mt-3 inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold"
           >
             Upgrade to Pro
           </Link>

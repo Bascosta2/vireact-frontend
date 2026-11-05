@@ -57,7 +57,7 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
   return (
     <article
       aria-labelledby={`video-title-${video._id}`}
-      className="flex h-full gap-4 rounded-xl border border-line bg-surface p-3"
+      className="app-glass flex h-full gap-4 rounded-xl p-3"
     >
       <div className="relative h-[136px] w-[76px] shrink-0 overflow-hidden rounded-lg bg-canvas">
         {video.thumbnailUrl ? (

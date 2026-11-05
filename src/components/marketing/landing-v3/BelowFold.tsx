@@ -1,6 +1,5 @@
 import { EasiestWayCards } from './EasiestWayCards';
 import { FounderCredibility } from './FoundationCredibility';
-import { CreatorResults } from './CreatorResults';
 import { NicheVideoCarousel } from './NicheVideoCarousel';
 import { LibraryTeaser } from './LibraryTeaser';
 import { FaqV3 } from './FaqV3';
@@ -16,9 +15,6 @@ export default function BelowFold() {
       </TrackedSection>
       <TrackedSection section="founder_credibility">
         <FounderCredibility />
-      </TrackedSection>
-      <TrackedSection section="creator_results">
-        <CreatorResults />
       </TrackedSection>
       <TrackedSection section="niche_carousel">
         <NicheVideoCarousel />

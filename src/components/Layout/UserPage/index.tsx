@@ -49,7 +49,7 @@ function UserPage({
         {showHeader && (
           <header className="flex h-14 shrink-0 items-center border-b border-line px-4 md:hidden">
             <Link to="/dashboard" className="app-focus rounded" aria-label="Vireact home">
-              <span className="text-brand-gradient font-heading text-2xl leading-none tracking-wide">VIREACT</span>
+              <span className="font-heading text-2xl leading-none tracking-wide text-fg">VIREACT</span>
             </Link>
           </header>
         )}

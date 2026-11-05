@@ -62,7 +62,7 @@ export function MoreActionsMenu({ items, label = 'More actions' }: { items: Menu
           id={menuId}
           role="menu"
           onKeyDown={onMenuKey}
-          className="absolute bottom-full right-0 z-30 mb-2 min-w-[180px] rounded-xl border border-line bg-surface-raised p-1 shadow-lg shadow-black/40"
+          className="app-glass absolute bottom-full right-0 z-30 mb-2 min-w-[180px] rounded-xl p-1"
         >
           {enabled.map((item, i) => (
             <button

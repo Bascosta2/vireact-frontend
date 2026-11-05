@@ -12,7 +12,7 @@ const buttonClasses = (variant: ButtonVariant = 'primary', size: ButtonSize = 'm
     'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
     size === 'md' ? 'h-11 px-5 text-base' : 'h-9 px-3 text-sm',
     fullWidth && 'w-full',
-    variant === 'primary' && 'bg-brand-gradient text-on-brand font-semibold hover:opacity-90',
+    variant === 'primary' && 'app-primary font-semibold',
     variant === 'secondary' && 'border border-control bg-surface text-fg hover:bg-surface-raised',
     variant === 'ghost' && 'text-fg-muted hover:bg-white/5 hover:text-fg',
     variant === 'danger' && 'border border-danger/60 bg-transparent text-danger hover:bg-danger/10'

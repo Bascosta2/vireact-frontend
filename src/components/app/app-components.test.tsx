@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { ScoreRing } from './ScoreRing';
+import { AdvancedAnalyticsCallout } from './AdvancedAnalyticsCallout';
+import { Select } from './Select';
 import { presetFeatureIds } from '@/lib/analysis-presets';
 import { statusKind } from '@/lib/video-status';
 import { featureLabel, ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
@@ -33,6 +36,50 @@ describe('features', () => {
       'Advanced analytics',
     ]);
     expect(featureLabel('views_predictor')).toBe('Views prediction');
+  });
+});
+
+describe('AdvancedAnalyticsCallout', () => {
+  it('shows the description and a lock for users who have not paid', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AdvancedAnalyticsCallout unlocked={false} />
+      </MemoryRouter>
+    );
+    expect(html).toContain('Advanced analytics');
+    expect(html).toContain('Emotional triggers, retention drivers and your weakest moment');
+    expect(html).toContain('Unlock on a paid plan');
+    expect(html).toContain('Pro');
+  });
+
+  it('marks the check as included for paying users', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <AdvancedAnalyticsCallout unlocked={true} />
+      </MemoryRouter>
+    );
+    expect(html).toContain('Included');
+    expect(html).not.toContain('Unlock on a paid plan');
+  });
+});
+
+describe('Select', () => {
+  it('renders the selected label and stays closed until opened', () => {
+    const html = renderToStaticMarkup(
+      <Select
+        id="library-sort"
+        label="Sort"
+        value="date"
+        options={[
+          { value: 'date', label: 'Newest' },
+          { value: 'score', label: 'Top score' },
+        ]}
+        onChange={() => undefined}
+      />
+    );
+    expect(html).toContain('Newest');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('Top score');
   });
 });
 

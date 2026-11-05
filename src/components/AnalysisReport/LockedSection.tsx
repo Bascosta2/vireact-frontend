@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import { ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
+import { FEATURES_IDS } from '@/constants';
 
 export type LockedProFeatureSectionProps = {
     featureId: string;
@@ -8,49 +10,40 @@ export type LockedProFeatureSectionProps = {
     ctaLabel?: string;
 };
 
+const DEFAULT_DESCRIPTION =
+    ANALYSIS_FEATURES_UI.find((f) => f.id === FEATURES_IDS.ADVANCED_ANALYTICS)?.description ??
+    'Emotional triggers, retention drivers and your weakest moment';
+
 /**
- * Reusable "locked" preview for Pro-gated report sections. Shows a blurred
- * skeleton tease, Pro badge, and upgrade CTA (used e.g. for Advanced Analytics
- * on Free/Premium when the pipeline produced no data).
+ * Locked preview for Pro-gated report sections. Always shows the title, a real
+ * description, and an upgrade path so every user can see what Advanced analytics is.
  */
 export function LockedProFeatureSection({
     featureId,
     title,
-    description,
-    ctaLabel = 'Unlock Advanced Analytics — Upgrade to Pro',
+    description = DEFAULT_DESCRIPTION,
+    ctaLabel = 'Unlock on a paid plan',
 }: LockedProFeatureSectionProps) {
     return (
         <div
-            className="relative mb-4 overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4"
+            className="relative mb-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-4"
             data-feature-locked={featureId}
-            style={{
-                backgroundImage:
-                    'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(249,115,22,0.04) 100%)',
-            }}
+            data-testid="advanced-analytics-locked"
         >
-            <div className="pointer-events-none absolute inset-0 z-0 opacity-50" aria-hidden>
-                <div className="m-3 h-3 w-3/4 max-w-sm rounded bg-white/10" />
-                <div className="mx-3 mt-3 h-20 rounded-lg border border-white/[0.06] bg-gradient-to-b from-white/[0.08] to-white/[0.02] blur-[1px]" />
-                <div className="mx-3 mt-2 h-2 w-1/2 max-w-xs rounded bg-white/10" />
+            <div className="mb-3 flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold uppercase tracking-wide text-white">{title}</span>
+                <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-zinc-200">
+                    <Lock className="h-3 w-3" strokeWidth={2.5} />
+                    Pro
+                </span>
             </div>
-            <div className="relative z-10">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-bold uppercase tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
-                        {title}
-                    </span>
-                    <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-                        <Lock className="h-3 w-3" strokeWidth={2.5} />
-                        Pro
-                    </span>
-                </div>
-                <p className="mb-4 text-sm leading-relaxed text-white/75">{description}</p>
-                <Link
-                    to="/subscription-plans"
-                    className="inline-flex h-10 min-h-[40px] items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-4 text-sm font-semibold text-white transition-opacity hover:opacity-95"
-                >
-                    {ctaLabel}
-                </Link>
-            </div>
+            <p className="mb-4 text-sm leading-relaxed text-zinc-300">{description}</p>
+            <Link
+                to="/subscription-plans"
+                className="inline-flex h-10 min-h-[40px] items-center justify-center rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition-colors hover:border-white/30 hover:bg-white/10"
+            >
+                {ctaLabel}
+            </Link>
         </div>
     );
 }

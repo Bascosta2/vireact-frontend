@@ -11,9 +11,9 @@
   --app-text-primary: #f5f6f8;
   --app-text-secondary: #a3a9b6;
   --app-text-tertiary: #8b92a3;
-  --app-accent: #ff6b35;
-  --app-accent-tint: rgba(255, 107, 53, 0.15);
-  --app-brand-gradient: linear-gradient(90deg, #ff1b6b 0%, #ff6b35 50%, #ffa500 100%);
+  --app-accent: #e86735;
+  --app-accent-tint: rgba(232, 103, 53, 0.1);
+  --app-brand-gradient: linear-gradient(90deg, #9a1848 0%, #c24f28 50%, #b06d00 100%);
   --app-on-brand: #0b0d12;
   --app-success: #3dd68c;
   --app-warning: #f5b83d;
@@ -67,6 +67,25 @@
 @layer utilities {
   .bg-brand-gradient {
     background-image: var(--app-brand-gradient);
+  }
+
+  .app-glass {
+    background-color: rgba(18, 21, 28, 0.86);
+    border: 1px solid var(--app-border-subtle);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset, 0 16px 40px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(16px);
+  }
+
+  .app-primary {
+    background-color: var(--app-surface-raised);
+    color: var(--app-text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 24px rgba(232, 103, 53, 0.08);
+  }
+
+  .app-primary:hover {
+    background-color: #1d2230;
+    border-color: rgba(232, 103, 53, 0.4);
   }
 
   .text-brand-gradient {
@@ -127,6 +146,9 @@
   font-family: 'Poppins', system-ui, sans-serif;
   color: var(--app-text-primary);
   background-color: var(--app-canvas);
+  background-image:
+    radial-gradient(ellipse 70% 40% at 0% 0%, rgba(232, 103, 53, 0.05), transparent 55%),
+    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(154, 24, 72, 0.04), transparent 50%);
 }
 
 .app-root :focus-visible {
