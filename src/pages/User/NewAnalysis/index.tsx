@@ -17,9 +17,38 @@ import { findFeature } from '@/data/analysis-features';
 import { inspectVideoFile } from '@/lib/video-metadata';
 import { cleanVideoTitle, fileExtension, formatDuration, formatFileSize, VIDEO_ERRORS } from '@/lib/video-file';
 import { FileRow } from './FileRow';
+import { Select, type SelectOption } from '@/components/app/Select';
 
 const STORAGE_SELECTED = 'vireact-selected-feature-ids';
 const STORAGE_PRESET = 'vireact-analysis-preset';
+const STORAGE_PLATFORM = 'vireact-creator-platform';
+const STORAGE_FOLLOWERS = 'vireact-creator-followers';
+
+const PLATFORM_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Choose a platform' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'instagram', label: 'Instagram Reels' },
+  { value: 'youtube', label: 'YouTube Shorts' },
+  { value: 'facebook', label: 'Facebook Reels' },
+  { value: 'other', label: 'Other' },
+];
+
+const readStored = (key: string): string => {
+  try {
+    return localStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const writeStored = (key: string, value: string) => {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    /* private mode: just not remembered */
+  }
+};
 
 const loadStoredFeatures = (): string[] => {
   try {
@@ -60,6 +89,12 @@ function NewAnalysis() {
   const [quotaError, setQuotaError] = useState(false);
   const dropzoneRef = useRef<DropzoneHandle>(null);
   const checksHeadingId = useId();
+  const accountHeadingId = useId();
+  const [platform, setPlatform] = useState(() => readStored(STORAGE_PLATFORM));
+  const [followers, setFollowers] = useState(() => readStored(STORAGE_FOLLOWERS));
+
+  useEffect(() => writeStored(STORAGE_PLATFORM, platform), [platform]);
+  useEffect(() => writeStored(STORAGE_FOLLOWERS, followers), [followers]);
 
   const allowedCustom = customIds.filter((id) => findFeature(id) && (canUsePro || findFeature(id)?.tier !== 'pro'));
   const selectedIds = preset === 'custom' ? allowedCustom : presetFeatureIds(preset, canUsePro);
@@ -115,7 +150,11 @@ function NewAnalysis() {
       return;
     }
     setFeatureError(null);
-    void start(withName(pending.file, title), selectedIds);
+    const followerCount = followers ? Number(followers) : null;
+    void start(withName(pending.file, title), selectedIds, {
+      platform: platform || null,
+      followers: followerCount != null && Number.isFinite(followerCount) ? followerCount : null,
+    });
   };
 
   const startOver = () => {
@@ -211,6 +250,34 @@ function NewAnalysis() {
           {preset !== 'custom' && featureError && (
             <p role="alert" className="mt-2 text-sm font-medium text-danger">{featureError}</p>
           )}
+        </section>
+
+        <section className="mt-10" aria-labelledby={accountHeadingId}>
+          <h2 id={accountHeadingId} className="text-lg font-semibold text-fg">
+            Your account <span className="text-sm font-normal text-fg-muted">(optional)</span>
+          </h2>
+          <p className="mt-1 text-sm text-fg-muted">
+            Predicted views fit your account when we know where you post and how many followers you have.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-sm font-medium text-fg" aria-hidden="true">Platform</span>
+              <Select id="creator-platform" label="Platform" value={platform} options={PLATFORM_OPTIONS} onChange={setPlatform} className="sm:flex-1" />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <label htmlFor="creator-followers" className="text-sm font-medium text-fg">Followers</label>
+              <input
+                id="creator-followers"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="e.g. 2500"
+                value={followers}
+                onChange={(e) => setFollowers(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                className="app-focus h-11 w-full rounded-lg border border-line bg-surface px-3 text-base text-fg placeholder:text-fg-subtle md:text-sm"
+              />
+            </div>
+          </div>
         </section>
 
         {/*

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { getUserVideos, getVideoStatus, uploadVideoFileToTwelveLabs, type Video } from '@/api/video';
+import { getUserVideos, getVideoStatus, uploadVideoFileToTwelveLabs, type CreatorContext, type Video } from '@/api/video';
 import { ANALYSIS_STATUS } from '@/constants';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import type { AnalysisStage, NotifyState } from '@/components/app/ProgressPanel';
@@ -19,7 +19,7 @@ type ActiveAnalysesValue = {
   /** Videos the server still reports as queued or processing (includes `job` once uploaded). */
   inProgressCount: number;
   notifyState: NotifyState;
-  start: (file: File, features: string[]) => Promise<void>;
+  start: (file: File, features: string[], creator?: CreatorContext) => Promise<void>;
   retry: () => void;
   reset: () => void;
   enableNotifications: () => void;
@@ -57,7 +57,7 @@ export function ActiveAnalysesProvider({ children }: { children: ReactNode }) {
   const [job, setJob] = useState<AnalysisJob | null>(null);
   const [serverPending, setServerPending] = useState(0);
   const [notifyState, setNotifyState] = useState<NotifyState>(initialNotifyState);
-  const lastRequest = useRef<{ file: File; features: string[] } | null>(null);
+  const lastRequest = useRef<{ file: File; features: string[]; creator?: CreatorContext } | null>(null);
   const notifyRef = useRef(false);
 
   const patch = useCallback((p: Partial<AnalysisJob>) => setJob((prev) => (prev ? { ...prev, ...p } : prev)), []);
@@ -82,13 +82,13 @@ export function ActiveAnalysesProvider({ children }: { children: ReactNode }) {
   }, [serverPending, refreshPendingCount]);
 
   const start = useCallback(
-    async (file: File, features: string[]) => {
-      lastRequest.current = { file, features };
+    async (file: File, features: string[], creator?: CreatorContext) => {
+      lastRequest.current = { file, features, creator };
       setJob({ fileName: file.name, stage: 'uploading', uploadPercent: 0, startedAt: Date.now(), videoId: null, errorMessage: null });
       try {
         const video = await uploadVideoFileToTwelveLabs(file, file.name, features, (pct) => {
           patch(pct >= 100 ? { uploadPercent: 100, stage: 'preparing' } : { uploadPercent: pct });
-        });
+        }, creator);
         patch({ stage: 'analyzing', uploadPercent: 100, videoId: video?._id ?? null });
         void refetchSubscription();
         void refreshPendingCount();
@@ -148,7 +148,7 @@ export function ActiveAnalysesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const retry = useCallback(() => {
-    if (lastRequest.current) void start(lastRequest.current.file, lastRequest.current.features);
+    if (lastRequest.current) void start(lastRequest.current.file, lastRequest.current.features, lastRequest.current.creator);
   }, [start]);
 
   const reset = useCallback(() => {

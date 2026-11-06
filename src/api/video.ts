@@ -100,7 +100,15 @@ interface Video {
             low: number | null;
             expected: number | null;
             high: number | null;
+            /** score = capped model estimate; followers = follower-based estimate; dataset = similar real results */
+            method?: 'score' | 'followers' | 'dataset';
+            comparables?: number;
+            followers?: number | null;
+            platform?: string | null;
         };
+        /** Real view count the creator reported after posting. */
+        actualViews?: number | null;
+        actualViewsReportedAt?: string | null;
         features: {
             hook: FeatureEntry | null;
             pacing: FeatureEntry | null;
@@ -221,11 +229,18 @@ export const markAnalysisViewed = async (videoId: string): Promise<Video> => {
     return response.data.data.video;
 };
 
+/** Optional account context sent with an upload so predicted views fit the creator. */
+export interface CreatorContext {
+    platform?: string | null;
+    followers?: number | null;
+}
+
 export const uploadVideoFileToTwelveLabs = async (
     file: File,
     filename: string,
     selectedFeatures: string[] = [],
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    creator: CreatorContext = {}
 ): Promise<Video> => {
     console.log('📤 Uploading video file to TwelveLabs...');
     console.log('📁 File:', filename, 'Size:', file.size);
@@ -235,6 +250,8 @@ export const uploadVideoFileToTwelveLabs = async (
     formData.append('file', file);
     formData.append('filename', filename);
     formData.append('selectedFeatures', JSON.stringify(selectedFeatures));
+    if (creator.platform) formData.append('platform', creator.platform);
+    if (creator.followers != null && Number.isFinite(creator.followers)) formData.append('followers', String(creator.followers));
 
     try {
         const response = await Axios.post<{ data: { video: Video } }>(
@@ -340,6 +357,19 @@ export const generateScriptSuggestions = async (videoId: string, regenerate = fa
         `/videos/${videoId}/scripts`,
         { regenerate },
         { timeout: SCRIPT_GENERATION_TIMEOUT_MS }
+    );
+    return response.data.data;
+};
+
+// ─── Real results ──────────────────────────────────────────────────────────
+
+export const reportActualViews = async (
+    videoId: string,
+    views: number
+): Promise<{ actualViews: number; actualViewsReportedAt: string }> => {
+    const response = await Axios.patch<{ data: { actualViews: number; actualViewsReportedAt: string } }>(
+        `/videos/${videoId}/actual-views`,
+        { views }
     );
     return response.data.data;
 };

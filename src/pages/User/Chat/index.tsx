@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import { cleanVideoTitle } from '@/lib/video-file';
 import ScriptSuggestions from '@/components/domain/ScriptSuggestions';
+import ActualViewsCard from '@/components/domain/ActualViews';
 
 function normalizeChatText(text: string): string {
     // Older stored messages may contain em/en dashes; show them as plain punctuation.
@@ -1521,6 +1522,18 @@ function Chat() {
     };
 
     const showScripts = activeTab === 'scripts';
+    const PLATFORM_NAMES: Record<string, string> = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook', other: 'your platform' };
+    const predictionBasis = (() => {
+        const followers = pv?.followers != null ? pv.followers.toLocaleString() : null;
+        const where = pv?.platform ? ` on ${PLATFORM_NAMES[pv.platform] ?? pv.platform}` : '';
+        if (pv?.method === 'dataset' && followers) {
+            return `Based on ${pv.comparables ?? 0} similar videos with real results, scaled to your ${followers} followers${where}.`;
+        }
+        if (pv?.method === 'followers' && followers) {
+            return `Estimate for ${followers} followers${where}. It gets more accurate as creators report real results.`;
+        }
+        return 'Estimate for a typical account. Add your follower count on your next upload for a range that fits you.';
+    })();
     const userInitial = (name || 'You').trim().charAt(0).toUpperCase() || 'U';
     const hasUserMessage = messages.some((m) => m.isUser);
 
@@ -1920,7 +1933,7 @@ function Chat() {
                             id="report-predictions"
                             index={sectionNumber('report-predictions')}
                             title="Predicted performance"
-                            hint="Based on similar content."
+                            hint={predictionBasis}
                         >
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-4">
@@ -1998,6 +2011,7 @@ function Chat() {
                                     </p>
                                 </div>
                             </div>
+                            <ActualViewsCard videoId={video._id} initialViews={dto?.actualViews ?? null} />
                         </ReportSection>
 
                         {video.streamUrl ? (
