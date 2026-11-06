@@ -197,6 +197,17 @@
   }
 }
 
+/* Report score dial: full glow on phones, a quieter one on desktop. */
+.score-dial-arc {
+  filter: drop-shadow(0 0 6px var(--dial-color));
+}
+
+@media (min-width: 768px) {
+  .score-dial-arc {
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--dial-color) 55%, transparent));
+  }
+}
+
 /* Chat: typing dots pulse in sequence. */
 @keyframes chat-typing {
   0%,

@@ -43,12 +43,18 @@ import {
     Lock,
     MessageSquare,
     Play,
+    ScrollText,
     Sparkles,
 } from 'lucide-react';
 import { cleanVideoTitle } from '@/lib/video-file';
+import ScriptSuggestions from '@/components/domain/ScriptSuggestions';
 
 function normalizeChatText(text: string): string {
-    return text.replace(/\*\*/g, '').replace(/—/g, ', ');
+    // Older stored messages may contain em/en dashes; show them as plain punctuation.
+    return text
+        .replace(/\*\*/g, '')
+        .replace(/(\d)\s*[–—]\s*(\d)/g, '$1-$2')
+        .replace(/\s*[–—]\s*/g, ', ');
 }
 
 const FEATURE_NAMES_GROUP = '(Hook|Pacing|Audio|Views Predictor|Advanced Analytics|Caption)';
@@ -150,13 +156,13 @@ function formatChatMessage(raw: string): ReactElement {
                                 color: 'inherit',
                             }}
                         >
-                            {featureName} — What&apos;s wrong:
+                            {featureName}
                         </p>
                         {critique ? <p style={{ marginBottom: '8px' }}>{critique}</p> : null}
                         {sugBody ? (
                             <>
                                 <p style={{ fontWeight: 500, marginTop: '10px', marginBottom: '6px' }}>
-                                    Suggestions to improve:
+                                    What to do
                                 </p>
                                 {bullets}
                             </>
@@ -534,10 +540,21 @@ function ScoreDial({ score, size = 112 }: { score: number | null; size?: number 
     const r = (size - stroke) / 2;
     const c = 2 * Math.PI * r;
     const pct = score == null ? 0 : Math.max(0, Math.min(100, displayed)) / 100;
+    const gradientId = `dial-${useId().replace(/:/g, '')}`;
 
     return (
-        <div className="relative shrink-0" style={{ width: size, height: size }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
+        <div
+            className="relative shrink-0"
+            style={{ width: size, height: size, ['--dial-color' as string]: tone.color }}
+        >
+            {/* overflow-visible: the glow is drawn outside the circle; clipping it to the SVG box cut it off on desktop. */}
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90 overflow-visible" aria-hidden>
+                <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={tone.color} stopOpacity={1} />
+                        <stop offset="100%" stopColor={tone.color} stopOpacity={0.55} />
+                    </linearGradient>
+                </defs>
                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
                 {/* Tick ring for the "instrument" look */}
                 <circle
@@ -554,12 +571,12 @@ function ScoreDial({ score, size = 112 }: { score: number | null; size?: number 
                     cy={size / 2}
                     r={r}
                     fill="none"
-                    stroke={tone.color}
+                    stroke={`url(#${gradientId})`}
                     strokeWidth={stroke}
                     strokeLinecap="round"
                     strokeDasharray={c}
                     strokeDashoffset={c * (1 - pct)}
-                    style={{ filter: score == null ? undefined : `drop-shadow(0 0 6px ${tone.color})` }}
+                    className={score == null ? undefined : 'score-dial-arc'}
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -989,7 +1006,7 @@ function Chat() {
     const [citedFeedbackIds, setCitedFeedbackIds] = useState<string[]>([]);
     const playerRef = useRef<SeekableVideoPlayerHandle>(null);
     const [analysisErrorSummary, setAnalysisErrorSummary] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'chat' | 'analytics'>('analytics');
+    const [activeTab, setActiveTab] = useState<'chat' | 'analytics' | 'scripts'>('analytics');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const prevAnalysisStatusForPollRef = useRef<string | null>(null);
@@ -1503,6 +1520,7 @@ function Chat() {
         document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
     };
 
+    const showScripts = activeTab === 'scripts';
     const userInitial = (name || 'You').trim().charAt(0).toUpperCase() || 'U';
     const hasUserMessage = messages.some((m) => m.isUser);
 
@@ -1529,10 +1547,10 @@ function Chat() {
                 </div>
 
                 <div className="px-3 pb-2 md:hidden">
-                    <div role="tablist" aria-label="Video view" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
-                        {(['analytics', 'chat'] as const).map((tab) => {
+                    <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+                        {(['analytics', 'chat', 'scripts'] as const).map((tab) => {
                             const isActive = activeTab === tab;
-                            const TabIcon = tab === 'analytics' ? BarChart3 : MessageSquare;
+                            const TabIcon = tab === 'analytics' ? BarChart3 : tab === 'chat' ? MessageSquare : ScrollText;
                             return (
                                 <button
                                     key={tab}
@@ -1547,7 +1565,7 @@ function Chat() {
                                     }`}
                                 >
                                     <TabIcon className={`h-4 w-4 ${isActive ? 'text-accent' : ''}`} aria-hidden />
-                                    {tab === 'analytics' ? 'Analytics' : 'Chat'}
+                                    {tab === 'analytics' ? 'Analytics' : tab === 'chat' ? 'Chat' : 'Scripts'}
                                 </button>
                             );
                         })}
@@ -1745,15 +1763,37 @@ function Chat() {
 
                 {/* ─── Analytics report ─── */}
                 <div
-                    className={`${activeTab === 'analytics' ? 'block' : 'hidden'} min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain md:block`}
+                    className={`${activeTab !== 'chat' ? 'block' : 'hidden'} min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain md:block`}
                 >
-                    {/* Jump bar: every report section one tap away */}
+                    {/* Jump bar: every report section one tap away. Opaque so headings never show through it. */}
                     <nav
                         aria-label="Report sections"
-                        className="app-chrome sticky top-0 z-10 border-b border-line"
+                        className={`sticky top-0 z-10 border-b border-line bg-canvas ${showScripts ? 'hidden md:block' : ''}`}
                     >
-                        <div className="mx-auto flex max-w-3xl gap-1.5 overflow-x-auto px-4 py-2 [scrollbar-width:none] md:px-6">
-                            {jumpTargets.map((t) => (
+                        <div className="mx-auto flex max-w-3xl items-center gap-1.5 overflow-x-auto px-4 py-2 [scrollbar-width:none] md:px-6">
+                            {/* Desktop: the chat is always visible, so the right panel switches between report and scripts. */}
+                            <div role="tablist" aria-label="Right panel" className="mr-1 hidden shrink-0 rounded-full border border-line bg-white/[0.02] p-0.5 md:flex">
+                                {(['analytics', 'scripts'] as const).map((tab) => {
+                                    const isActive = tab === 'scripts' ? showScripts : !showScripts;
+                                    const TabIcon = tab === 'scripts' ? ScrollText : BarChart3;
+                                    return (
+                                        <button
+                                            key={tab}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={isActive}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={`app-focus inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                                                isActive ? 'bg-surface-raised text-fg shadow-[0_0_0_1px_rgba(232,103,53,0.35)]' : 'text-fg-muted hover:text-fg'
+                                            }`}
+                                        >
+                                            <TabIcon className={`h-3.5 w-3.5 ${isActive ? 'text-accent' : ''}`} aria-hidden />
+                                            {tab === 'scripts' ? 'Scripts' : 'Report'}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {!showScripts && jumpTargets.map((t) => (
                                 <button
                                     key={t.id}
                                     type="button"
@@ -1767,6 +1807,14 @@ function Chat() {
                         </div>
                     </nav>
 
+                    {showScripts ? (
+                        <div
+                            className="mx-auto max-w-3xl px-4 pt-5 md:px-6 md:pt-6"
+                            style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+                        >
+                            <ScriptSuggestions videoId={video._id} onSeek={canSeek ? handleSeek : undefined} />
+                        </div>
+                    ) : (
                     <div
                         className="mx-auto max-w-3xl px-4 pt-5 md:px-6 md:pt-6"
                         style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
@@ -1798,7 +1846,7 @@ function Chat() {
                                         </dd>
                                     </div>
                                     <div className="min-w-0">
-                                        <dt className="app-label">Best part</dt>
+                                        <dt className="app-label">{strongestArea && strongestArea.score < 50 ? 'Least weak' : 'Best part'}</dt>
                                         <dd className="mt-1 truncate text-base font-semibold text-success">
                                             {strongestArea ? strongestArea.label : '—'}
                                         </dd>
@@ -2059,6 +2107,7 @@ function Chat() {
                             )}
                         </ReportSection>
                     </div>
+                    )}
                 </div>
             </div>
         </div>

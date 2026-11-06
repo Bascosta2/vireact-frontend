@@ -299,3 +299,47 @@ export const getVideoById = async (videoId: string): Promise<Video> => {
 
 export type { Video };
 
+
+// ─── Scripts tab ───────────────────────────────────────────────────────────
+
+export interface ScriptBeat {
+    tStart: number;
+    tEnd: number;
+    say: string;
+    onScreenText: string;
+    visual: string;
+}
+
+export interface ScriptOption {
+    id: string;
+    title: string;
+    angle: string;
+    hookLine: string;
+    beats: ScriptBeat[];
+    cta: string;
+    whyItWorks: string;
+}
+
+export interface ScriptSuggestions {
+    options: ScriptOption[];
+    targetSeconds: number | null;
+    generatedAt: string | null;
+    regenerationsLeft: number;
+}
+
+/** Writing scripts takes a model call or two; allow well over the default 30 s client timeout. */
+const SCRIPT_GENERATION_TIMEOUT_MS = 90000;
+
+export const getScriptSuggestions = async (videoId: string): Promise<ScriptSuggestions> => {
+    const response = await Axios.get<{ data: ScriptSuggestions }>(`/videos/${videoId}/scripts`);
+    return response.data.data;
+};
+
+export const generateScriptSuggestions = async (videoId: string, regenerate = false): Promise<ScriptSuggestions> => {
+    const response = await Axios.post<{ data: ScriptSuggestions }>(
+        `/videos/${videoId}/scripts`,
+        { regenerate },
+        { timeout: SCRIPT_GENERATION_TIMEOUT_MS }
+    );
+    return response.data.data;
+};
