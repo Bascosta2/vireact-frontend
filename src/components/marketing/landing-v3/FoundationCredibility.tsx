@@ -33,32 +33,32 @@ export function FounderCredibility() {
         </p>
       </header>
 
-      <ul className="relative grid gap-4 md:grid-cols-3">
-        <li className="rounded-2xl border border-white/10 bg-zinc-950/80 p-6 shadow-lg shadow-black/40 backdrop-blur">
-          <Users className="h-5 w-5 text-pink-300" aria-hidden="true" />
-          <p className="mt-4 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-4xl font-extrabold tabular-nums text-transparent md:text-5xl">
+      <ul className="relative grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+        <li className="min-w-0 rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-center shadow-lg shadow-black/40 backdrop-blur sm:p-4 md:rounded-2xl md:p-6 md:text-left">
+          <Users className="mx-auto h-4 w-4 text-pink-300 md:mx-0 md:h-5 md:w-5" aria-hidden="true" />
+          <p className="mt-2 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent sm:text-3xl md:mt-4 md:text-5xl">
             {reach.followers}
           </p>
-          <p className="mt-2 text-sm font-medium text-white">Followers generated</p>
-          <p className="mt-1 text-sm text-zinc-400">Across the accounts this playbook was built on.</p>
+          <p className="mt-1 text-[11px] font-medium leading-tight text-white sm:text-xs md:mt-2 md:text-sm">Followers generated</p>
+          <p className="mt-1 hidden text-sm text-zinc-400 md:block">Across the accounts this playbook was built on.</p>
         </li>
-        <li className="rounded-2xl border border-white/10 bg-zinc-950/80 p-6 shadow-lg shadow-black/40 backdrop-blur">
-          <TrendingUp className="h-5 w-5 text-orange-300" aria-hidden="true" />
-          <p className="mt-4 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-4xl font-extrabold tabular-nums text-transparent md:text-5xl">
+        <li className="min-w-0 rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-center shadow-lg shadow-black/40 backdrop-blur sm:p-4 md:rounded-2xl md:p-6 md:text-left">
+          <TrendingUp className="mx-auto h-4 w-4 text-orange-300 md:mx-0 md:h-5 md:w-5" aria-hidden="true" />
+          <p className="mt-2 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent sm:text-3xl md:mt-4 md:text-5xl">
             {reach.monthlyViews}
           </p>
-          <p className="mt-2 text-sm font-medium text-white">Views per month</p>
-          <p className="mt-1 text-sm text-zinc-400">A consistent monthly output, not a one-off viral hit.</p>
+          <p className="mt-1 text-[11px] font-medium leading-tight text-white sm:text-xs md:mt-2 md:text-sm">Views per month</p>
+          <p className="mt-1 hidden text-sm text-zinc-400 md:block">A consistent monthly output, not a one-off viral hit.</p>
         </li>
-        <li className="rounded-2xl border border-white/10 bg-zinc-950/80 p-6 shadow-lg shadow-black/40 backdrop-blur">
-          <PenLine className="h-5 w-5 text-pink-200" aria-hidden="true" />
-          <p className="mt-4 text-4xl font-extrabold text-white md:text-5xl">Notes</p>
-          <p className="mt-2 text-sm font-medium text-white">Handwritten strategies</p>
-          <p className="mt-1 text-sm text-zinc-400">The model is trained on that playbook, not scraped guesswork.</p>
+        <li className="min-w-0 rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-center shadow-lg shadow-black/40 backdrop-blur sm:p-4 md:rounded-2xl md:p-6 md:text-left">
+          <PenLine className="mx-auto h-4 w-4 text-pink-200 md:mx-0 md:h-5 md:w-5" aria-hidden="true" />
+          <p className="mt-2 text-2xl font-extrabold text-white sm:text-3xl md:mt-4 md:text-5xl">Notes</p>
+          <p className="mt-1 text-[11px] font-medium leading-tight text-white sm:text-xs md:mt-2 md:text-sm">Handwritten strategies</p>
+          <p className="mt-1 hidden text-sm text-zinc-400 md:block">The model is trained on that playbook, not scraped guesswork.</p>
         </li>
       </ul>
 
-      <ol className="relative mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="How the playbook became Vireact">
+      <ol className="relative mt-8 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-4" aria-label="How the playbook became Vireact">
         {STEPS.map((step, i) => (
           <li key={step.id} className="relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-pink-400/30 bg-pink-500/10">
@@ -75,7 +75,7 @@ export function FounderCredibility() {
         ))}
       </ol>
 
-      <div className="mt-10 flex justify-center">
+      <div className="mt-8 flex justify-center md:mt-10">
         <PrimaryCta location="credibility" />
       </div>
     </section>
