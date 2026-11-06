@@ -37,7 +37,7 @@ export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
 
         <div className={`flex w-full flex-col gap-6 ${align} ${withImage ? 'md:order-1 md:w-1/2' : 'max-w-4xl'}`}>
           <div className="inline-flex items-center rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1 text-xs font-medium text-pink-200">
-            Free crystal ball for short-form creators
+            Free crystal ball for short form creators
           </div>
           <h1 className="!text-4xl font-extrabold tracking-tight text-white sm:!text-5xl md:!text-6xl lg:!text-7xl">
             <Highlight>Predict your views.</Highlight> Know exactly what to fix. Then post.

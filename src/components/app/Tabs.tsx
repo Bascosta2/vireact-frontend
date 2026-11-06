@@ -36,7 +36,11 @@ export function Tabs<T extends string>({
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto border-b border-line">
+      <div
+        role="tablist"
+        aria-label={label}
+        className="flex gap-1 overflow-x-auto rounded-2xl border border-line bg-white/[0.02] p-1 [scrollbar-width:none]"
+      >
         {tabs.map((t, i) => (
           <button
             key={t.id}
@@ -52,8 +56,10 @@ export function Tabs<T extends string>({
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              'app-focus -mb-px h-11 shrink-0 whitespace-nowrap border-b-2 px-3 text-sm sm:px-4 font-medium transition-colors duration-100',
-              value === t.id ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg'
+              'app-focus h-10 flex-1 shrink-0 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 sm:px-4',
+              value === t.id
+                ? 'bg-surface-raised text-fg shadow-[0_0_0_1px_rgba(232,103,53,0.35),0_0_18px_rgba(232,103,53,0.15)]'
+                : 'text-fg-muted hover:bg-white/[0.04] hover:text-fg'
             )}
           >
             {t.label}

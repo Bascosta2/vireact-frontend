@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, LogOut } from 'lucide-react';
+import { Bell, Film, Loader2, LogOut, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Button } from '@/components/app/Button';
 import { Tabs, type TabDef } from '@/components/app/Tabs';
@@ -57,9 +57,10 @@ function Profile() {
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
-  // Notification preferences
-  const [notifyShortsReady, setNotifyShortsReady] = useState(true);
-  const [notifyExportReady, setNotifyExportReady] = useState(true);
+  // Notification preferences. Video emails (short ready, report/export ready) are opt-in and start off;
+  // new features and events start on. Same defaults as the backend user model.
+  const [notifyShortsReady, setNotifyShortsReady] = useState(false);
+  const [notifyExportReady, setNotifyExportReady] = useState(false);
   const [notifyProductUpdates, setNotifyProductUpdates] = useState(true);
 
   const {
@@ -84,8 +85,8 @@ function Profile() {
         const [userData, notificationPrefs] = await Promise.all([
           getProfile(),
           getNotificationPreferences().catch(() => ({
-            notifyShortsReady: true,
-            notifyExportReady: true,
+            notifyShortsReady: false,
+            notifyExportReady: false,
             notifyProductUpdates: true,
           })),
         ]);
@@ -239,7 +240,7 @@ function Profile() {
   const tabs: TabDef<SettingsTab>[] = [
     { id: 'profile', label: 'Profile' },
     { id: 'plan', label: 'Plan' },
-    { id: 'notifications', label: 'Emails' },
+    { id: 'notifications', label: 'Notifications' },
     ...(user?.provider === 'local' ? [{ id: 'password' as const, label: 'Password' }] : []),
   ];
   const requestedTab = searchParams.get('tab') as SettingsTab | null;
@@ -437,32 +438,48 @@ function Profile() {
           )}
 
           {activeTab === 'notifications' && (
-            <section className={cardClass} aria-labelledby="settings-notifications">
-              <h2 id="settings-notifications" className={sectionTitleClass}>Email notifications</h2>
-              <div className="space-y-0">
-                <NotificationToggle
-                  title="Shorts ready"
-                  description="Get notified when your Shorts are ready"
-                  enabled={notifyShortsReady}
-                  onToggle={() => toggleNotification('shorts')}
-                  variant="dark"
-                />
-                <NotificationToggle
-                  title="Export ready"
-                  description="Get notified when your exports are ready"
-                  enabled={notifyExportReady}
-                  onToggle={() => toggleNotification('export')}
-                  variant="dark"
-                />
-                <NotificationToggle
-                  title="Product updates"
-                  description="Get notified when we release new features"
-                  enabled={notifyProductUpdates}
-                  onToggle={() => toggleNotification('product')}
-                  variant="dark"
-                />
-              </div>
-            </section>
+            <div className="space-y-4">
+              <section className={cardClass} aria-labelledby="settings-notifications-news">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <h2 id="settings-notifications-news" className="text-lg font-semibold text-fg">Vireact news</h2>
+                  <span className="app-label">Email</span>
+                </div>
+                <p className="text-sm text-fg-muted">Hear about launches and events. On unless you turn it off.</p>
+                <div className="mt-2">
+                  <NotificationToggle
+                    icon={<Sparkles className="h-5 w-5" />}
+                    title="New features and events"
+                    description="When we release new features or host creator events"
+                    enabled={notifyProductUpdates}
+                    onToggle={() => toggleNotification('product')}
+                  />
+                </div>
+              </section>
+
+              <section className={cardClass} aria-labelledby="settings-notifications-videos">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <h2 id="settings-notifications-videos" className="text-lg font-semibold text-fg">Your videos</h2>
+                  <span className="app-label">Email</span>
+                </div>
+                <p className="text-sm text-fg-muted">Off by default. Turn these on if you want an email for every video.</p>
+                <div className="mt-2">
+                  <NotificationToggle
+                    icon={<Film className="h-5 w-5" />}
+                    title="Short ready"
+                    description="When a short you uploaded is ready to view"
+                    enabled={notifyShortsReady}
+                    onToggle={() => toggleNotification('shorts')}
+                  />
+                  <NotificationToggle
+                    icon={<Bell className="h-5 w-5" />}
+                    title="Analysis or export ready"
+                    description="When a report or export for your short is finished"
+                    enabled={notifyExportReady}
+                    onToggle={() => toggleNotification('export')}
+                  />
+                </div>
+              </section>
+            </div>
           )}
 
           {activeTab === 'password' && user.provider === 'local' && (
@@ -530,7 +547,7 @@ function Profile() {
   );
 }
 
-const cardClass = 'rounded-xl border border-line bg-surface p-5 md:p-6';
+const cardClass = 'app-panel p-5 md:p-6';
 const sectionTitleClass = 'mb-5 text-lg font-semibold text-fg';
 
 function UsageBar({

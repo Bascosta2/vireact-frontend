@@ -66,12 +66,12 @@ export function HowItWorks({
 
   return (
     <div>
-      <ol ref={listRef} className="grid gap-4 md:grid-cols-3" aria-labelledby={headingId}>
+      <ol ref={listRef} className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4" aria-labelledby={headingId}>
         {HOW_IT_WORKS_STEPS.map((step, i) => (
           <li
             key={step.title}
             data-active={active === i ? 'true' : undefined}
-            className="intro-step relative rounded-xl border border-line bg-surface p-5"
+            className="intro-step relative min-w-0 rounded-xl border border-line bg-surface p-4 md:p-5"
           >
             <div className="flex items-center gap-3">
               <span

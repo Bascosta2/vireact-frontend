@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaBars, FaTimes } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
+import { ArrowUpRight, X } from 'lucide-react';
 import type { PreLoginHeaderProps } from '@/types/header';
 import NavigationDropdown from '@/components/UI/NavigationDropdown';
 import { navItems } from './pre-login-nav-items';
@@ -94,7 +95,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
 
     return (
         <header
-            className={`fixed top-0 left-0 right-0 z-50 h-18 ${className}`}
+            className={`app-edge-bottom md:after:hidden fixed top-0 left-0 right-0 z-50 h-18 ${className}`}
             style={{
                 background: 'rgba(10, 10, 15, 0.85)',
                 backdropFilter: 'blur(12px)',
@@ -186,24 +187,25 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                         </button>
                     </div>
 
-                    {/* &lt; md only: hamburger + compact signup */}
+                    {/* &lt; md only: compact glowing signup + glass menu button */}
                     <div className="flex md:hidden items-center gap-2 flex-shrink-0">
-                        <button
-                            type="button"
-                            onClick={openMobileMenu}
-                            className="inline-flex items-center justify-center p-2 rounded-md text-light-gray hover:text-white hover:bg-white/20 transition-colors duration-200 min-h-[44px] min-w-[44px]"
-                            aria-expanded={isMobileMenuOpen}
-                            aria-label="Open menu"
-                        >
-                            <FaBars className="block h-6 w-6" />
-                        </button>
                         <button
                             type="button"
                             data-cta-location="header_mobile"
                             onClick={handleSignupClick}
-                            className="btn-primary text-sm px-3 py-2 rounded-lg font-semibold whitespace-nowrap min-h-[40px]"
+                            className="btn-primary h-10 rounded-full px-4 text-[13px] font-semibold whitespace-nowrap shadow-[0_0_20px_rgba(255,0,79,0.35)]"
                         >
-                            Sign up - It's FREE
+                            Sign up free
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openMobileMenu}
+                            className="group inline-flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/10 bg-white/[0.04] transition-colors duration-200 hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
+                            aria-expanded={isMobileMenuOpen}
+                            aria-label="Open menu"
+                        >
+                            <span aria-hidden="true" className="block h-[2px] w-5 rounded-full bg-white" />
+                            <span aria-hidden="true" className="block h-[2px] w-3.5 translate-x-[3px] rounded-full bg-gradient-to-r from-[#FF004F] to-[#FF883E] transition-transform duration-200 group-hover:translate-x-0" />
                         </button>
                     </div>
                 </div>
@@ -217,13 +219,34 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
             */}
             {isMobileMenuOpen && typeof document !== 'undefined' && createPortal(
                 <div
-                    className="md:hidden fixed inset-0 z-[100] flex flex-col"
-                    style={{ background: '#0a0a0f', height: '100dvh' }}
+                    className="md:hidden fixed inset-0 z-[100] flex flex-col overflow-hidden"
+                    style={{ background: '#07070b', height: '100dvh' }}
                     role="dialog"
                     aria-modal="true"
                     aria-label="Mobile navigation"
                 >
-                    <div className="flex h-18 shrink-0 items-center justify-between border-b border-white/10 px-4">
+                    {/* Ambient glow + faint grid behind the menu */}
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                            background:
+                                'radial-gradient(60% 40% at 100% 0%, rgba(255,0,79,0.18), transparent 70%), radial-gradient(50% 35% at 0% 100%, rgba(255,136,62,0.14), transparent 70%)',
+                        }}
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+                        style={{
+                            backgroundImage:
+                                'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+                            backgroundSize: '32px 32px',
+                            maskImage: 'linear-gradient(180deg, black, transparent 80%)',
+                            WebkitMaskImage: 'linear-gradient(180deg, black, transparent 80%)',
+                        }}
+                    />
+
+                    <div className="app-edge-bottom relative flex h-18 shrink-0 items-center justify-between px-4">
                         <NavLink
                             to="/"
                             onClick={closeMobileMenu}
@@ -234,28 +257,50 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                         <button
                             type="button"
                             onClick={closeMobileMenu}
-                            className="p-3 rounded-lg text-light-gray hover:text-white hover:bg-white/10 min-h-[48px] min-w-[48px] flex items-center justify-center"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
                             aria-label="Close menu"
                         >
-                            <FaTimes className="h-6 w-6" />
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </button>
                     </div>
-                    <nav className="flex-1 overflow-y-auto overscroll-contain px-4 py-2">
-                        {MOBILE_LINKS.map((link) => (
-                            <NavLink
-                                key={link.to}
-                                to={link.to}
-                                className="flex items-center min-h-[52px] text-base text-light-gray hover:text-white border-b border-white/10"
-                                onClick={() => {
-                                    if (link.trackLocation) track('cta_clicked', { location: link.trackLocation });
-                                    closeMobileMenu();
-                                }}
-                            >
-                                {link.label}
-                            </NavLink>
-                        ))}
+
+                    <nav className="relative flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-2">
+                        <ul className="space-y-2">
+                            {MOBILE_LINKS.map((link, i) => (
+                                <li
+                                    key={link.to}
+                                    className="mobile-menu-item"
+                                    style={{ animationDelay: `${40 + i * 45}ms` }}
+                                >
+                                    <NavLink
+                                        to={link.to}
+                                        className={({ isActive }) =>
+                                            `group flex min-h-[56px] items-center gap-4 rounded-2xl border px-4 transition-colors duration-200 ${
+                                                isActive
+                                                    ? 'border-pink-500/40 bg-pink-500/10 text-white'
+                                                    : 'border-white/[0.07] bg-white/[0.03] text-zinc-200 hover:border-white/15 hover:bg-white/[0.06] hover:text-white'
+                                            }`
+                                        }
+                                        onClick={() => {
+                                            if (link.trackLocation) track('cta_clicked', { location: link.trackLocation });
+                                            closeMobileMenu();
+                                        }}
+                                    >
+                                        <span aria-hidden="true" className="w-6 font-mono text-[11px] tabular-nums text-zinc-500">
+                                            {String(i + 1).padStart(2, '0')}
+                                        </span>
+                                        <span className="flex-1 text-base font-medium">{link.label}</span>
+                                        <ArrowUpRight
+                                            aria-hidden="true"
+                                            className="h-4 w-4 text-zinc-500 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white"
+                                        />
+                                    </NavLink>
+                                </li>
+                            ))}
+                        </ul>
                     </nav>
-                    <div className="shrink-0 px-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+
+                    <div className="app-edge-top relative shrink-0 px-4 pt-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                         <button
                             type="button"
                             data-cta-location="mobile_menu"
@@ -263,7 +308,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                 closeMobileMenu();
                                 handleSignupClick(e);
                             }}
-                            className="btn-primary w-full min-h-[48px] rounded-xl text-base font-semibold"
+                            className="btn-primary w-full min-h-[52px] rounded-2xl text-base font-semibold shadow-[0_0_28px_rgba(255,0,79,0.35)]"
                         >
                             Sign up - It's FREE
                         </button>

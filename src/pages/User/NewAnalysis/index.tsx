@@ -213,12 +213,22 @@ function NewAnalysis() {
           )}
         </section>
 
-        <div className="sticky bottom-[calc(56px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-10 border-t border-line bg-canvas/95 px-4 py-4 backdrop-blur-md md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:pb-12 md:backdrop-blur-none">
-          <Button fullWidth onClick={analyze} className="md:w-auto md:min-w-[200px]">
-            Analyze video
-          </Button>
-          <QuotaLine remaining={quota.remaining} total={quota.limit} showError={quotaError} />
+        {/*
+          Mobile: docked to the viewport right on top of the 64 px tab bar. Both are position:fixed against the
+          same box, so scroll bounce and browser toolbar resizes can no longer open a gap between them (the old
+          sticky bar lived inside the scrolling <main> and drifted away from the fixed tab bar).
+          Desktop: an ordinary block at the end of the form.
+        */}
+        <div className="app-chrome app-edge-top md:before:hidden fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-[190] px-4 pb-3 pt-3 md:static md:z-auto md:mt-10 md:bg-transparent md:px-0 md:pb-12 md:pt-0 md:backdrop-blur-none">
+          <div className="mx-auto w-full max-w-[720px] md:max-w-none">
+            <Button fullWidth onClick={analyze} className="md:w-auto md:min-w-[200px]">
+              Analyze video
+            </Button>
+            <QuotaLine remaining={quota.remaining} total={quota.limit} showError={quotaError} />
+          </div>
         </div>
+        {/* Room for the docked bar so the last section can scroll fully into view on mobile. */}
+        <div aria-hidden="true" className="h-32 md:hidden" />
       </div>
     </UserPage>
   );

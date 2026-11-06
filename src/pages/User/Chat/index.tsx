@@ -2,6 +2,7 @@ import {
     useState,
     useEffect,
     useCallback,
+    useId,
     useRef,
     useMemo,
     type ReactNode,
@@ -33,7 +34,18 @@ import { useSubscription } from '@/redux/hooks/use-subscription';
 import { LockedProFeatureSection } from '@/components/AnalysisReport/LockedSection';
 import { CHAT_WELCOME_MESSAGES, ANALYSIS_STATUS } from '@/constants';
 import { ErrorNotification } from '@/utils/toast';
-import { FaPaperPlane, FaSpinner } from 'react-icons/fa';
+import {
+    ArrowUp,
+    BarChart3,
+    ChevronDown,
+    ChevronLeft,
+    Loader2,
+    Lock,
+    MessageSquare,
+    Play,
+    Sparkles,
+} from 'lucide-react';
+import { cleanVideoTitle } from '@/lib/video-file';
 
 function normalizeChatText(text: string): string {
     return text.replace(/\*\*/g, '').replace(/—/g, ', ');
@@ -157,9 +169,9 @@ function formatChatMessage(raw: string): ReactElement {
 }
 
 /** Inline SVGs replace emoji in static UI only; stroke uses currentColor for layout parity. */
-const svgRow = 'inline-block align-middle shrink-0 text-zinc-300';
-const svgChip = 'inline-block align-middle shrink-0 text-[#FF8C00]';
-const svgCard = 'inline-block align-middle text-zinc-300';
+const svgRow = 'inline-block align-middle shrink-0 text-fg-muted';
+const svgChip = 'inline-block align-middle shrink-0 text-accent';
+const svgCard = 'inline-block align-middle text-fg-muted';
 
 function SvgLightningCoach() {
     return (
@@ -172,7 +184,7 @@ function SvgLightningCoach() {
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`${svgRow} text-white`}
+            className={`${svgRow} !text-on-brand`}
             aria-hidden
         >
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
@@ -451,98 +463,134 @@ function SvgGauge() {
     );
 }
 
-// ─── Right panel: Virality ring (conic gradient) ───
-function ViralityRing({ score }: { score: number | null }) {
-    const [displayed, setDisplayed] = useState(0);
+// ─── Report: one scale for every score on the page (dial, tiles, accordions, header chip) ───
+type ScoreTone = 'strong' | 'okay' | 'weak' | 'none';
+
+function scoreTone(score: number | null | undefined): ScoreTone {
+    if (score == null || Number.isNaN(score)) return 'none';
+    return score >= 75 ? 'strong' : score >= 50 ? 'okay' : 'weak';
+}
+
+const TONE_STYLES: Record<ScoreTone, { label: string; color: string; text: string; chip: string }> = {
+    strong: {
+        label: 'Strong',
+        color: 'var(--app-success)',
+        text: 'text-success',
+        chip: 'border-success/30 bg-success/10 text-success',
+    },
+    okay: {
+        label: 'Okay',
+        color: 'var(--app-warning)',
+        text: 'text-warning',
+        chip: 'border-warning/30 bg-warning/10 text-warning',
+    },
+    weak: {
+        label: 'Needs work',
+        color: 'var(--app-danger)',
+        text: 'text-danger',
+        chip: 'border-danger/30 bg-danger/10 text-danger',
+    },
+    none: {
+        label: 'Not analyzed',
+        color: 'var(--app-text-tertiary)',
+        text: 'text-fg-subtle',
+        chip: 'border-line bg-white/[0.03] text-fg-subtle',
+    },
+};
+
+const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Counts up to `target` once (skipped under reduced motion). */
+function useCountUp(target: number | null) {
+    const [value, setValue] = useState(0);
     useEffect(() => {
-        if (score == null) {
-            setDisplayed(0);
+        if (target == null) {
+            setValue(0);
             return;
         }
-        let start = 0;
+        if (prefersReducedMotion()) {
+            setValue(target);
+            return;
+        }
+        let current = 0;
         const timer = setInterval(() => {
-            start += 2;
-            if (start >= score) {
-                setDisplayed(score);
+            current += 2;
+            if (current >= target) {
+                setValue(target);
                 clearInterval(timer);
-            } else setDisplayed(start);
+            } else setValue(current);
         }, 16);
         return () => clearInterval(timer);
-    }, [score]);
+    }, [target]);
+    return value;
+}
 
-    if (score == null) {
-        return (
-            <div className="flex flex-col items-center my-6">
-                <div
-                    style={{
-                        width: 120,
-                        height: 120,
-                        borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.08)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <div
-                        style={{
-                            width: 92,
-                            height: 92,
-                            borderRadius: '50%',
-                            background: '#0a0a0f',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        <span style={{ fontSize: 28, fontWeight: 700, color: '#71717a' }}>—</span>
-                        <span style={{ fontSize: 10, color: '#71717a' }}>Overall</span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    const color = score >= 80 ? '#22c55e' : score >= 60 ? '#f97316' : '#ef4444';
-    const pct = (displayed / 100) * 360;
+// ─── Report: circular virality dial ───
+function ScoreDial({ score, size = 112 }: { score: number | null; size?: number }) {
+    const displayed = useCountUp(score);
+    const tone = TONE_STYLES[scoreTone(score)];
+    const stroke = 8;
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+    const pct = score == null ? 0 : Math.max(0, Math.min(100, displayed)) / 100;
 
     return (
-        <div className="flex flex-col items-center my-6">
-            <div
-                style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: '50%',
-                    background: `conic-gradient(${color} ${pct}deg, rgba(255,255,255,0.08) ${pct}deg)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: `0 0 30px ${color}40`,
-                }}
-            >
-                <div
-                    style={{
-                        width: 92,
-                        height: 92,
-                        borderRadius: '50%',
-                        background: '#0a0a0f',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <span style={{ fontSize: 28, fontWeight: 700, color: 'white' }}>{displayed}</span>
-                    <span style={{ fontSize: 10, color: '#71717a' }}>Overall</span>
-                </div>
+        <div className="relative shrink-0" style={{ width: size, height: size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+                {/* Tick ring for the "instrument" look */}
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={r - stroke - 3}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth={1}
+                    strokeDasharray="1 5"
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={r}
+                    fill="none"
+                    stroke={tone.color}
+                    strokeWidth={stroke}
+                    strokeLinecap="round"
+                    strokeDasharray={c}
+                    strokeDashoffset={c * (1 - pct)}
+                    style={{ filter: score == null ? undefined : `drop-shadow(0 0 6px ${tone.color})` }}
+                />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="tabular text-3xl font-semibold leading-none text-fg">
+                    {score == null ? '—' : displayed}
+                </span>
+                <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-fg-subtle">of 100</span>
             </div>
         </div>
     );
 }
 
-// ─── Right panel: Sub-score bar ───
-function ScoreBar({
+/** Small score pill used in the page header. */
+function ScoreChip({ score }: { score: number | null }) {
+    const tone = TONE_STYLES[scoreTone(score)];
+    return (
+        <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.25 }}
+            className={`tabular inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${tone.chip}`}
+            title="Virality score"
+        >
+            <span className="hidden text-[11px] font-medium uppercase tracking-[0.12em] opacity-80 sm:inline">Virality</span>
+            {score != null ? score : '—'}
+        </motion.span>
+    );
+}
+
+// ─── Report: one score tile (replaces the old horizontal bar rows) ───
+function ScoreTile({
     icon,
     label,
     score,
@@ -565,45 +613,132 @@ function ScoreBar({
             setWidth(0);
             return;
         }
+        if (prefersReducedMotion()) {
+            setWidth(score);
+            return;
+        }
         const t = setTimeout(() => setWidth(score), delay);
         return () => clearTimeout(t);
     }, [score, delay, notAnalyzed, locked]);
 
-    const color = notAnalyzed || locked ? '#52525b' : score > 75 ? '#22c55e' : score > 50 ? '#f97316' : '#ef4444';
+    const tone = TONE_STYLES[notAnalyzed || locked ? 'none' : scoreTone(score)];
 
     return (
-        <div className="flex items-center gap-3 mb-3">
-            <span className="text-base w-5 inline-flex items-center justify-center shrink-0 [&>svg]:inline-block [&>svg]:align-middle">
-                {icon}
-            </span>
-            <span className="text-xs text-zinc-300 w-32 flex-shrink-0 flex items-center gap-1">
-                {label}
+        <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-3" title={tooltip}>
+            <div className="flex items-center gap-2 text-xs text-fg-muted">
+                <span className="inline-flex shrink-0 items-center [&>svg]:inline-block">{icon}</span>
+                <span className="truncate">{label}</span>
                 {tooltip != null && (
-                    <span
-                        className="text-zinc-500 cursor-help"
-                        title={tooltip}
-                        aria-label={tooltip}
-                    >
+                    <span className="ml-auto cursor-help text-fg-subtle" aria-label={tooltip}>
                         ⓘ
                     </span>
                 )}
-            </span>
-            <div className="flex-1 h-1.5 rounded-full bg-white/[0.06]">
+            </div>
+            <div className="mt-2 flex items-end justify-between gap-2">
+                {locked ? (
+                    <Link
+                        to="/subscription-plans"
+                        className="app-focus inline-flex items-center gap-1 rounded-md text-sm font-semibold text-fg hover:text-accent"
+                    >
+                        <Lock className="h-3.5 w-3.5" aria-hidden />
+                        Pro
+                    </Link>
+                ) : (
+                    <span className={`tabular text-2xl font-semibold leading-none ${notAnalyzed ? 'text-fg-subtle' : 'text-fg'}`}>
+                        {notAnalyzed ? '—' : score}
+                    </span>
+                )}
+                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone.chip}`}>
+                    {locked ? 'Locked' : tone.label}
+                </span>
+            </div>
+            <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
                 <div
-                    style={{
-                        width: notAnalyzed ? '0%' : `${width}%`,
-                        backgroundColor: color,
-                        transition: 'width 0.8s ease',
-                        boxShadow: notAnalyzed || locked ? 'none' : `0 0 6px ${color}80`,
-                    }}
                     className="h-full rounded-full"
+                    style={{
+                        width: notAnalyzed || locked ? '0%' : `${width}%`,
+                        backgroundColor: tone.color,
+                        transition: 'width 0.8s cubic-bezier(0.2, 0, 0, 1)',
+                        boxShadow: notAnalyzed || locked ? 'none' : `0 0 8px ${tone.color}`,
+                    }}
                 />
             </div>
-            <span
-                className={`text-xs font-semibold w-24 text-right ${notAnalyzed || locked ? 'text-zinc-500' : 'text-white'}`}
-            >
-                {locked ? 'Pro' : notAnalyzed ? 'Not analyzed' : score}
-            </span>
+        </div>
+    );
+}
+
+// ─── Report: numbered section heading with a light rule ───
+function ReportSection({
+    id,
+    index,
+    title,
+    hint,
+    children,
+    className = 'mt-8',
+}: {
+    id: string;
+    index: string;
+    title: string;
+    hint?: string;
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <section id={id} className={`scroll-mt-16 ${className}`} aria-labelledby={`${id}-title`}>
+            <div className="mb-3 flex items-center gap-3">
+                <span className="font-mono text-[11px] text-accent">{index}</span>
+                <h3 id={`${id}-title`} className="text-sm font-semibold text-fg">
+                    {title}
+                </h3>
+                <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+            {hint && <p className="-mt-1 mb-3 text-xs text-fg-subtle">{hint}</p>}
+            {children}
+        </section>
+    );
+}
+
+// ─── Report: shared body for each feature in "Detailed analysis" ───
+function FeatureDetail({
+    feedback,
+    suggestions,
+    problemLabel = 'What’s holding it back',
+    children,
+}: {
+    feedback: string | null | undefined;
+    suggestions: string[] | null | undefined;
+    problemLabel?: string;
+    children?: ReactNode;
+}) {
+    const tips = (suggestions ?? []).filter(Boolean);
+    return (
+        <div className="space-y-4 pt-4">
+            <div>
+                <p className="flex items-center gap-2 text-xs font-semibold text-danger">
+                    <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-danger" />
+                    {problemLabel}
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">{feedback ?? 'No analysis yet'}</p>
+            </div>
+            {children}
+            {tips.length > 0 && (
+                <div>
+                    <p className="flex items-center gap-2 text-xs font-semibold text-success">
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
+                        How to fix it
+                    </p>
+                    <ol className="mt-2 space-y-2">
+                        {tips.map((s, i) => (
+                            <li key={i} className="flex gap-3 text-sm leading-relaxed text-fg">
+                                <span className="tabular mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-success/30 bg-success/10 text-[11px] font-semibold text-success">
+                                    {i + 1}
+                                </span>
+                                <span className="min-w-0">{s}</span>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            )}
         </div>
     );
 }
@@ -630,6 +765,9 @@ function SvgWarningTriangle() {
     );
 }
 
+const ADVANCED_LOCKED_DESCRIPTION =
+    'Unlock the full breakdown: psychological strategy, emotional triggers, retention drivers, weakest moment, and tailored suggestions, written to match what Pro analysis returns for your short.';
+
 function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | null | undefined }) {
     const [expanded, setExpanded] = useState(true);
     const { plan, status } = useSubscription();
@@ -637,7 +775,7 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
     if (status === 'loading' && plan == null) {
         return (
             <div
-                className="mb-4 h-28 animate-pulse rounded-xl border border-white/5 bg-white/[0.04]"
+                className="mb-4 h-28 animate-pulse rounded-xl border border-line bg-white/[0.03]"
                 role="status"
                 aria-live="polite"
             />
@@ -650,7 +788,7 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
             <LockedProFeatureSection
                 featureId="advanced_analytics"
                 title="Advanced Analytics"
-                description="Unlock the full breakdown: psychological strategy, emotional triggers, retention drivers, weakest moment, and tailored suggestions—written to match what Pro analysis returns for your short."
+                description={ADVANCED_LOCKED_DESCRIPTION}
             />
         );
     }
@@ -658,16 +796,8 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
     if (advanced == null) {
         if (plan === 'pro' || plan === 'enterprise') {
             return (
-                <div
-                    className="mb-4 rounded-xl border border-white/5 bg-white/[0.02] p-4"
-                    style={{
-                        backgroundImage:
-                            'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(249,115,22,0.04) 100%)',
-                    }}
-                >
-                    <p className="text-sm text-zinc-400">
-                        No Advanced Analytics data for this video yet.
-                    </p>
+                <div className="mb-4 rounded-xl border border-line bg-white/[0.02] p-4">
+                    <p className="text-sm text-fg-muted">No Advanced Analytics data for this video yet.</p>
                 </div>
             );
         }
@@ -675,7 +805,7 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
             <LockedProFeatureSection
                 featureId="advanced_analytics"
                 title="Advanced Analytics"
-                description="Unlock the full breakdown: psychological strategy, emotional triggers, retention drivers, weakest moment, and tailored suggestions—written to match what Pro analysis returns for your short."
+                description={ADVANCED_LOCKED_DESCRIPTION}
             />
         );
     }
@@ -694,52 +824,44 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
         suggestions.length > 0;
 
     return (
-        <div
-            className="rounded-xl border border-white/5 bg-white/[0.02] p-4 mb-4"
-            style={{
-                backgroundImage: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(249,115,22,0.04) 100%)',
-            }}
-        >
+        <div className="app-panel mb-4 p-4">
             <button
                 type="button"
                 onClick={() => setExpanded((e) => !e)}
-                className="flex w-full items-center justify-between gap-2 text-left"
+                aria-expanded={expanded}
+                className="app-focus flex w-full items-center justify-between gap-2 rounded-lg text-left"
             >
-                <span className="flex items-center gap-2 min-w-0">
-                    <span className="text-base inline-flex shrink-0 text-white [&>svg]:inline-block [&>svg]:align-middle">
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="inline-flex shrink-0 text-fg [&>svg]:inline-block [&>svg]:align-middle">
                         <SvgBarChartSmall />
                     </span>
-                    <span className="text-sm font-bold tracking-wide bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent truncate uppercase">
+                    <span className="text-brand-gradient truncate text-sm font-bold uppercase tracking-wide">
                         Advanced Analytics
                     </span>
                 </span>
-                <span
-                    className={`text-zinc-500 text-xs shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
                     aria-hidden
-                >
-                    ▼
-                </span>
+                />
             </button>
 
             {expanded && hasBody ? (
-                <div className="mt-4 space-y-5 border-t border-white/[0.06] pt-4">
+                <div className="mt-4 space-y-5 border-t border-line pt-4">
                     {profile ? (
                         <div>
-                            <p className="text-xs text-white/40 tracking-widest uppercase mb-1.5">
-                                PSYCHOLOGICAL STRATEGY
-                            </p>
-                            <p className="text-sm text-white/80">{profile}</p>
+                            <p className="app-label mb-1.5">Psychological strategy</p>
+                            <p className="text-sm text-fg-muted">{profile}</p>
                         </div>
                     ) : null}
 
                     {triggers.length > 0 ? (
                         <div>
-                            <p className="text-xs text-white/40 tracking-widest uppercase mb-2">EMOTIONAL TRIGGERS</p>
+                            <p className="app-label mb-2">Emotional triggers</p>
                             <div className="flex flex-wrap gap-2">
                                 {triggers.map((t) => (
                                     <span
                                         key={t}
-                                        className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs text-red-400"
+                                        className="rounded-full border border-danger/25 bg-danger/10 px-2.5 py-1 text-xs text-danger"
                                     >
                                         {t}
                                     </span>
@@ -750,12 +872,12 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
 
                     {drivers.length > 0 ? (
                         <div>
-                            <p className="text-xs text-white/40 tracking-widest uppercase mb-2">RETENTION DRIVERS</p>
+                            <p className="app-label mb-2">Retention drivers</p>
                             <div className="flex flex-wrap gap-2">
                                 {drivers.map((d) => (
                                     <span
                                         key={d}
-                                        className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-1 text-xs text-orange-400"
+                                        className="rounded-full border border-accent/25 bg-accent-tint px-2.5 py-1 text-xs text-accent"
                                     >
                                         {d}
                                     </span>
@@ -766,9 +888,9 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
 
                     {weakest ? (
                         <div>
-                            <p className="text-xs text-white/40 tracking-widest uppercase mb-2">WEAKEST MOMENT</p>
-                            <div className="inline-flex items-center gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-300">
-                                <span className="text-yellow-400 shrink-0 inline-flex [&>svg]:inline-block [&>svg]:align-middle">
+                            <p className="app-label mb-2">Weakest moment</p>
+                            <div className="inline-flex items-center gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-1.5 text-sm text-warning">
+                                <span className="inline-flex shrink-0 [&>svg]:inline-block [&>svg]:align-middle">
                                     <SvgWarningTriangle />
                                 </span>
                                 <span>{weakest}</span>
@@ -778,13 +900,10 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
 
                     {suggestions.length > 0 ? (
                         <div>
-                            <p className="text-xs text-white/40 tracking-widest uppercase mb-2">SUGGESTIONS</p>
-                            <ul className="list-none p-0 m-0">
+                            <p className="app-label mb-2">Suggestions</p>
+                            <ul className="m-0 list-none p-0">
                                 {suggestions.map((s, i) => (
-                                    <li
-                                        key={i}
-                                        className="mb-2 border-l-2 border-red-500/40 pl-3 text-sm text-white/70 last:mb-0"
-                                    >
+                                    <li key={i} className="mb-2 border-l-2 border-accent/40 pl-3 text-sm text-fg-muted last:mb-0">
                                         {s}
                                     </li>
                                 ))}
@@ -797,7 +916,7 @@ function AdvancedAnalyticsDetailCard({ advanced }: { advanced: FeatureEntry | nu
     );
 }
 
-// ─── Right panel: Accordion card for detailed analysis ───
+// ─── Report: accordion card for "Detailed analysis" ───
 function AccordionCard({
     icon,
     title,
@@ -812,83 +931,40 @@ function AccordionCard({
     defaultOpen?: boolean;
 }) {
     const [open, setOpen] = useState(defaultOpen);
-    const color =
-        score == null ? '#71717a' : score > 75 ? '#22c55e' : score > 50 ? '#f97316' : '#ef4444';
+    const panelId = useId();
+    const tone = TONE_STYLES[scoreTone(score)];
 
     return (
         <div
-            style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 12,
-                marginBottom: 8,
-                overflow: 'hidden',
-            }}
+            className={`mb-2 overflow-hidden rounded-xl border transition-colors duration-200 ${
+                open ? 'border-white/[0.14] bg-white/[0.035]' : 'border-line bg-white/[0.02]'
+            }`}
         >
-            <div
-                onClick={() => setOpen(!open)}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                }}
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                aria-controls={panelId}
+                className="app-focus flex w-full items-center gap-3 px-4 py-3 text-left"
             >
-                <span
-                    style={{
-                        fontSize: 16,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                    className="[&>svg]:inline-block [&>svg]:align-middle"
-                >
-                    {icon}
-                </span>
-                <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: 'white' }}>
-                    {title}
-                </span>
-                <span
-                    style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                        background: `${color}20`,
-                        color,
-                        border: `1px solid ${color}60`,
-                    }}
-                >
+                <span className="inline-flex shrink-0 items-center [&>svg]:inline-block [&>svg]:align-middle">{icon}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{title}</span>
+                <span className={`tabular shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tone.chip}`}>
                     {score == null ? '—' : score}
                 </span>
-                <span
-                    style={{
-                        color: '#71717a',
-                        fontSize: 12,
-                        marginLeft: 8,
-                        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
-                    }}
-                >
-                    ▼
-                </span>
-            </div>
+                <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                    aria-hidden
+                />
+            </button>
+            {/* grid-rows 0fr -> 1fr animates to the content's real height (no max-height clipping). */}
             <div
-                style={{
-                    maxHeight: open ? '600px' : '0px',
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease',
-                }}
+                id={panelId}
+                className={`grid transition-[grid-template-rows] duration-300 ease-app-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                inert={!open}
             >
-                <div
-                    style={{
-                        padding: '0 16px 16px',
-                        borderTop: '1px solid rgba(255,255,255,0.06)',
-                    }}
-                >
-                    {children}
+                <div className="min-h-0 overflow-hidden">
+                    <div className="border-t border-line px-4 pb-4">{children}</div>
                 </div>
             </div>
         </div>
@@ -1254,10 +1330,6 @@ function Chat() {
 
     // Use stored virality score from API; show placeholder when missing
     const viralityScore = video?.viralityScore ?? null;
-    const filenameDisplay =
-        video?.filename != null && video.filename.length > 36
-            ? `${video.filename.slice(0, 36)}…`
-            : video?.filename ?? '';
 
     const retentionChartData = useMemo(() => {
         const curve = video?.retentionCurve ?? [];
@@ -1278,8 +1350,9 @@ function Chat() {
 
     if (isLoading || !video) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <FaSpinner className="w-8 h-8 text-white animate-spin" />
+            <div className="app-root flex h-dvh items-center justify-center" role="status">
+                <Loader2 className="h-8 w-8 text-fg-muted motion-safe:animate-spin" aria-hidden />
+                <span className="sr-only">Loading your analysis</span>
             </div>
         );
     }
@@ -1292,23 +1365,29 @@ function Chat() {
 
     if (isAnalysisPending) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[100dvh] px-4">
-                <Link to="/videos" className="text-zinc-400 hover:text-white transition-colors text-sm mb-6">
-                    ← Back to Library
-                </Link>
-                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6" />
-                <h2 className="text-xl font-bold text-white mb-2">Analysis in progress</h2>
-                <p className="text-gray-400 text-center max-w-md mb-2">
-                    Your video is being analyzed. This usually takes a few minutes.
-                </p>
-                <p className="text-gray-500 text-sm">You can wait here or go back to the library and we’ll refresh automatically.</p>
-                <button
-                    type="button"
-                    onClick={() => navigate('/videos')}
-                    className="mt-8 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                    Back to Library
-                </button>
+            <div className="app-root flex min-h-dvh flex-col items-center justify-center px-4">
+                <div className="app-panel w-full max-w-md p-6 text-center">
+                    <div className="relative mx-auto mb-5 h-16 w-16">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+                        <div className="absolute inset-0 rounded-full border-2 border-accent border-t-transparent motion-safe:animate-spin" />
+                        <Sparkles className="absolute inset-0 m-auto h-6 w-6 text-accent" aria-hidden />
+                    </div>
+                    <h2 className="text-xl font-semibold text-fg">Analysis in progress</h2>
+                    <p className="mt-2 text-sm text-fg-muted">
+                        Your video is being analyzed. This usually takes a few minutes.
+                    </p>
+                    <p className="mt-1 text-sm text-fg-subtle">
+                        You can wait here or go back to the library and we’ll refresh automatically.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/videos')}
+                        className="app-focus app-primary mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold"
+                    >
+                        <ChevronLeft className="h-4 w-4" aria-hidden />
+                        Back to Library
+                    </button>
+                </div>
             </div>
         );
     }
@@ -1322,32 +1401,31 @@ function Chat() {
                 ? video.errorSummary.trim()
                 : null);
         return (
-            <div className="flex flex-col items-center justify-center min-h-[100dvh] px-4">
-                <Link to="/videos" className="text-zinc-400 hover:text-white transition-colors text-sm mb-6">
-                    ← Back to Library
-                </Link>
-                <p className="text-red-400 mb-2">Analysis failed for this video.</p>
-                {failedDetail ? (
-                    <p className="text-xs text-red-400/90 text-center max-w-md mb-3 leading-snug">{failedDetail}</p>
-                ) : null}
-                <p className="text-gray-400 text-center max-w-md mb-6">
-                    You can try re-analyzing from the library.
-                </p>
-                <button
-                    type="button"
-                    onClick={() => navigate('/videos')}
-                    className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                    Back to Library
-                </button>
+            <div className="app-root flex min-h-dvh flex-col items-center justify-center px-4">
+                <div className="app-panel w-full max-w-md p-6 text-center">
+                    <p className="font-semibold text-danger">Analysis failed for this video.</p>
+                    {failedDetail ? (
+                        <p className="mt-2 text-xs leading-snug text-danger/90">{failedDetail}</p>
+                    ) : null}
+                    <p className="mt-3 text-sm text-fg-muted">You can try re-analyzing from the library.</p>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/videos')}
+                        className="app-focus app-primary mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold"
+                    >
+                        <ChevronLeft className="h-4 w-4" aria-hidden />
+                        Back to Library
+                    </button>
+                </div>
             </div>
         );
     }
 
     if (isLoadingMessages) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <FaSpinner className="w-8 h-8 text-white animate-spin" />
+            <div className="app-root flex h-dvh items-center justify-center" role="status">
+                <Loader2 className="h-8 w-8 text-fg-muted motion-safe:animate-spin" aria-hidden />
+                <span className="sr-only">Loading your chat</span>
             </div>
         );
     }
@@ -1387,69 +1465,118 @@ function Chat() {
         Array.isArray(video.selectedFeatures) &&
         video.selectedFeatures.some((f) => f === 'hook' || f === 'pacing' || f === 'audio');
 
-    return (
-        <div
-            className="flex flex-col overflow-hidden md:h-[100dvh] h-[100dvh]"
-        >
-            {/* ─── Sticky banner (full width) ─── */}
-            <div
-                className="sticky top-0 z-20 flex-shrink-0 px-6 py-3 flex items-center justify-between border-b border-white/[0.08]"
-                style={{ background: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(12px)' }}
-            >
-                <Link
-                    to="/videos"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
-                >
-                    ← Back to Library
-                </Link>
-                <span className="text-white font-medium truncate max-w-[40%] mx-2" title={video.filename}>
-                    {filenameDisplay}
-                </span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-zinc-400">Virality Score</span>
-                    <motion.span
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
-                        className="font-bold text-white text-sm px-3 py-1 rounded-full"
-                        style={{
-                            background:
-                                viralityScore == null
-                                    ? 'rgba(255,255,255,0.1)'
-                                    : viralityScore >= 80
-                                        ? 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)'
-                                        : viralityScore >= 60
-                                            ? 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)'
-                                            : 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
-                        }}
-                    >
-                        {viralityScore != null ? viralityScore : '—'}
-                    </motion.span>
-                </div>
-            </div>
+    // "At a glance": the overall verdict plus the strongest and weakest analyzed areas.
+    const areaScores = (
+        [
+            { label: 'Hook', score: dto?.scores?.hook },
+            { label: 'Pacing', score: dto?.scores?.pacing },
+            { label: 'Audio', score: dto?.scores?.audio },
+            { label: 'Captions', score: dto?.scores?.caption },
+        ] as { label: string; score: number | null | undefined }[]
+    ).filter((a): a is { label: string; score: number } => typeof a.score === 'number' && !Number.isNaN(a.score));
+    const weakestArea = areaScores.length > 0 ? areaScores.reduce((a, b) => (b.score < a.score ? b : a)) : null;
+    const strongestArea = areaScores.length > 1 ? areaScores.reduce((a, b) => (b.score > a.score ? b : a)) : null;
+    const overallTone = scoreTone(viralityScore);
+    const verdictTitle =
+        overallTone === 'strong'
+            ? 'Ready to post'
+            : overallTone === 'okay'
+                ? 'Close. Fix a few things first'
+                : overallTone === 'weak'
+                    ? 'Fix this before you post'
+                    : 'Score not available yet';
+    const verdictBody = weakestArea
+        ? `Start with your ${weakestArea.label.toLowerCase()} (${weakestArea.score}). It is holding this video back the most.`
+        : 'Open the details below to see what to fix.';
 
-            {/* ─── Two panels: Chat (left) | Analysis (right). Mobile: stack (45vh + 55vh) ─── */}
-            <div className="flex flex-col md:flex-row flex-1 min-h-0 w-full">
-                {/* Left: 45% desktop, 45vh mobile - AI Chat */}
-                <div
-                    className={`${activeTab === 'chat' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[45%] min-h-0 flex-1 md:flex-none md:h-auto border-r-0 md:border-r border-white/[0.07] md:flex-shrink-0`}
-                >
-                    {/* Panel header (sticky within left) */}
-                    <div
-                        className="flex-shrink-0 px-4 py-3 border-b border-white/[0.08] flex items-start justify-between gap-3"
-                        style={{ background: 'rgba(10, 10, 15, 0.95)' }}
+    const jumpTargets: { id: string; label: string }[] = [
+        { id: 'report-overview', label: 'Overview' },
+        { id: 'report-scores', label: 'Scores' },
+        { id: 'report-predictions', label: 'Predictions' },
+        ...(video.streamUrl ? [{ id: 'report-video', label: 'Video' }] : []),
+        ...(showFrameFeedbackSection ? [{ id: 'report-moments', label: 'Moments' }] : []),
+        ...(scriptRewriteList.length > 0 ? [{ id: 'report-rewrites', label: 'Rewrites' }] : []),
+        { id: 'report-details', label: 'Details' },
+    ];
+    const sectionNumber = (id: string) => String(jumpTargets.findIndex((t) => t.id === id) + 1).padStart(2, '0');
+    const jumpTo = (id: string) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    };
+
+    const userInitial = (name || 'You').trim().charAt(0).toUpperCase() || 'U';
+    const hasUserMessage = messages.some((m) => m.isUser);
+
+    return (
+        <div className="app-root flex h-dvh flex-col overflow-hidden">
+            {/* ─── Header: back, title, score, and (mobile) the Analytics / Chat switch ─── */}
+            <header className="app-chrome app-edge-bottom relative z-20 flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                <div className="flex h-14 items-center gap-3 px-3 md:px-5">
+                    <Link
+                        to="/videos"
+                        aria-label="Back to Library"
+                        className="app-focus inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border border-line bg-white/[0.03] pl-2 pr-2.5 text-sm text-fg-muted transition-colors hover:border-white/20 hover:text-fg"
                     >
-                        <div>
-                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                <SvgLightningCoach />
-                                Personalized Video Coach
-                            </h2>
-                            <p className="text-xs text-zinc-400 mt-0.5">Ask anything about your video</p>
+                        <ChevronLeft className="h-4 w-4" aria-hidden />
+                        <span className="hidden sm:inline">Library</span>
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                        <p className="app-label hidden sm:block">Analysis report</p>
+                        <p className="truncate text-sm font-medium text-fg" title={video.filename}>
+                            {cleanVideoTitle(video.filename)}
+                        </p>
+                    </div>
+                    <ScoreChip score={viralityScore} />
+                </div>
+
+                <div className="px-3 pb-2 md:hidden">
+                    <div role="tablist" aria-label="Video view" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+                        {(['analytics', 'chat'] as const).map((tab) => {
+                            const isActive = activeTab === tab;
+                            const TabIcon = tab === 'analytics' ? BarChart3 : MessageSquare;
+                            return (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`app-focus flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
+                                        isActive
+                                            ? 'bg-surface-raised text-fg shadow-[0_0_0_1px_rgba(232,103,53,0.35),0_0_16px_rgba(232,103,53,0.15)]'
+                                            : 'text-fg-muted'
+                                    }`}
+                                >
+                                    <TabIcon className={`h-4 w-4 ${isActive ? 'text-accent' : ''}`} aria-hidden />
+                                    {tab === 'analytics' ? 'Analytics' : 'Chat'}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </header>
+
+            {/* ─── Two panels: Chat (left) | Analysis (right). Mobile: one at a time via the switch above ─── */}
+            <div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
+                {/* ─── Chat ─── */}
+                <div
+                    className={`${activeTab === 'chat' ? 'flex' : 'hidden'} min-h-0 w-full flex-1 flex-col md:flex md:w-[42%] md:max-w-[560px] md:flex-none md:flex-shrink-0 md:border-r md:border-line`}
+                >
+                    <div className="flex flex-shrink-0 items-center gap-3 border-b border-line px-4 py-3">
+                        <span
+                            aria-hidden
+                            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gradient text-on-brand shadow-[0_0_20px_rgba(232,103,53,0.35)]"
+                        >
+                            <SvgLightningCoach />
+                            <span className="app-glow-dot absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-success" />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="text-sm font-semibold text-fg">Personalized Video Coach</h2>
+                            <p className="text-xs text-fg-muted">Ask anything about your video</p>
                         </div>
                     </div>
 
                     {/* Message history */}
-                    <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" aria-live="polite">
                         {messages.map((message) => {
                             const messageId =
                                 message.id ?? (message as { _id?: string })._id ?? `msg-${Date.now()}`;
@@ -1457,26 +1584,24 @@ function Chat() {
 
                             if (message.isUser) {
                                 return (
-                                    <div key={messageId} className="flex items-start gap-3 mb-4 flex-row-reverse">
-                                        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-zinc-700 text-white text-xs font-bold">
-                                            U
+                                    <div key={messageId} className="mb-4 flex flex-row-reverse items-end gap-2.5">
+                                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-line bg-surface-raised text-[11px] font-semibold text-fg-muted">
+                                            {userInitial}
                                         </div>
-                                        <div className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-3 bg-gradient-to-r from-[#FF3CAC] to-[#FF8C00] text-white text-sm leading-relaxed">
+                                        <div className="max-w-[82%] break-words rounded-2xl rounded-br-md border border-accent/30 bg-accent-tint px-4 py-2.5 text-sm leading-relaxed text-fg">
                                             {message.text}
-                                            {timestamp && (
-                                                <div className="text-[10px] text-white/50 mt-1">{timestamp}</div>
-                                            )}
+                                            {timestamp && <div className="mt-1 text-right text-[10px] text-fg-subtle">{timestamp}</div>}
                                         </div>
                                     </div>
                                 );
                             }
 
                             return (
-                                <div key={messageId} className="flex items-start gap-3 mb-4">
-                                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#FF3CAC] to-[#FF8C00] text-white text-xs font-bold">
+                                <div key={messageId} className="mb-4 flex items-start gap-2.5">
+                                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-[11px] font-bold text-on-brand">
                                         V
                                     </div>
-                                    <div className="max-w-[80%] rounded-2xl rounded-tl-sm px-4 py-3 border border-white/[0.08] text-white text-sm leading-relaxed bg-[rgba(255,255,255,0.05)]">
+                                    <div className="min-w-0 max-w-[88%] break-words rounded-2xl rounded-tl-md border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-fg shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
                                         {formatChatMessage(message.text)}
 
                                         {/* Fixes render as structured diffs, never as prose inside the reply. */}
@@ -1497,7 +1622,8 @@ function Chat() {
 
                                         {/* Deep-link into the report for items the reply cited. */}
                                         {(message.feedbackRefs ?? []).length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                                                <span className="app-label mr-1">Jump to</span>
                                                 {(message.feedbackRefs ?? []).map((ref) => {
                                                     const cited = timestampFeedbackList.find((item) => item.id === ref);
                                                     const citedRewrite = scriptRewriteList.find((item) => item.lineId === ref);
@@ -1511,9 +1637,10 @@ function Chat() {
                                                                 setCitedFeedbackIds([ref]);
                                                                 if (canSeek) handleSeek(seconds);
                                                             }}
-                                                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-zinc-300 hover:bg-[#FF3CAC]/30 hover:text-white transition-colors"
+                                                            className="app-focus inline-flex items-center gap-1 rounded-md border border-line bg-white/[0.04] px-2 py-0.5 font-mono text-[11px] text-fg-muted transition-colors hover:border-accent/40 hover:text-fg"
                                                             title="Show this item in the report"
                                                         >
+                                                            <Play className="h-2.5 w-2.5" aria-hidden />
                                                             {formatSecondsToMmSs(seconds)}
                                                         </button>
                                                     );
@@ -1521,33 +1648,27 @@ function Chat() {
                                             </div>
                                         )}
 
-                                        {timestamp && (
-                                            <div className="text-[10px] text-zinc-500 mt-1">{timestamp}</div>
-                                        )}
+                                        {timestamp && <div className="mt-1.5 text-[10px] text-fg-subtle">{timestamp}</div>}
                                     </div>
                                 </div>
                             );
                         })}
 
                         {isSending && (
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#FF3CAC] to-[#FF8C00] text-white text-xs font-bold">
+                            <div className="mb-4 flex items-start gap-2.5" role="status">
+                                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-[11px] font-bold text-on-brand">
                                     V
                                 </div>
-                                <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-[rgba(255,255,255,0.05)] border border-white/[0.08]">
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"
-                                            style={{ animationDelay: '0ms' }}
-                                        />
-                                        <div
-                                            className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"
-                                            style={{ animationDelay: '150ms' }}
-                                        />
-                                        <div
-                                            className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"
-                                            style={{ animationDelay: '300ms' }}
-                                        />
+                                <div className="rounded-2xl rounded-tl-md border border-line bg-surface px-4 py-3.5">
+                                    <span className="sr-only">Coach is typing</span>
+                                    <div className="flex items-center gap-1.5" aria-hidden>
+                                        {[0, 150, 300].map((d) => (
+                                            <span
+                                                key={d}
+                                                className="chat-typing-dot h-1.5 w-1.5 rounded-full bg-accent"
+                                                style={{ animationDelay: `${d}ms` }}
+                                            />
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -1557,40 +1678,43 @@ function Chat() {
                     </div>
 
                     {/* Suggestion chips (only when user hasn't sent a message yet) */}
-                    {chipsVisible && !messages.some((m) => m.isUser) && (
-                        <div className="px-4 pb-2 flex flex-wrap gap-2">
-                            {(
-                                [
-                                    { key: 'chip-hook', prompt: 'Fix my hook', label: 'Fix my hook', Icon: SvgChipWrench },
-                                    { key: 'chip-cut', prompt: 'What to cut?', label: 'What to cut?', Icon: SvgChipScissors },
-                                    {
-                                        key: 'chip-platform',
-                                        prompt: 'TikTok vs Reels?',
-                                        label: 'TikTok vs Reels?',
-                                        Icon: SvgChipBarChart,
-                                    },
-                                    { key: 'chip-pacing', prompt: 'My pacing?', label: 'My pacing?', Icon: SvgChipMusic },
-                                ] as const
-                            ).map(({ key, prompt, label, Icon }) => (
-                                <button
-                                    key={key}
-                                    type="button"
-                                    className="text-xs px-3 py-1.5 rounded-full border border-[#FF8C00] text-[#FF8C00] bg-[rgba(255,140,0,0.1)] hover:bg-[rgba(255,140,0,0.2)] transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                                    onClick={() => handleChipClick(prompt)}
-                                >
-                                    <Icon />
-                                    <span>{label}</span>
-                                </button>
-                            ))}
+                    {chipsVisible && !hasUserMessage && (
+                        <div className="flex-shrink-0 px-4 pb-2">
+                            <p className="app-label mb-2">Try asking</p>
+                            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+                                {(
+                                    [
+                                        { key: 'chip-hook', prompt: 'Fix my hook', label: 'Fix my hook', Icon: SvgChipWrench },
+                                        { key: 'chip-cut', prompt: 'What to cut?', label: 'What to cut?', Icon: SvgChipScissors },
+                                        {
+                                            key: 'chip-platform',
+                                            prompt: 'TikTok vs Reels?',
+                                            label: 'TikTok vs Reels?',
+                                            Icon: SvgChipBarChart,
+                                        },
+                                        { key: 'chip-pacing', prompt: 'My pacing?', label: 'My pacing?', Icon: SvgChipMusic },
+                                    ] as const
+                                ).map(({ key, prompt, label, Icon }) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        className="app-focus inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-white/[0.03] px-3 text-xs font-medium text-fg-muted transition-colors hover:border-accent/40 hover:bg-accent-tint hover:text-fg"
+                                        onClick={() => handleChipClick(prompt)}
+                                    >
+                                        <Icon />
+                                        <span>{label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
 
-                    {/* Input bar (sticky at bottom of left panel) */}
+                    {/* Input bar */}
                     <div
-                        className="flex-shrink-0 border-t border-white/[0.08] px-4 py-3"
-                        style={{ background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(12px)' }}
+                        className="app-chrome flex-shrink-0 border-t border-line px-3 pt-3 md:px-4"
+                        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-1.5 pl-4 transition-[border-color,box-shadow] duration-200 focus-within:border-accent/50 focus-within:shadow-[0_0_0_3px_rgba(232,103,53,0.12)]">
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -1598,492 +1722,344 @@ function Chat() {
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Ask anything to improve your video..."
-                                className="flex-1 bg-[rgba(255,255,255,0.05)] border border-white/[0.1] rounded-full px-4 py-2.5 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-[#FF8C00] focus:shadow-[0_0_0_2px_rgba(255,140,0,0.2)] transition-all"
+                                aria-label="Message the video coach"
+                                // 16px on mobile so iOS does not zoom the page when the field gets focus.
+                                className="min-w-0 flex-1 bg-transparent py-2 text-base text-fg placeholder:text-fg-subtle focus:outline-none md:text-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => handleSendMessage()}
                                 disabled={!inputText.trim() || isSending}
-                                className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-r from-[#FF3CAC] to-[#FF8C00] hover:shadow-[0_0_20px_rgba(255,60,172,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                                className="app-focus flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-gradient text-on-brand transition-[opacity,box-shadow] hover:shadow-[0_0_20px_rgba(232,103,53,0.45)] disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label="Send message"
                             >
                                 {isSending ? (
-                                    <FaSpinner className="w-[18px] h-[18px] animate-spin" />
+                                    <Loader2 className="h-[18px] w-[18px] motion-safe:animate-spin" aria-hidden />
                                 ) : (
-                                    <FaPaperPlane className="w-[18px] h-[18px]" />
+                                    <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden />
                                 )}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Vertical divider */}
+                {/* ─── Analytics report ─── */}
                 <div
-                    className="hidden md:block flex-shrink-0"
-                    style={{ width: 1, background: 'rgba(255,255,255,0.07)' }}
-                />
-
-                {/* Right: 55% desktop, 55vh mobile - Analysis Report */}
-                <div
-                    className={`${activeTab === 'analytics' ? 'block' : 'hidden'} md:block flex-1 min-h-0 md:min-h-0 overflow-y-auto px-6 py-6 bg-[rgba(255,255,255,0.01)] md:min-w-0`}
+                    className={`${activeTab === 'analytics' ? 'block' : 'hidden'} min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain md:block`}
                 >
-                    {/* Section A: Scores overview */}
-                    <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
-                        Analysis Report
-                    </p>
-                    <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
+                    {/* Jump bar: every report section one tap away */}
+                    <nav
+                        aria-label="Report sections"
+                        className="app-chrome sticky top-0 z-10 border-b border-line"
+                    >
+                        <div className="mx-auto flex max-w-3xl gap-1.5 overflow-x-auto px-4 py-2 [scrollbar-width:none] md:px-6">
+                            {jumpTargets.map((t) => (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => jumpTo(t.id)}
+                                    className="app-focus inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line bg-white/[0.02] px-3 text-xs font-medium text-fg-muted transition-colors hover:border-accent/40 hover:text-fg"
+                                >
+                                    <span className="font-mono text-[10px] text-accent">{sectionNumber(t.id)}</span>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
 
-                    <ViralityRing score={viralityScore} />
+                    <div
+                        className="mx-auto max-w-3xl px-4 pt-5 md:px-6 md:pt-6"
+                        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+                    >
+                        {/* 01 Overview: one verdict, the score, and where to start */}
+                        <ReportSection id="report-overview" index={sectionNumber('report-overview')} title="At a glance" className="">
+                            <div className="app-panel p-5">
+                                <div className="relative flex items-center gap-5">
+                                    <ScoreDial score={viralityScore} />
+                                    <div className="min-w-0">
+                                        <p className="app-label">Virality score</p>
+                                        <p className={`mt-1 text-lg font-semibold leading-snug md:text-xl ${TONE_STYLES[overallTone].text}`}>
+                                            {verdictTitle}
+                                        </p>
+                                        <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">{verdictBody}</p>
+                                    </div>
+                                </div>
+                                <dl className="relative mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
+                                    <div className="min-w-0">
+                                        <dt className="app-label">Expected views</dt>
+                                        <dd className="tabular mt-1 truncate text-base font-semibold text-fg">
+                                            {predsAllNull ? '—' : formatViews(pv?.expected ?? null)}
+                                        </dd>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <dt className="app-label">Fix first</dt>
+                                        <dd className="mt-1 truncate text-base font-semibold text-danger">
+                                            {weakestArea ? weakestArea.label : '—'}
+                                        </dd>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <dt className="app-label">Best part</dt>
+                                        <dd className="mt-1 truncate text-base font-semibold text-success">
+                                            {strongestArea ? strongestArea.label : '—'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </ReportSection>
 
-                    <ScoreBar
-                        icon={<SvgHookFish />}
-                        label="Hook Score"
-                        score={dto?.scores?.hook ?? 0}
-                        delay={100}
-                        notAnalyzed={dto?.scores?.hook == null}
-                    />
-                    <ScoreBar
-                        icon={<SvgWaveformBars />}
-                        label="Pacing & Rhythm"
-                        score={dto?.scores?.pacing ?? 0}
-                        delay={200}
-                        notAnalyzed={dto?.scores?.pacing == null}
-                    />
-                    <ScoreBar
-                        icon={<SvgSpeaker />}
-                        label="Audio Score"
-                        score={dto?.scores?.audio ?? 0}
-                        delay={300}
-                        notAnalyzed={dto?.scores?.audio == null}
-                    />
-                    <ScoreBar
-                        icon={<SvgSpeechBubble />}
-                        label="Caption Clarity"
-                        score={dto?.scores?.caption ?? 0}
-                        delay={400}
-                        notAnalyzed={dto?.scores?.caption == null}
-                    />
-                    <ScoreBar
-                        icon={<SvgBarChartSmall />}
-                        label="Advanced"
-                        score={dto?.scores?.advanced ?? 0}
-                        delay={5}
-                        tooltip="Advanced Analytics: emotional triggers, retention drivers and your weakest moment"
-                        notAnalyzed={dto?.scores?.advanced == null && reportSubscriptionPlan !== 'free' && reportSubscriptionPlan !== 'premium'}
-                        locked={reportSubscriptionPlan === 'free' || reportSubscriptionPlan === 'premium'}
-                    />
-                    <ScoreBar
-                        icon={<SvgSwipeGesture />}
-                        label="Hook Swipe Rate"
-                        score={hookSwipeNotAnalyzed ? 0 : (hookSwipe ?? 0)}
-                        delay={500}
-                        notAnalyzed={hookSwipeNotAnalyzed}
-                        tooltip="Lower swipe rate = more viewers stayed past your hook. Higher is better here."
-                    />
-
-                    <AdvancedAnalyticsDetailCard advanced={dto?.features?.advanced} />
-
-                    {/* Section B: Predicted Performance */}
-                    <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
-                        Predicted Performance
-                    </p>
-                    <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <div
-                            className="rounded-xl p-4 border border-white/[0.08] bg-white/[0.04]"
-                            style={{ borderTop: '3px solid #06B6D4' }}
+                        {/* 02 Scores */}
+                        <ReportSection
+                            id="report-scores"
+                            index={sectionNumber('report-scores')}
+                            title="Score breakdown"
+                            hint="75 and up is strong, 50 to 74 is okay, under 50 needs work."
                         >
-                            <span className="text-base inline-flex [&>svg]:inline-block [&>svg]:align-middle">
-                                <SvgEyeTarget />
-                            </span>
-                            <p className="text-xs text-zinc-400 mt-1">Predicted Views (band)</p>
-                            <p className="text-xl font-bold text-white mt-0.5">
-                                {predsAllNull ? (
-                                    <span className="text-sm font-normal text-zinc-400">
-                                        Run Views analysis to get a prediction
-                                    </span>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                <ScoreTile
+                                    icon={<SvgHookFish />}
+                                    label="Hook"
+                                    score={dto?.scores?.hook ?? 0}
+                                    delay={100}
+                                    notAnalyzed={dto?.scores?.hook == null}
+                                />
+                                <ScoreTile
+                                    icon={<SvgWaveformBars />}
+                                    label="Pacing & Rhythm"
+                                    score={dto?.scores?.pacing ?? 0}
+                                    delay={200}
+                                    notAnalyzed={dto?.scores?.pacing == null}
+                                />
+                                <ScoreTile
+                                    icon={<SvgSpeaker />}
+                                    label="Audio"
+                                    score={dto?.scores?.audio ?? 0}
+                                    delay={300}
+                                    notAnalyzed={dto?.scores?.audio == null}
+                                />
+                                <ScoreTile
+                                    icon={<SvgSpeechBubble />}
+                                    label="Caption Clarity"
+                                    score={dto?.scores?.caption ?? 0}
+                                    delay={400}
+                                    notAnalyzed={dto?.scores?.caption == null}
+                                />
+                                <ScoreTile
+                                    icon={<SvgSwipeGesture />}
+                                    label="Hook Swipe Rate"
+                                    score={hookSwipeNotAnalyzed ? 0 : (hookSwipe ?? 0)}
+                                    delay={500}
+                                    notAnalyzed={hookSwipeNotAnalyzed}
+                                    tooltip="Lower swipe rate = more viewers stayed past your hook. Higher is better here."
+                                />
+                                <ScoreTile
+                                    icon={<SvgBarChartSmall />}
+                                    label="Advanced"
+                                    score={dto?.scores?.advanced ?? 0}
+                                    delay={600}
+                                    tooltip="Advanced Analytics: emotional triggers, retention drivers and your weakest moment"
+                                    notAnalyzed={dto?.scores?.advanced == null && reportSubscriptionPlan !== 'free' && reportSubscriptionPlan !== 'premium'}
+                                    locked={reportSubscriptionPlan === 'free' || reportSubscriptionPlan === 'premium'}
+                                />
+                            </div>
+
+                            <div className="mt-4">
+                                <AdvancedAnalyticsDetailCard advanced={dto?.features?.advanced} />
+                            </div>
+                        </ReportSection>
+
+                        {/* 03 Predicted performance */}
+                        <ReportSection
+                            id="report-predictions"
+                            index={sectionNumber('report-predictions')}
+                            title="Predicted performance"
+                            hint="Based on similar content."
+                        >
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-4">
+                                    <div className="flex items-center gap-2 text-xs text-fg-muted">
+                                        <span className="inline-flex text-[#38bdf8] [&>svg]:inline-block">
+                                            <SvgEyeTarget />
+                                        </span>
+                                        Predicted views (range)
+                                    </div>
+                                    <p className="tabular mt-2 text-xl font-semibold text-fg">
+                                        {predsAllNull ? (
+                                            <span className="text-sm font-normal text-fg-muted">
+                                                Run Views analysis to get a prediction
+                                            </span>
+                                        ) : (
+                                            <>
+                                                {formatViews(pv?.low ?? null)} – {formatViews(pv?.high ?? null)}
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-4">
+                                    <div className="flex items-center gap-2 text-xs text-fg-muted">
+                                        <span className="inline-flex text-success [&>svg]:inline-block">
+                                            <SvgTrendingArrow />
+                                        </span>
+                                        Expected views
+                                    </div>
+                                    <p className="tabular mt-2 text-xl font-semibold text-success">
+                                        {predsAllNull ? '—' : formatViews(pv?.expected ?? null)}
+                                    </p>
+                                    <p className="mt-2 text-xs text-fg-muted">
+                                        Avg retention{' '}
+                                        <span className="tabular font-semibold text-fg">
+                                            {retentionAvgPct != null ? `${retentionAvgPct}%` : '—'}
+                                        </span>
+                                    </p>
+                                    <ResponsiveContainer width="100%" height={44}>
+                                        <LineChart data={retentionChartData}>
+                                            <Line
+                                                type="monotone"
+                                                dataKey="v"
+                                                stroke="#3dd68c"
+                                                strokeWidth={2}
+                                                dot={false}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    background: '#181c25',
+                                                    border: '1px solid rgba(255,255,255,0.08)',
+                                                    borderRadius: 8,
+                                                    fontSize: 11,
+                                                }}
+                                                formatter={(v: number | undefined) => [v != null ? `${v}%` : '', 'Retention']}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-4">
+                                    <div className="flex items-center gap-2 text-xs text-fg-muted">
+                                        <span className="inline-flex text-accent [&>svg]:inline-block">
+                                            <SvgGauge />
+                                        </span>
+                                        Views predictor score
+                                    </div>
+                                    <p className="tabular mt-2 text-xl font-semibold text-accent">
+                                        {dto?.scores?.viewsPredictor != null ? dto.scores.viewsPredictor : '—'}
+                                    </p>
+                                    <p className="mt-1 text-xs text-fg-subtle">
+                                        {dto?.features?.viewsPredictor?.rating
+                                            ? `Tier: ${dto.features.viewsPredictor.rating}`
+                                            : 'Run Views predictor in upload options'}
+                                    </p>
+                                </div>
+                            </div>
+                        </ReportSection>
+
+                        {video.streamUrl ? (
+                            <ReportSection
+                                id="report-video"
+                                index={sectionNumber('report-video')}
+                                title="Your video"
+                                hint="Tap any timestamp in the report or chat to jump to that moment."
+                            >
+                                <div className="overflow-hidden rounded-xl border border-line">
+                                    <SeekableVideoPlayer
+                                        ref={playerRef}
+                                        streamUrl={video.streamUrl}
+                                        poster={video.thumbnailUrl}
+                                    />
+                                </div>
+                            </ReportSection>
+                        ) : null}
+
+                        {showFrameFeedbackSection && (
+                            <ReportSection
+                                id="report-moments"
+                                index={sectionNumber('report-moments')}
+                                title="Moment-by-moment fixes"
+                            >
+                                {timestampFeedbackList.length === 0 ? (
+                                    <p className="rounded-xl border border-line bg-white/[0.02] p-4 text-sm text-fg-muted">
+                                        No frame-level feedback available for this video.
+                                    </p>
                                 ) : (
-                                    <>
-                                        {formatViews(pv?.low ?? null)} – {formatViews(pv?.high ?? null)}
-                                    </>
+                                    <div className="space-y-3">
+                                        {timestampFeedbackList.map((item) => (
+                                            <FeedbackFixCard
+                                                key={item.id}
+                                                item={item}
+                                                onSeek={canSeek ? handleSeek : undefined}
+                                                isHighlighted={citedFeedbackIds.includes(item.id)}
+                                            />
+                                        ))}
+                                    </div>
                                 )}
-                            </p>
-                            <p className="text-[10px] text-zinc-500">Based on similar content</p>
-                        </div>
+                            </ReportSection>
+                        )}
 
-                        <div
-                            className="rounded-xl p-4 border border-white/[0.08] bg-white/[0.04]"
-                            style={{ borderTop: '3px solid #22C55E' }}
-                        >
-                            <span className="text-base inline-flex [&>svg]:inline-block [&>svg]:align-middle">
-                                <SvgTrendingArrow />
-                            </span>
-                            <p className="text-xs text-zinc-400 mt-1">Expected views</p>
-                            <p className="text-xl font-bold text-green-400">
-                                {predsAllNull ? '—' : formatViews(pv?.expected ?? null)}
-                            </p>
-                            <p className="text-xs text-zinc-400 mt-2">Avg retention (curve)</p>
-                            <p className="text-sm font-semibold text-zinc-300">
-                                {retentionAvgPct != null ? `${retentionAvgPct}%` : '—'}
-                            </p>
-                            <ResponsiveContainer width="100%" height={48}>
-                                <LineChart data={retentionChartData}>
-                                    <Line
-                                        type="monotone"
-                                        dataKey="v"
-                                        stroke="#22c55e"
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ background: '#1a1a2e', border: 'none', fontSize: 10 }}
-                                        formatter={(v: number | undefined) => [v != null ? `${v}%` : '', 'Retention']}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        <div
-                            className="rounded-xl p-4 border border-white/[0.08] bg-white/[0.04]"
-                            style={{ borderTop: '3px solid #F97316' }}
-                        >
-                            <span className="text-base inline-flex [&>svg]:inline-block [&>svg]:align-middle">
-                                <SvgGauge />
-                            </span>
-                            <p className="text-xs text-zinc-400 mt-1">Views predictor (score)</p>
-                            <p className="text-xl font-bold text-orange-400">
-                                {dto?.scores?.viewsPredictor != null
-                                    ? dto.scores.viewsPredictor
-                                    : '—'}
-                            </p>
-                            <p className="text-[10px] text-zinc-500 mt-1">
-                                {dto?.features?.viewsPredictor?.rating
-                                    ? `Tier: ${dto.features.viewsPredictor.rating}`
-                                    : 'Run Views predictor in upload options'}
-                            </p>
-                        </div>
-                    </div>
-
-                    {video.streamUrl ? (
-                        <>
-                            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
-                                Your video
-                            </p>
-                            <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
-                            <SeekableVideoPlayer
-                                ref={playerRef}
-                                streamUrl={video.streamUrl}
-                                poster={video.thumbnailUrl}
-                                className="mt-2"
-                            />
-                            <p className="text-[11px] text-zinc-500 mt-2">
-                                Click any timestamp below to jump to that moment.
-                            </p>
-                        </>
-                    ) : null}
-
-                    {showFrameFeedbackSection && (
-                        <>
-                            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
-                                Frame-level feedback
-                            </p>
-                            <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
-                            {timestampFeedbackList.length === 0 ? (
-                                <p className="text-sm text-zinc-500 py-4">
-                                    No frame-level feedback available for this video.
-                                </p>
-                            ) : (
-                                <div className="space-y-3 mt-2">
-                                    {timestampFeedbackList.map((item) => (
-                                        <FeedbackFixCard
-                                            key={item.id}
-                                            item={item}
+                        {scriptRewriteList.length > 0 && (
+                            <ReportSection id="report-rewrites" index={sectionNumber('report-rewrites')} title="Script rewrites">
+                                <div className="space-y-3">
+                                    {scriptRewriteList.map((rewrite) => (
+                                        <ScriptRewriteCard
+                                            key={rewrite.lineId}
+                                            rewrite={rewrite}
                                             onSeek={canSeek ? handleSeek : undefined}
-                                            isHighlighted={citedFeedbackIds.includes(item.id)}
                                         />
                                     ))}
                                 </div>
-                            )}
-                        </>
-                    )}
+                            </ReportSection>
+                        )}
 
-                    {scriptRewriteList.length > 0 && (
-                        <>
-                            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
-                                Script rewrites
-                            </p>
-                            <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
-                            <div className="space-y-3 mt-2">
-                                {scriptRewriteList.map((rewrite) => (
-                                    <ScriptRewriteCard
-                                        key={rewrite.lineId}
-                                        rewrite={rewrite}
-                                        onSeek={canSeek ? handleSeek : undefined}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    )}
+                        {/* Detailed analysis */}
+                        <ReportSection
+                            id="report-details"
+                            index={sectionNumber('report-details')}
+                            title="Detailed analysis"
+                            hint="What is holding each part back, and how to fix it."
+                        >
+                            <AccordionCard icon={<SvgHookFish />} title="Hook" score={dto?.scores?.hook ?? null} defaultOpen={true}>
+                                <FeatureDetail feedback={dto?.features?.hook?.feedback} suggestions={dto?.features?.hook?.suggestions} />
+                            </AccordionCard>
 
-                    {/* Section C: Detailed Analysis (accordions) */}
-                    <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400 mt-8">
-                        Detailed Analysis
-                    </p>
-                    <hr className="border-0 h-px bg-white/[0.06] w-full my-2" />
+                            <AccordionCard icon={<SvgWaveformBars />} title="Pacing & Rhythm" score={dto?.scores?.pacing ?? null}>
+                                <FeatureDetail feedback={dto?.features?.pacing?.feedback} suggestions={dto?.features?.pacing?.suggestions} />
+                            </AccordionCard>
 
-                    <AccordionCard
-                        icon={<SvgHookFish />}
-                        title="Hook"
-                        score={dto?.scores?.hook ?? null}
-                        defaultOpen={true}
-                    >
-                        <p
-                            style={{
-                                color: '#f87171',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            What&apos;s wrong:
-                        </p>
-                        <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                            {dto?.features?.hook?.feedback ?? 'No analysis yet'}
-                        </p>
-                        <p
-                            style={{
-                                color: '#4ade80',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Suggestions to improve:
-                        </p>
-                        <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                            {(dto?.features?.hook?.suggestions ?? []).map((s, i) => (
-                                <li key={i}>{s}</li>
-                            ))}
-                        </ul>
-                    </AccordionCard>
+                            <AccordionCard icon={<SvgSpeaker />} title="Audio" score={dto?.scores?.audio ?? null}>
+                                <FeatureDetail feedback={dto?.features?.audio?.feedback} suggestions={dto?.features?.audio?.suggestions} />
+                            </AccordionCard>
 
-                    <AccordionCard icon={<SvgWaveformBars />} title="Pacing & Rhythm" score={dto?.scores?.pacing ?? null}>
-                        <p
-                            style={{
-                                color: '#f87171',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            What&apos;s wrong:
-                        </p>
-                        <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                            {dto?.features?.pacing?.feedback ?? 'No analysis yet'}
-                        </p>
-                        <p
-                            style={{
-                                color: '#4ade80',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Suggestions to improve:
-                        </p>
-                        <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                            {(dto?.features?.pacing?.suggestions ?? []).map((s, i) => (
-                                <li key={i}>{s}</li>
-                            ))}
-                        </ul>
-                    </AccordionCard>
+                            <AccordionCard icon={<SvgSpeechBubble />} title="Caption Clarity" score={dto?.scores?.caption ?? null}>
+                                <FeatureDetail feedback={dto?.features?.caption?.feedback} suggestions={dto?.features?.caption?.suggestions} />
+                            </AccordionCard>
 
-                    <AccordionCard icon={<SvgSpeaker />} title="Audio Score" score={dto?.scores?.audio ?? null}>
-                        <p
-                            style={{
-                                color: '#f87171',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            What&apos;s wrong:
-                        </p>
-                        <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                            {dto?.features?.audio?.feedback ?? 'No analysis yet'}
-                        </p>
-                        <p
-                            style={{
-                                color: '#4ade80',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Suggestions to improve:
-                        </p>
-                        <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                            {(dto?.features?.audio?.suggestions ?? []).map((s, i) => (
-                                <li key={i}>{s}</li>
-                            ))}
-                        </ul>
-                    </AccordionCard>
-
-                    <AccordionCard icon={<SvgSpeechBubble />} title="Caption Clarity" score={dto?.scores?.caption ?? null}>
-                        <p
-                            style={{
-                                color: '#f87171',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            What&apos;s wrong:
-                        </p>
-                        <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                            {dto?.features?.caption?.feedback ?? 'No analysis yet'}
-                        </p>
-                        <p
-                            style={{
-                                color: '#4ade80',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Suggestions to improve:
-                        </p>
-                        <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                            {(dto?.features?.caption?.suggestions ?? []).map((s, i) => (
-                                <li key={i}>{s}</li>
-                            ))}
-                        </ul>
-                    </AccordionCard>
-
-                    <AccordionCard
-                        icon={<SvgGauge />}
-                        title="Views predictor"
-                        score={dto?.scores?.viewsPredictor ?? null}
-                    >
-                        <p
-                            style={{
-                                color: '#f87171',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Summary:
-                        </p>
-                        <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                            {dto?.features?.viewsPredictor?.feedback ?? 'No analysis yet'}
-                        </p>
-                        <p
-                            style={{
-                                color: '#4ade80',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                marginBottom: 4,
-                                marginTop: 12,
-                            }}
-                        >
-                            Suggestions to improve:
-                        </p>
-                        <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                            {(dto?.features?.viewsPredictor?.suggestions ?? []).map((s, i) => (
-                                <li key={i}>{s}</li>
-                            ))}
-                        </ul>
-                    </AccordionCard>
-
-                    {dto?.features?.advanced &&
-                        (reportSubscriptionPlan === 'pro' || reportSubscriptionPlan === 'enterprise') && (
-                        <AccordionCard
-                            icon={<SvgBarChartSmall />}
-                            title="Advanced Analytics"
-                            score={dto.features.advanced.score ?? null}
-                        >
-                            <p
-                                style={{
-                                    color: '#f87171',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    marginBottom: 4,
-                                    marginTop: 12,
-                                }}
-                            >
-                                Summary:
-                            </p>
-                            <p style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.6 }}>
-                                {dto.features.advanced.feedback ?? 'No analysis yet'}
-                            </p>
-                            {dto.features.advanced.rating != null ? (
-                                <p className="text-xs text-zinc-400 mt-2">
-                                    Rating: {dto.features.advanced.rating}
-                                </p>
-                            ) : null}
-                            <p
-                                style={{
-                                    color: '#4ade80',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    marginBottom: 4,
-                                    marginTop: 12,
-                                }}
-                            >
-                                Suggestions to improve:
-                            </p>
-                            <ul className="list-disc list-inside text-[#d4d4d8] text-sm leading-relaxed">
-                                {(dto.features.advanced.suggestions ?? []).map((s, i) => (
-                                    <li key={i}>{s}</li>
-                                ))}
-                            </ul>
-                        </AccordionCard>
-                    )}
-                </div>
-            </div>
-
-            {/* Mobile-only tab switcher (<768px) — sits at the bottom of the page content area */}
-            <div
-                className="md:hidden flex-shrink-0 h-14 border-t border-white/[0.08] flex"
-                style={{ background: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(12px)' }}
-                role="tablist"
-                aria-label="Video view tabs"
-            >
-                {(['analytics', 'chat'] as const).map((tab) => {
-                    const isActive = activeTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            type="button"
-                            role="tab"
-                            aria-selected={isActive}
-                            onClick={() => setActiveTab(tab)}
-                            className={`relative flex-1 flex items-center justify-center text-sm transition-colors ${
-                                isActive ? 'text-white font-semibold' : 'text-zinc-500 font-medium'
-                            }`}
-                        >
-                            {isActive && (
-                                <span
-                                    aria-hidden
-                                    className="absolute top-0 left-4 right-4 h-[2px] rounded-full"
-                                    style={{ background: 'linear-gradient(90deg, #FF3CAC 0%, #FF8C00 100%)' }}
+                            <AccordionCard icon={<SvgGauge />} title="Views predictor" score={dto?.scores?.viewsPredictor ?? null}>
+                                <FeatureDetail
+                                    problemLabel="Summary"
+                                    feedback={dto?.features?.viewsPredictor?.feedback}
+                                    suggestions={dto?.features?.viewsPredictor?.suggestions}
                                 />
+                            </AccordionCard>
+
+                            {dto?.features?.advanced &&
+                                (reportSubscriptionPlan === 'pro' || reportSubscriptionPlan === 'enterprise') && (
+                                <AccordionCard
+                                    icon={<SvgBarChartSmall />}
+                                    title="Advanced Analytics"
+                                    score={dto.features.advanced.score ?? null}
+                                >
+                                    <FeatureDetail
+                                        problemLabel="Summary"
+                                        feedback={dto.features.advanced.feedback}
+                                        suggestions={dto.features.advanced.suggestions}
+                                    >
+                                        {dto.features.advanced.rating != null ? (
+                                            <p className="text-xs text-fg-muted">Rating: {dto.features.advanced.rating}</p>
+                                        ) : null}
+                                    </FeatureDetail>
+                                </AccordionCard>
                             )}
-                            {tab === 'analytics' ? 'Analytics' : 'Chat'}
-                        </button>
-                    );
-                })}
+                        </ReportSection>
+                    </div>
+                </div>
             </div>
         </div>
     );

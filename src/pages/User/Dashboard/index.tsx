@@ -124,7 +124,7 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
   return (
     <>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="app-title">Welcome back, {firstName}</h1>
+        <h1 className="app-title min-w-0 break-words">Welcome back, {firstName}</h1>
         <ButtonLink to="/new">
           <Plus className="h-4 w-4" aria-hidden="true" />
           New analysis
@@ -132,7 +132,7 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
       </header>
 
       {(localUploading || inProgress.length > 0) && (
-        <section aria-label="In progress" className="mb-10 space-y-2">
+        <section aria-label="In progress" className="mb-10 min-w-0 space-y-2">
           {localUploading && job && (
             <Link
               to="/new"
@@ -154,7 +154,7 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
               <span className="hidden text-sm text-fg-muted sm:inline">Usually 2 to 5 minutes</span>
             </Link>
           ))}
-        </section>
+          </section>
       )}
 
       <section aria-labelledby={recentHeading}>
@@ -165,15 +165,15 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
           <Link to="/videos" className="app-focus rounded text-sm font-medium text-accent hover:underline">
             View all
           </Link>
-        </div>
+                    </div>
         {recent.length === 0 ? (
           <p className="rounded-xl border border-line bg-surface p-6 text-sm text-fg-muted">
             Your first results will show here when the analysis finishes.
           </p>
         ) : (
-          <ul className="grid gap-4 md:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
             {recent.map((v) => (
-              <li key={v._id}>
+              <li key={v._id} className="min-w-0">
                 <RecentCard video={v} />
               </li>
             ))}
@@ -189,10 +189,10 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
 function RecentCard({ video }: { video: Video }) {
   const title = cleanVideoTitle(video.filename);
   const hasScore = typeof video.viralityScore === 'number' && !Number.isNaN(video.viralityScore);
-  return (
+                return (
     <Link
       to={`/videos/${video._id}`}
-      className="app-focus flex h-full items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-surface-raised"
+      className="app-focus flex h-full min-w-0 items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-surface-raised"
     >
       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-canvas text-fg-subtle">
         {video.thumbnailUrl ? (
@@ -200,11 +200,11 @@ function RecentCard({ video }: { video: Video }) {
         ) : (
           <Film className="h-6 w-6" aria-hidden="true" />
         )}
-      </div>
+              </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-fg">{title}</p>
         <p className="tabular mt-0.5 text-xs text-fg-muted">{formatVideoDate(video.createdAt)}</p>
-      </div>
+              </div>
       {hasScore && <ScoreRing score={video.viralityScore as number} size={44} />}
     </Link>
   );
@@ -213,11 +213,11 @@ function RecentCard({ video }: { video: Video }) {
 function HowItWorksDisclosure() {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  return (
+                return (
     <section className="mt-10 border-t border-line pt-6">
       <h2 className="text-base">
-        <button
-          type="button"
+                      <button
+                        type="button"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((v) => !v)}
@@ -228,11 +228,11 @@ function HowItWorksDisclosure() {
             className={`h-4 w-4 text-fg-muted transition-transform duration-200 ease-app-out ${open ? 'rotate-180' : ''}`}
             aria-hidden="true"
           />
-        </button>
+                      </button>
       </h2>
       <div id={panelId} hidden={!open} className="mt-4">
         <HowItWorks />
-      </div>
+                  </div>
     </section>
   );
 }
