@@ -13,12 +13,20 @@ interface FormValues {
 
 function ResendVerification() {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [isTimerActive, setIsTimerActive] = useState(true); // Start timer immediately
+  // The 60 s wait applies only right after an email went out (signup, or a login that resent it).
+  const justSent = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('sent') === '1';
+  const [timeLeft, setTimeLeft] = useState(justSent ? 60 : 0);
+  const [isTimerActive, setIsTimerActive] = useState(justSent);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const initialValues: FormValues = {
-    email: ''
+    email: (() => {
+      try {
+        return sessionStorage.getItem('vireact-pending-verify-email') || '';
+      } catch {
+        return '';
+      }
+    })()
   };
 
   const validationSchema = Yup.object({
@@ -148,7 +156,9 @@ function ResendVerification() {
             We've sent a verification email to your email address. Please check your inbox and click the verification link.
           </p>
           <p className="text-white/60 text-sm mb-6">
-            If you didn't receive the email, you can request another one after waiting {timeLeft} seconds.
+            {isTimerActive
+              ? `If you didn't receive the email, you can request another one in ${timeLeft} seconds.`
+              : "Didn't get it? Enter your email and we'll send a new link. Check your spam folder too."}
           </p>
         </div>
 
@@ -172,7 +182,7 @@ function ResendVerification() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !isValid || !dirty || isTimerActive}
+                  disabled={isSubmitting || !isValid || (!dirty && !initialValues.email) || isTimerActive}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? (

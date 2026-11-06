@@ -26,7 +26,7 @@ describe('Landing V3 hero', () => {
     expect(html).toContain('Predict your views.');
     expect(html).toContain('Know exactly what to fix. Then post.');
     expect(html).not.toContain('Fix the swipe');
-    expect(html.match(/Get my free hook analysis/g)).toHaveLength(1);
+    expect(html.match(/Get my free video analysis/g)).toHaveLength(1);
     expect(html).toContain('Creator results');
   });
 

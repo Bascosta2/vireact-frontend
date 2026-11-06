@@ -4,6 +4,37 @@ import Axios from '@/api';
 import { AUTH_TOKEN } from '@/constants';
 
 /**
+ * One refresh at a time. When the access token expires, the app usually has several requests in
+ * flight (dashboard loads subscription + videos together). Each used to start its own refresh; the
+ * server rotates the token on the first, so the others presented a stale token, failed, and the user
+ * was logged out. Now every 401 waits on the same refresh.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+const refreshAccessToken = (): Promise<string | null> => {
+  if (!refreshInFlight) {
+    refreshInFlight = Axios.post('/auth/refresh-token')
+      .then((response) => {
+        if (!response.data?.success) throw new Error('Refresh rejected');
+        const { accessToken } = response.data.data || {};
+        if (accessToken) {
+          store.dispatch(setAuthData({
+            token: accessToken,
+            role: store.getState().auth.role,
+            user: store.getState().auth.user
+          }));
+          localStorage.setItem('accessToken', accessToken);
+        }
+        return accessToken ?? null;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+};
+
+/**
  * Setup Axios interceptors for automatic authentication handling
  */
 export const setupAuthInterceptors = () => {
@@ -48,24 +79,18 @@ export const setupAuthInterceptors = () => {
 
       originalRequest._retry = true;
 
+      // Not signed in (e.g. a visitor on a public page): nothing to refresh, never redirect.
+      if (!store.getState().auth.isAuthenticated) {
+        return Promise.reject(error);
+      }
+
       try {
-        const response = await Axios.post('/auth/refresh-token');
-
-        if (response.data?.success) {
-          const { accessToken } = response.data.data || {};
-
-          if (accessToken) {
-            store.dispatch(setAuthData({
-              token: accessToken,
-              role: store.getState().auth.role,
-              user: store.getState().auth.user
-            }));
-            localStorage.setItem('accessToken', accessToken);
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          }
-          return Axios(originalRequest);
+        const accessToken = await refreshAccessToken();
+        if (accessToken) {
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         }
-      } catch (refreshError) {
+        return Axios(originalRequest);
+      } catch {
         console.warn('Token refresh failed, clearing authentication');
       }
 
@@ -76,6 +101,9 @@ export const setupAuthInterceptors = () => {
       store.dispatch(logout());
       localStorage.removeItem(AUTH_TOKEN);
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('auth_is_authenticated');
+      localStorage.removeItem('auth_role');
+      localStorage.removeItem('auth_user');
 
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

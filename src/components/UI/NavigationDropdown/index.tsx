@@ -88,8 +88,8 @@
                 className={`
                     absolute top-full -left-12 mt-3
                     w-[380px] sm:w-[580px] lg:w-[700px] max-w-[calc(100vw-2rem)]
-                    bg-[#1a1a1a] backdrop-blur-3xl border border-white/10 
-                    rounded-2xl shadow-2xl 
+                    rounded-2xl border border-white/10 bg-[#0c0c13]/95 backdrop-blur-2xl
+                    shadow-[0_0_0_1px_rgba(255,0,79,0.08),0_0_40px_rgba(255,0,79,0.12),0_24px_60px_rgba(0,0,0,0.6)]
                     z-[60]
                     ${className}
                 `}
@@ -103,12 +103,16 @@
                                 key={item.id}
                                 to={item.href}
                                 onClick={onClose}
-                                className="block p-3 rounded-lg hover:bg-white/10 transition-all duration-200 group"
+                                className={({ isActive }) =>
+                                    `group block rounded-xl border p-3 transition-colors duration-200 ${
+                                        isActive ? 'border-pink-500/30 bg-pink-500/10' : 'border-transparent hover:border-white/10 hover:bg-white/[0.05]'
+                                    }`
+                                }
                             >
                                 <div className="flex items-start gap-3">
                                     {/* Icon */}
                                     {item.icon && (
-                                        <div className="w-11 h-11 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-all duration-200">
+                                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-[#FF004F]/25 to-[#FF883E]/15 transition-shadow duration-200 group-hover:shadow-[0_0_18px_rgba(255,0,79,0.3)]">
                                             <item.icon className="w-6 h-6 text-white group-hover:text-white transition-colors duration-200" />
                                         </div>
                                     )}

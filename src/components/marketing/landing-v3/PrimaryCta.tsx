@@ -18,7 +18,7 @@ interface PrimaryCtaProps {
   className?: string;
 }
 
-export const PRIMARY_CTA_LABEL = 'Get my free hook analysis';
+export const PRIMARY_CTA_LABEL = 'Get my free video analysis';
 
 const baseClass =
   'inline-flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-orange-700 px-6 text-base font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';

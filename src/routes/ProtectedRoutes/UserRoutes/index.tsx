@@ -13,6 +13,7 @@ const Chat = lazy(() => import('@/pages/User/Chat'));
 const Profile = lazy(() => import('@/pages/User/Profile'));
 const SubscriptionUsage = lazy(() => import('@/pages/User/SubscriptionUsage'));
 const SubscriptionPlans = lazy(() => import('@/pages/User/SubscriptionPlans'));
+const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
 
 /** Old upload steps now live on /new; query params (e.g. ?onboarding=1) carry over. */
 function RedirectKeepingQuery({ to }: { to: string }) {
@@ -25,6 +26,7 @@ function UserRoutes() {
         <Suspense fallback={<Fallback />}>
             <Routes>
                 <Route path='/dashboard' element={<Dashboard />} />
+                <Route path='/reset-password' element={<ResetPassword />} />
                 <Route path='/new' element={<NewAnalysis />} />
                 <Route path='/upload' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/features' element={<RedirectKeepingQuery to="/new" />} />

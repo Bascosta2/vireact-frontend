@@ -53,7 +53,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     name: isLogin ? Yup.string() : Yup.string()
       .min(2, 'Name must be at least 2 characters')
       .max(50, 'Name must be less than 50 characters')
-      .matches(/^[a-zA-Z\s.'-]+$/, 'Name can only contain letters, spaces, dots, apostrophes, and hyphens')
+      .matches(/^[\p{L}\p{M}\s.'-]+$/u, 'Name can only contain letters, spaces, dots, apostrophes, and hyphens')
       .required('Name is required'),
     email: Yup.string()
       .email('Invalid email address')
@@ -139,8 +139,9 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
           SuccessNotification('Account created successfully! Please check your email for verification.');
           
           // Show verification message and redirect to resend page after a delay
+          try { sessionStorage.setItem('vireact-pending-verify-email', values.email); } catch { /* ignore */ }
           setTimeout(() => {
-            window.location.href = '/resend-verification';
+            window.location.href = '/resend-verification?sent=1';
           }, 2000);
           
           if (onSuccess) {
@@ -187,7 +188,14 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
                           error.message || 
                           (isLogin ? 'Login failed' : 'Signup failed');
       
-      if (error.response?.status === 401 && isLogin) {
+      const errorCode = error.response?.data?.data?.code;
+      if (isLogin && error.response?.status === 403 && errorCode === 'EMAIL_NOT_VERIFIED') {
+        // Right password, unverified email: the server just sent a fresh link.
+        try { sessionStorage.setItem('vireact-pending-verify-email', values.email); } catch { /* ignore */ }
+        setStatus({ formError: errorMessage, verify: true });
+      } else if (isLogin && error.response?.status === 429) {
+        setStatus({ formError: 'Too many attempts. Wait a few minutes, or reset your password.' });
+      } else if (error.response?.status === 401 && isLogin) {
         // Generic credential failure on login. Surface as a top-level form
         // error so neither email nor password gets a misleading field marker.
         setStatus({ formError: errorMessage || 'Invalid email or password' });
@@ -275,6 +283,20 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
                 data-testid="form-error"
               >
                 {status.formError}
+                {status.verify && (
+                  <>
+                    {' '}
+                    <a href="/resend-verification?sent=1" className="underline hover:text-white">Resend the link</a>
+                  </>
+                )}
+              </div>
+            )}
+
+            {isLogin && (
+              <div className="text-right">
+                <a href="/forgot-password" className="text-sm text-gray-400 hover:text-secondary">
+                  Forgot password?
+                </a>
               </div>
             )}
             

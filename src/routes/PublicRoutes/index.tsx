@@ -1,10 +1,17 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import Fallback from "@/components/Fallback";
 import { isLandingV3Enabled } from '@/pages/Home/landing-flag';
 // Imported statically on purpose: the hero is the LCP element and a lazy route chunk adds a full extra
 // network round trip before it can paint. Everything below the hero is split out (see BelowFold).
 import LandingV3 from '@/pages/Home/LandingV3';
+
+/** /auth/error?message=... -> /login?error=... so the message is shown instead of silently lost. */
+function AuthErrorRedirect() {
+    const { search } = useLocation();
+    const message = new URLSearchParams(search).get('message') || 'Sign-in did not complete. Try again.';
+    return <Navigate to={`/login?error=${encodeURIComponent(message)}`} replace />;
+}
 
 const Home = lazy(() => import('@/pages/PreLogin/Home'));
 const Pricing = lazy(() => import('@/pages/PreLogin/Pricing'));
@@ -21,6 +28,8 @@ const GetInTouch = lazy(() => import('@/pages/PreLogin/GetInTouch'));
 const GoogleCallback = lazy(() => import('@/components/GoogleCallback'));
 const VerifyEmail = lazy(() => import('@/pages/PreLogin/VerifyEmail'));
 const ResendVerification = lazy(() => import('@/pages/PreLogin/ResendVerification'));
+const ForgotPassword = lazy(() => import('@/pages/PreLogin/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
 
 // Trust & Legal Pages
 const TermsAndConditions = lazy(() => import('@/pages/PreLogin/TrustAndLegal/TermsAndConditions'));
@@ -49,6 +58,10 @@ function PublicRoutes() {
                 <Route path='/signup' element={<Signup />} />
                 <Route path='/verify-email' element={<VerifyEmail />} />
                 <Route path='/resend-verification' element={<ResendVerification />} />
+                <Route path='/forgot-password' element={<ForgotPassword />} />
+                <Route path='/reset-password' element={<ResetPassword />} />
+                {/* Older Google sign-in errors pointed here; show them on the login page. */}
+                <Route path='/auth/error' element={<AuthErrorRedirect />} />
 
                 {/* Features */}
                 <Route path='/features/viral-predictor' element={<ViralPredictor />} />

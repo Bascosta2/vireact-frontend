@@ -95,7 +95,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
 
     return (
         <header
-            className={`app-edge-bottom md:after:hidden fixed top-0 left-0 right-0 z-50 h-18 ${className}`}
+            className={`app-edge-bottom fixed top-0 left-0 right-0 z-50 h-18 ${className}`}
             style={{
                 background: 'rgba(10, 10, 15, 0.85)',
                 backdropFilter: 'blur(12px)',
@@ -111,7 +111,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                     </div>
 
                     {/* md+ : same desktop nav & buttons as before (previously shown at lg+) */}
-                    <div className="hidden md:flex items-center gap-10">
+                    <nav aria-label="Main" className="hidden md:flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.35)]">
                         {navItems.map((item) => (
                             <div key={item.label} className="relative">
                                 {item.hasDropdown ? (
@@ -123,7 +123,12 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                             ref={buttonRef}
                                             type="button"
                                             onClick={(e) => handleDropdownToggle(e, item.label)}
-                                            className="text-sm flex items-center gap-2 text-light-gray hover:text-white transition-all duration-200 cursor-pointer px-4 py-2 rounded-lg hover:bg-white/20"
+                                            aria-expanded={openDropdown === item.label}
+                                            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 ${
+                                                openDropdown === item.label || pathname.startsWith('/features')
+                                                    ? 'bg-white/[0.09] text-white shadow-[0_0_16px_rgba(255,0,79,0.18)]'
+                                                    : 'text-zinc-300 hover:bg-white/[0.07] hover:text-white'
+                                            }`}
                                         >
                                             <span className="font-normal leading-relaxed">
                                                 {item.label}
@@ -148,19 +153,38 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                                     <NavLink
                                         to={item.href}
                                         onClick={item.href === '/viral-hooks' ? () => track('cta_clicked', { location: 'nav_free_hooks' }) : undefined}
-                                        className="text-sm flex items-center gap-2 text-light-gray hover:text-white transition-all duration-200 cursor-pointer px-4 py-2 rounded-lg hover:bg-white/20"
+                                        className={({ isActive }) =>
+                                            `relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400 ${
+                                                isActive
+                                                    ? 'bg-white/[0.09] text-white shadow-[0_0_16px_rgba(255,0,79,0.18)]'
+                                                    : 'text-zinc-300 hover:bg-white/[0.07] hover:text-white'
+                                            }`
+                                        }
                                     >
-                                        {item.label}
+                                        {({ isActive }) => (
+                                            <>
+                                                {item.href === '/viral-hooks' ? (
+                                                    <span className="bg-gradient-to-r from-[#FF4D7E] to-[#FF9A4D] bg-clip-text font-semibold text-transparent">
+                                                        {item.label}
+                                                    </span>
+                                                ) : (
+                                                    item.label
+                                                )}
+                                                {isActive && (
+                                                    <span aria-hidden="true" className="absolute inset-x-4 -bottom-px h-[2px] rounded-full bg-gradient-to-r from-[#FF004F] to-[#FF883E]" />
+                                                )}
+                                            </>
+                                        )}
                                     </NavLink>
                                 )}
                             </div>
                         ))}
-                    </div>
+                    </nav>
 
-                    <div className="hidden md:flex items-center gap-3 xl:gap-4 flex-shrink-0">
+                    <div className="hidden md:flex items-center gap-2 xl:gap-3 flex-shrink-0">
                         <NavLink
                             to="/login"
-                            className="btn-outline"
+                            className="inline-flex h-10 items-center rounded-full border border-white/15 bg-white/[0.04] px-5 text-sm font-medium text-white transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
                         >
                             Log in
                         </NavLink>
@@ -168,7 +192,7 @@ const PreLoginHeader: React.FC<PreLoginHeaderProps> = ({ className = '' }) => {
                             ref={signupBtnRef}
                             type="button"
                             onClick={handleSignupClick}
-                            className="btn-primary btn-primary-hero-nav relative overflow-hidden"
+                            className="btn-primary btn-primary-hero-nav relative h-10 overflow-hidden rounded-full px-5 shadow-[0_0_22px_rgba(255,0,79,0.35)]"
                         >
                             {signupRipple && (
                                 <span
