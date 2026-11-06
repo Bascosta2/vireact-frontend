@@ -36,7 +36,7 @@ export function FounderCredibility() {
       <ul className="relative grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
         <li className="min-w-0 rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-center shadow-lg shadow-black/40 backdrop-blur sm:p-4 md:rounded-2xl md:p-6 md:text-left">
           <Users className="mx-auto h-4 w-4 text-pink-300 md:mx-0 md:h-5 md:w-5" aria-hidden="true" />
-          <p className="mt-2 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent sm:text-3xl md:mt-4 md:text-5xl">
+          <p className="mt-2 text-2xl font-extrabold tabular-nums text-[#ff6f61] sm:text-3xl md:mt-4 md:text-5xl">
             {reach.followers}
           </p>
           <p className="mt-1 text-[11px] font-medium leading-tight text-white sm:text-xs md:mt-2 md:text-sm">Followers generated</p>
@@ -44,7 +44,7 @@ export function FounderCredibility() {
         </li>
         <li className="min-w-0 rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-center shadow-lg shadow-black/40 backdrop-blur sm:p-4 md:rounded-2xl md:p-6 md:text-left">
           <TrendingUp className="mx-auto h-4 w-4 text-orange-300 md:mx-0 md:h-5 md:w-5" aria-hidden="true" />
-          <p className="mt-2 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent sm:text-3xl md:mt-4 md:text-5xl">
+          <p className="mt-2 text-2xl font-extrabold tabular-nums text-[#ff6f61] sm:text-3xl md:mt-4 md:text-5xl">
             {reach.monthlyViews}
           </p>
           <p className="mt-1 text-[11px] font-medium leading-tight text-white sm:text-xs md:mt-2 md:text-sm">Views per month</p>

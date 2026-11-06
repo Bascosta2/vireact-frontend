@@ -147,11 +147,8 @@
   h1,
   h2 {
     @apply font-heading font-bold text-white text-4xl md:text-5xl leading-tight;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    color: transparent;
+    /* Solid, easy-to-read headline color (was a pink-orange gradient fill). */
+    color: #f5f5f7;
   }
 
   h3,
@@ -604,4 +601,63 @@
   height: 6px;
   border-radius: 3px;
   background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e);
+}
+/* ─── Scroll reveal (RevealSection) ─────────────────────────────────────────
+   Hidden only while armed by JS and not yet in view; reveal animations use
+   fill-mode backwards so elements return to their own styles afterwards. */
+@keyframes reveal-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes reveal-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 0, 79, 0);
+  }
+  45% {
+    box-shadow: 0 0 36px rgba(255, 0, 79, 0.32), 0 0 0 1px rgba(255, 111, 97, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(255, 0, 79, 0);
+  }
+}
+
+.reveal-armed .reveal-item:not(.is-in) {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  filter: blur(8px);
+}
+
+.reveal-item.is-in {
+  animation: reveal-rise 720ms cubic-bezier(0.2, 0.7, 0, 1) var(--reveal-delay, 0ms) backwards;
+}
+
+.reveal-card.is-in {
+  animation:
+    reveal-rise 720ms cubic-bezier(0.2, 0.7, 0, 1) var(--reveal-delay, 0ms) backwards,
+    reveal-glow 1200ms ease-out var(--reveal-delay, 0ms) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-armed .reveal-item:not(.is-in) {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .reveal-item.is-in,
+  .reveal-card.is-in {
+    animation: none;
+  }
 }

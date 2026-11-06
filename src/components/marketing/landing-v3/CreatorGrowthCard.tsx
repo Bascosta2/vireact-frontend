@@ -55,7 +55,7 @@ export function CreatorGrowthCard({ win, compact = false }: CreatorGrowthCardPro
           <p className="flex flex-col">
             <span className={`${statLabel} text-pink-200`}>Now</span>
             <span className="whitespace-nowrap">
-              <span className="bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-3xl font-extrabold tabular-nums text-transparent">
+              <span className="text-3xl font-extrabold tabular-nums text-[#ff6f61]">
                 {growth.now}
               </span>
               {growth.unit && <span className="text-xs font-medium text-zinc-400">{` ${growth.unit}`}</span>}
@@ -63,7 +63,7 @@ export function CreatorGrowthCard({ win, compact = false }: CreatorGrowthCardPro
           </p>
         </div>
       ) : (
-        <p className="relative mt-4 bg-gradient-to-r from-pink-400 to-orange-300 bg-clip-text text-2xl font-extrabold tabular-nums text-transparent">
+        <p className="relative mt-4 text-2xl font-extrabold tabular-nums text-[#ff6f61]">
           {win.stat}
         </p>
       )}

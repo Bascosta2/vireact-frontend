@@ -5,7 +5,7 @@ interface HighlightProps {
 }
 
 export const Highlight = ({ children }: HighlightProps) => (
-  <span className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">
+  <span className="text-[#ff6f61]">
     {children}
   </span>
 );
