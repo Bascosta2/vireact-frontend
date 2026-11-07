@@ -42,6 +42,43 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
   const { login, updateAuthData } = useAuth();
   const { setUserData } = useUser();
 
+  /** Store the session the backend just issued and go to the app. */
+  const completeSignIn = async (accessToken: string, user: any) => {
+    // Map user data to match user slice structure
+    const mappedUser = {
+      id: user._id || user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      preferences: user.preferences || {}
+    };
+
+    // Update Redux store. The refresh token is intentionally not handled
+    // here — it lives only in an HttpOnly cookie set by the backend on
+    // this response, and is sent back automatically via withCredentials
+    // when the auth interceptor calls /auth/refresh-token.
+    login(true);
+    updateAuthData({
+      token: accessToken,
+      role: 'user',
+      user: mappedUser
+    });
+    setUserData(mappedUser);
+
+    // Store access token + identity in localStorage for rehydration on
+    // reload. Refresh token is never persisted client-side.
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('auth_role', 'user');
+    localStorage.setItem('auth_user', JSON.stringify(mappedUser));
+    localStorage.setItem('auth_is_authenticated', 'true');
+
+    if (onSuccess) {
+      onSuccess();
+    }
+
+    window.location.href = await resolvePostAuthPath('/dashboard');
+  };
+
   const initialValues: FormValues = {
     name: '',
     email: '',
@@ -83,43 +120,9 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
 
         if (response.data.success) {
           const { accessToken, user } = response.data.data;
-          
-          // Map user data to match user slice structure
-          const mappedUser = {
-            id: user._id || user.id,
-            name: user.name,
-            email: user.email,
-            avatar: user.avatar,
-            preferences: user.preferences || {}
-          };
-          
-          // Update Redux store. The refresh token is intentionally not handled
-          // here — it lives only in an HttpOnly cookie set by the backend on
-          // this response, and is sent back automatically via withCredentials
-          // when the auth interceptor calls /auth/refresh-token.
-          login(true);
-          updateAuthData({ 
-            token: accessToken, 
-            role: 'user', 
-            user: mappedUser 
-          });
-          setUserData(mappedUser);
-          
-          // Store access token + identity in localStorage for rehydration on
-          // reload. Refresh token is never persisted client-side.
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('auth_role', 'user');
-          localStorage.setItem('auth_user', JSON.stringify(mappedUser));
-          localStorage.setItem('auth_is_authenticated', 'true');
-          
           track('login_completed', { method: 'email' }, { beforeUnload: true });
           SuccessNotification('Login successful!');
-          
-          if (onSuccess) {
-            onSuccess();
-          }
-          
-          window.location.href = await resolvePostAuthPath('/dashboard');
+          await completeSignIn(accessToken, user);
         }
       } else {
         // Handle signup
@@ -136,6 +139,15 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
 
         if (response.data.success) {
           track('signup_completed', { method: 'email' }, { beforeUnload: true });
+
+          // The server signs the user in directly when it can't send verification email right now.
+          const { accessToken, user } = response.data.data || {};
+          if (accessToken && user) {
+            SuccessNotification("Account created. You're in!");
+            await completeSignIn(accessToken, user);
+            return;
+          }
+
           SuccessNotification('Account created successfully! Please check your email for verification.');
           
           // Show verification message and redirect to resend page after a delay
