@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { getUserVideos, getVideoStatus, uploadVideoFileToTwelveLabs, type CreatorContext, type Video } from '@/api/video';
+import { getUserVideos, getVideoStatus, uploadVideoFileToTwelveLabs, type CreatorContext } from '@/api/video';
 import { ANALYSIS_STATUS } from '@/constants';
+import { isPendingVideo } from '@/lib/video-status';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import type { AnalysisStage, NotifyState } from '@/components/app/ProgressPanel';
 import { VIDEO_ERRORS } from '@/lib/video-file';
@@ -18,6 +19,8 @@ type ActiveAnalysesValue = {
   job: AnalysisJob | null;
   /** Videos the server still reports as queued or processing (includes `job` once uploaded). */
   inProgressCount: number;
+  /** Re-read the badge count now (call after deleting or re-analyzing a video). */
+  refreshPendingCount: () => Promise<void>;
   notifyState: NotifyState;
   start: (file: File, features: string[], creator?: CreatorContext) => Promise<void>;
   retry: () => void;
@@ -30,10 +33,6 @@ const ActiveAnalysesContext = createContext<ActiveAnalysesValue | null>(null);
 const STATUS_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
 
-const isPendingVideo = (v: Video) =>
-  v.analysisStatus === ANALYSIS_STATUS.QUEUED ||
-  v.analysisStatus === ANALYSIS_STATUS.PROCESSING ||
-  v.analysisStatus === ANALYSIS_STATUS.PENDING;
 
 const initialNotifyState = (): NotifyState => {
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
@@ -64,8 +63,9 @@ export function ActiveAnalysesProvider({ children }: { children: ReactNode }) {
 
   const refreshPendingCount = useCallback(async () => {
     try {
-      const videos = await getUserVideos();
-      setServerPending(videos.filter(isPendingVideo).length);
+      const videos = await getUserVideos({ summary: true });
+      const now = Date.now();
+      setServerPending(videos.filter((v) => isPendingVideo(v, now)).length);
     } catch {
       // Badge is best effort; the Library page shows the authoritative list.
     }
@@ -160,8 +160,8 @@ export function ActiveAnalysesProvider({ children }: { children: ReactNode }) {
   const inProgressCount = Math.max(serverPending, localRunning);
 
   const value = useMemo(
-    () => ({ job, inProgressCount, notifyState, start, retry, reset, enableNotifications }),
-    [job, inProgressCount, notifyState, start, retry, reset, enableNotifications]
+    () => ({ job, inProgressCount, refreshPendingCount, notifyState, start, retry, reset, enableNotifications }),
+    [job, inProgressCount, refreshPendingCount, notifyState, start, retry, reset, enableNotifications]
   );
 
   return <ActiveAnalysesContext.Provider value={value}>{children}</ActiveAnalysesContext.Provider>;

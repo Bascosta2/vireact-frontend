@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
 import { VITE_BACKEND_URL } from '@/constants';
+import { reportClientError } from '@/lib/error-reporter';
 
 let headers = {
     Accept: "application/json",
@@ -119,6 +120,18 @@ Axios.interceptors.response.use(
                     console.error('[API Retry Failed]', retryError);
                     return Promise.reject(retryError);
                 }
+            }
+        }
+
+        // Safety net: failures the server cannot record itself (it never saw the request, or the
+        // platform answered for it). 500s are already recorded server-side.
+        const status = error.response?.status;
+        const path = `${method.toUpperCase()} ${(originalRequest?.url || '').split('?')[0]}`;
+        if (error.code !== 'ERR_CANCELED') {
+            if (!error.response) {
+                reportClientError({ message: `Network error on ${path}: ${error.code || error.message}` }, 'network');
+            } else if (status === 502 || status === 503 || status === 504) {
+                reportClientError({ message: `HTTP ${status} on ${path}` }, 'api');
             }
         }
 

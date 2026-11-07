@@ -185,8 +185,14 @@ export const confirmVideoUpload = async (videoId: string, fileSize: number): Pro
     return response.data.data.video;
 };
 
-export const getUserVideos = async (): Promise<Video[]> => {
-    const response = await Axios.get<{ data?: { videos?: Video[] } | Video[]; videos?: Video[] }>('/videos');
+/**
+ * The user's videos. `summary: true` returns list fields only (status, score, thumbnail, dates): use it
+ * anywhere that does not need the full analysis, it is much lighter.
+ */
+export const getUserVideos = async (options: { summary?: boolean } = {}): Promise<Video[]> => {
+    const response = await Axios.get<{ data?: { videos?: Video[] } | Video[]; videos?: Video[] }>('/videos', {
+        params: options.summary ? { view: 'summary' } : undefined,
+    });
     // Support wrapped (data.videos), direct (videos), or array-as-data (data = array)
     const raw =
         (response.data?.data as { videos?: Video[] })?.videos ??

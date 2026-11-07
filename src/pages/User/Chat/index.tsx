@@ -1011,6 +1011,9 @@ function Chat() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const prevAnalysisStatusForPollRef = useRef<string | null>(null);
+    /** Latest video, for the status poll to merge into without restarting on every update. */
+    const latestVideoRef = useRef<Video | null>(null);
+    latestVideoRef.current = video;
 
     // Reset state when videoId changes
     useEffect(() => {
@@ -1164,10 +1167,13 @@ function Chat() {
 
         const interval = setInterval(async () => {
             try {
-                const videos = await getUserVideos();
-                const found = videos.find((v) => v._id === videoId);
-                if (!found) return;
+                // Status only (light): the full video is loaded once the analysis completes, below.
+                const videos = await getUserVideos({ summary: true });
+                const summary = videos.find((v) => v._id === videoId);
+                if (!summary) return;
                 const prevStatus = prevAnalysisStatusForPollRef.current;
+                const current = latestVideoRef.current;
+                const found = current && current._id === summary._id ? { ...current, ...summary } : summary;
                 setVideo(found);
                 if (
                     found.analysisStatus === ANALYSIS_STATUS.FAILED &&

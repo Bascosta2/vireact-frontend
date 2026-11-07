@@ -29,7 +29,7 @@ function Dashboard() {
   const load = useCallback(async () => {
     setLoadError(false);
     try {
-      const list = await getUserVideos();
+      const list = await getUserVideos({ summary: true });
       setVideos(list.filter((v) => v.uploadStatus !== UPLOAD_STATUS.FAILED));
     } catch {
       setLoadError(true);

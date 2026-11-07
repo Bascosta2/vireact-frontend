@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { reportClientError } from '@/lib/error-reporter';
 
 // One-shot auto-reload guard: a chunk-load failure right after deploy is
 // almost always recoverable by reloading the page so the browser fetches
@@ -44,8 +45,13 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, State> {
         }
     }
 
-    componentDidCatch(error: Error, _info: ErrorInfo): void {
-        if (!isChunkLoadError(error)) return;
+    componentDidCatch(error: Error, info: ErrorInfo): void {
+        if (!isChunkLoadError(error)) {
+            // A page crashed: tell the safety net, with the component path for context.
+            const where = (info?.componentStack || '').trim().split('\n').slice(0, 6).join('\n');
+            reportClientError({ message: error?.message || String(error), stack: `${error?.stack || ''}\n${where}` }, 'crash');
+            return;
+        }
 
         let count = 0;
         try {

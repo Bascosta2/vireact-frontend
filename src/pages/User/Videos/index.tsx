@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Library, Plus, Search } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos, deleteVideo, reanalyzeVideo, type Video } from '@/api/video';
+import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { UPLOAD_STATUS, ANALYSIS_STATUS } from '@/constants';
 import VideoCard from '@/components/UI/VideoCard';
@@ -35,6 +36,7 @@ function Videos() {
   const [error, setError] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [reanalyzingVideoId, setReanalyzingVideoId] = useState<string | null>(null);
+  const { refreshPendingCount } = useActiveAnalyses();
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [filterFeature, setFilterFeature] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -52,7 +54,7 @@ function Videos() {
   const fetchVideos = useCallback(async () => {
     setError(null);
     try {
-      const videoList = await getUserVideos();
+      const videoList = await getUserVideos({ summary: true });
       if (!mounted.current) return;
       setVideos(videoList.filter((v) => v.uploadStatus !== UPLOAD_STATUS.FAILED));
     } catch (err: unknown) {
@@ -127,6 +129,7 @@ function Videos() {
           try {
             await deleteVideo(videoId);
             if (mounted.current) setVideos((prev) => prev.filter((v) => v._id !== videoId));
+            void refreshPendingCount();
           } catch (err: unknown) {
             const msg =
               (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
@@ -138,7 +141,7 @@ function Videos() {
         },
       });
     },
-    [toast]
+    [toast, refreshPendingCount]
   );
 
   const handleReanalyze = useCallback(
@@ -148,6 +151,7 @@ function Videos() {
         await reanalyzeVideo(videoId);
         SuccessNotification('Re-analysis queued');
         await fetchVideos();
+        void refreshPendingCount();
       } catch (err: unknown) {
         const msg =
           (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
@@ -158,7 +162,7 @@ function Videos() {
         setReanalyzingVideoId(null);
       }
     },
-    [fetchVideos]
+    [fetchVideos, refreshPendingCount]
   );
 
   const handleChatClick = useCallback(

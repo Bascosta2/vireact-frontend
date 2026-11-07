@@ -5,7 +5,7 @@ import { ScoreRing } from './ScoreRing';
 import { AdvancedAnalyticsCallout } from './AdvancedAnalyticsCallout';
 import { Select } from './Select';
 import { presetFeatureIds } from '@/lib/analysis-presets';
-import { statusKind } from '@/lib/video-status';
+import { statusKind, isPendingVideo } from '@/lib/video-status';
 import { featureLabel, ANALYSIS_FEATURES_UI } from '@/data/analysis-features';
 
 describe('ScoreRing', () => {
@@ -90,5 +90,25 @@ describe('statusKind', () => {
     expect(statusKind('queued')).toBe('queued');
     expect(statusKind('failed')).toBe('failed');
     expect(statusKind('pending', 'uploading')).toBe('uploading');
+  });
+});
+
+describe('isPendingVideo (analyzing badge)', () => {
+  const now = Date.parse('2026-11-06T12:00:00Z');
+  const ago = (min: number) => new Date(now - min * 60_000).toISOString();
+  it('counts queued and processing videos', () => {
+    expect(isPendingVideo({ analysisStatus: 'queued', uploadStatus: 'completed' }, now)).toBe(true);
+    expect(isPendingVideo({ analysisStatus: 'processing', uploadStatus: 'completed' }, now)).toBe(true);
+  });
+  it('never counts failed uploads, even when analysis status is still pending', () => {
+    expect(isPendingVideo({ analysisStatus: 'pending', uploadStatus: 'failed', updatedAt: ago(1) }, now)).toBe(false);
+  });
+  it('counts a fresh pending upload but not one abandoned hours ago', () => {
+    expect(isPendingVideo({ analysisStatus: 'pending', uploadStatus: 'uploading', updatedAt: ago(5) }, now)).toBe(true);
+    expect(isPendingVideo({ analysisStatus: 'pending', uploadStatus: 'pending', updatedAt: ago(300) }, now)).toBe(false);
+  });
+  it('does not count finished videos', () => {
+    expect(isPendingVideo({ analysisStatus: 'completed', uploadStatus: 'completed' }, now)).toBe(false);
+    expect(isPendingVideo({ analysisStatus: 'failed', uploadStatus: 'completed' }, now)).toBe(false);
   });
 });
