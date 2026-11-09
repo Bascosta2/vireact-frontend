@@ -34,6 +34,8 @@ interface Video {
     predictedViewsLow?: number | null;
     predictedViewsHigh?: number | null;
     predictedViewsExpected?: number | null;
+    /** Latest real view count the creator logged (summary list includes it). */
+    actualViews?: number | null;
     retentionCurve?: number[];
     /** Twelve Labs HLS stream URL, used by the report player for click-to-seek. */
     streamUrl?: string | null;
@@ -377,5 +379,59 @@ export const reportActualViews = async (
         `/videos/${videoId}/actual-views`,
         { views }
     );
+    return response.data.data;
+};
+
+export interface PerformanceSnapshot {
+    id: string;
+    capturedAt: string;
+    views: number;
+    likes: number | null;
+    comments: number | null;
+    shares: number | null;
+    saves: number | null;
+    source: string;
+}
+
+export interface VideoPerformance {
+    videoId: string;
+    postedAt: string | null;
+    postUrl: string | null;
+    creatorPlatform: string | null;
+    creatorFollowers: number | null;
+    actualViews: number | null;
+    actualViewsReportedAt: string | null;
+    snapshots: PerformanceSnapshot[];
+}
+
+export type SnapshotInput = {
+    views: number;
+    likes?: number | null;
+    comments?: number | null;
+    shares?: number | null;
+    saves?: number | null;
+    capturedAt?: string;
+};
+
+export const getVideoPerformance = async (videoId: string): Promise<VideoPerformance> => {
+    const response = await Axios.get<{ data: VideoPerformance }>(`/videos/${videoId}/performance`);
+    return response.data.data;
+};
+
+export const updateVideoPost = async (
+    videoId: string,
+    body: { postedAt?: string | null; postUrl?: string | null; platform?: string | null }
+): Promise<VideoPerformance> => {
+    const response = await Axios.patch<{ data: VideoPerformance }>(`/videos/${videoId}/post`, body);
+    return response.data.data;
+};
+
+export const addPerformanceSnapshot = async (videoId: string, body: SnapshotInput): Promise<VideoPerformance> => {
+    const response = await Axios.post<{ data: VideoPerformance }>(`/videos/${videoId}/snapshots`, body);
+    return response.data.data;
+};
+
+export const deletePerformanceSnapshot = async (videoId: string, snapshotId: string): Promise<VideoPerformance> => {
+    const response = await Axios.delete<{ data: VideoPerformance }>(`/videos/${videoId}/snapshots/${snapshotId}`);
     return response.data.data;
 };

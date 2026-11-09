@@ -19,6 +19,15 @@
   --app-warning: #f5b83d;
   --app-danger: #ff6369;
 
+  /* Charts (Analytics). Categorical slots validated against --app-surface for CVD and contrast
+     (dataviz validate_palette.js, dark mode). Outcome colors always ship with a shape and a label. */
+  --app-chart-1: #3987e5;
+  --app-chart-2: #d95926;
+  --app-chart-good: #0ca30c;
+  --app-chart-serious: #ec835a;
+  --app-chart-grid: rgba(255, 255, 255, 0.06);
+  --app-chart-band: rgba(57, 135, 229, 0.22);
+
   --app-dur-1: 100ms;
   --app-dur-2: 200ms;
   --app-dur-3: 300ms;

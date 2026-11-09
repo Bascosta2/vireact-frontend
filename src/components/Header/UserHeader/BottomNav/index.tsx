@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Library, Plus, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Home, Library, Plus, Settings, type LucideIcon } from 'lucide-react';
 import { isNavActive } from '@/lib/app-nav';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ const TABS: { id: string; label: string; icon: LucideIcon; href: string }[] = [
   { id: 'home', label: 'Home', icon: Home, href: '/dashboard' },
   { id: 'new', label: 'New', icon: Plus, href: '/new' },
   { id: 'library', label: 'Library', icon: Library, href: '/videos' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' },
 ];
 
@@ -25,7 +26,7 @@ function BottomNav() {
       className="app-chrome app-edge-top fixed bottom-0 left-0 right-0 z-[200] md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <ul className="mx-auto flex h-16 max-w-lg items-stretch px-2">
+      <ul className="mx-auto flex h-16 max-w-lg items-stretch px-1">
         {TABS.map((tab) => {
           const active = tab.href === '/new' ? pathname === '/new' : isNavActive(pathname, tab.href);
           const Icon = tab.icon;
@@ -42,7 +43,7 @@ function BottomNav() {
               >
                 <span
                   className={cn(
-                    'relative flex h-8 w-12 items-center justify-center rounded-full transition-[background-color,box-shadow] duration-200',
+                    'relative flex h-8 w-11 items-center justify-center rounded-full transition-[background-color,box-shadow] duration-200',
                     active && 'bg-accent-tint shadow-[0_0_18px_rgba(232,103,53,0.25)]',
                     tab.id === 'new' && !active && 'border border-line bg-white/[0.04]'
                   )}

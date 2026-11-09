@@ -4,6 +4,7 @@ import { ChevronDown, Film, Plus } from 'lucide-react';
 import { useUser } from '@/redux/hooks/use-user';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos, type Video } from '@/api/video';
+import ProgressCard from './ProgressCard';
 import { ANALYSIS_STATUS, UPLOAD_STATUS } from '@/constants';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { Dropzone } from '@/components/app/Dropzone';
@@ -156,6 +157,8 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
           ))}
           </section>
       )}
+
+      {recent.length > 0 && <ProgressCard />}
 
       <section aria-labelledby={recentHeading}>
         <div className="mb-4 flex items-center justify-between gap-4">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Film, RefreshCw, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ClipboardPen, Film, RefreshCw, Trash2 } from 'lucide-react';
 import { ANALYSIS_STATUS } from '@/constants';
 import { getVideoStatus, type Video } from '@/api/video';
 import { Button } from '@/components/app/Button';
@@ -10,6 +11,8 @@ import { formatVideoDate, isInProgress, statusKind } from '@/lib/video-status';
 import { Tooltip } from '@/components/app/Tooltip';
 import { featureLabel } from '@/data/analysis-features';
 import { cleanVideoTitle } from '@/lib/video-file';
+
+const RESULTS_NUDGE_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 
 interface VideoCardProps {
   // `thumbnailUrl` is nullable on `Video` (Twelve Labs returns null until the
@@ -53,6 +56,8 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
   const errorSummary = listErrorSummary || fetchedErrorSummary;
   const isDeleting = deletingVideoId === video._id;
   const isReanalyzing = reanalyzingVideoId === video._id;
+  // Nudge for real results once a finished video is a few days old (Analytics tab).
+  const needsResults = hasScore && video.actualViews == null && Date.now() - new Date(video.createdAt).getTime() > RESULTS_NUDGE_AFTER_MS;
 
   return (
     <article
@@ -94,6 +99,17 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
           </div>
           {hasScore && <ScoreRing score={video.viralityScore as number} size={48} />}
         </div>
+
+        {needsResults && (
+          <Link
+            to={`/analytics?tab=videos&log=${video._id}`}
+            className="app-focus inline-flex items-center gap-1.5 self-start rounded-full border border-accent/30 bg-accent-tint px-2.5 py-1 text-xs font-medium text-fg hover:border-accent/60"
+          >
+            <ClipboardPen className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+            Log real views
+            <span className="sr-only"> for {title}</span>
+          </Link>
+        )}
 
         {kind === 'failed' && (
           <p className="text-sm text-danger">{errorSummary || 'The analysis failed. Try re-analyzing.'}</p>

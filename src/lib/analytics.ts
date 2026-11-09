@@ -18,7 +18,9 @@ export type AnalyticsEvent =
   | 'hook_copied'
   | 'hook_rewrite_used'
   | 'results_email_captured'
-  | 'book_call_clicked';
+  | 'book_call_clicked'
+  | 'analytics_viewed'
+  | 'strategy_upgrade_clicked';
 
 const MAX_QUEUED_CALLS = 100;
 

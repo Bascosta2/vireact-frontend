@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { Check, Loader2 } from 'lucide-react';
 import { reportActualViews } from '@/api/video';
 
@@ -10,6 +11,7 @@ const format = (n: number) => n.toLocaleString();
  */
 export function ActualViewsCard({ videoId, initialViews }: { videoId: string; initialViews?: number | null }) {
   const inputId = useId();
+  const fullLog = `/analytics?tab=videos&log=${videoId}`;
   const [saved, setSaved] = useState<number | null>(initialViews ?? null);
   const [editing, setEditing] = useState(initialViews == null);
   const [value, setValue] = useState('');
@@ -45,9 +47,14 @@ export function ActualViewsCard({ videoId, initialViews }: { videoId: string; in
           <Check className="h-4 w-4 text-success" aria-hidden />
           Real result logged: <span className="tabular font-semibold">{format(saved)} views</span>
         </p>
-        <button type="button" onClick={() => setEditing(true)} className="app-focus rounded text-sm font-medium text-accent hover:underline">
-          Update
-        </button>
+        <span className="flex items-center gap-4">
+          <Link to={fullLog} className="app-focus rounded text-sm font-medium text-fg-muted hover:text-fg hover:underline">
+            Track over time
+          </Link>
+          <button type="button" onClick={() => setEditing(true)} className="app-focus rounded text-sm font-medium text-accent hover:underline">
+            Update
+          </button>
+        </span>
       </div>
     );
   }
@@ -57,7 +64,12 @@ export function ActualViewsCard({ videoId, initialViews }: { videoId: string; in
       <label htmlFor={inputId} className="text-sm font-semibold text-fg">
         Posted it? How many views did it get?
       </label>
-      <p className="mt-0.5 text-xs text-fg-muted">Add the count about a week after posting. Real results make every prediction more accurate.</p>
+      <p className="mt-0.5 text-xs text-fg-muted">
+        Add the count about a week after posting. Real results make every prediction more accurate.{' '}
+        <Link to={fullLog} className="app-focus rounded font-medium text-accent hover:underline">
+          Log post date, likes and growth
+        </Link>
+      </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           id={inputId}
