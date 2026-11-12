@@ -24,16 +24,27 @@ import { FootageDisclaimer } from './Disclaimer';
 const ACCEPT = '.mp4,.mov,.webm,.mkv,.m4v';
 const TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska', 'video/x-m4v']);
 
+const isFreePlan = (usage: EditorUsage) => usage.plan === 'free';
+
+/** Free resets on the 1st of the month in UTC, so show that day in UTC (not the day before in the Americas). */
+const resetDate = (usage: EditorUsage) =>
+  new Date(usage.resetsOn).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(isFreePlan(usage) ? { timeZone: 'UTC' } : {}) });
+
 function UsagePill({ usage }: { usage: EditorUsage }) {
-  const text = usage.trialAvailable
-    ? '1 free edit'
-    : usage.limit > 0
-      ? `${usage.remaining} of ${usage.limit} edits left this period`
-      : 'Free edit used';
-  return <span className="tabular rounded-full border border-line px-3 py-1 text-xs text-fg-muted">{text}</span>;
+  const text = isFreePlan(usage)
+    ? usage.canStart
+      ? 'One AI edit per month on the free plan'
+      : `Free AI edit used · next on ${resetDate(usage)}`
+    : `${usage.remaining} of ${usage.limit} AI edits left this period`;
+  return (
+    <span className="tabular inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent-tint px-4 py-2 text-sm font-semibold text-accent">
+      <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {text}
+    </span>
+  );
 }
 
-function LockedCard() {
+function LockedCard({ usage }: { usage: EditorUsage }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-line bg-surface">
       <div aria-hidden="true" className="pointer-events-none grid select-none gap-4 p-6 blur-[6px] sm:grid-cols-2">
@@ -47,8 +58,10 @@ function LockedCard() {
       <div className="absolute inset-0 flex items-center justify-center bg-canvas/40 p-4">
         <div className="max-w-md rounded-xl border border-line bg-surface-raised p-5 text-center shadow-xl">
           <Lock className="mx-auto h-6 w-6 text-accent" aria-hidden="true" />
-          <h2 className="mt-2 text-base font-semibold text-fg">You&rsquo;ve used your free edit</h2>
-          <p className="mt-1 text-sm text-fg-muted">Premium and Pro include AI edits every month: cuts, captions, zooms, a reworked hook, music and sound effects.</p>
+          <h2 className="mt-2 text-base font-semibold text-fg">You&rsquo;ve used this month&rsquo;s free AI edit</h2>
+          <p className="mt-1 text-sm text-fg-muted">
+            Your next free edit unlocks on {resetDate(usage)}. Premium and Pro include more AI edits every month: cuts, captions, zooms, a reworked hook, music and sound effects.
+          </p>
           <ButtonLink to="/subscription-plans" className="mt-4" onClick={() => track('editor_upgrade_clicked', { from: 'editor_home' })}>
             See plans
           </ButtonLink>
@@ -184,10 +197,10 @@ export default function Editor() {
             </div>
           ) : usage.locked || !usage.canStart ? (
             usage.locked ? (
-              <LockedCard />
+              <LockedCard usage={usage} />
             ) : (
               <div className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-fg-muted">
-                You&rsquo;ve used all {usage.limit} edits for this period. More unlock on {new Date(usage.resetsOn).toLocaleDateString()}.
+                You&rsquo;ve used all {usage.limit} edits for this period. More unlock on {resetDate(usage)}.
               </div>
             )
           ) : upload ? (
@@ -203,7 +216,7 @@ export default function Editor() {
               <Dropzone
                 onFile={(f) => void onFile(f)}
                 error={uploadError}
-                label={usage.trialAvailable ? 'Drop your raw video here for your free edit' : 'Drop your raw video here'}
+                label={isFreePlan(usage) ? 'Drop your raw video here for your free AI edit' : 'Drop your raw video here'}
                 hint="MP4, MOV, WebM or MKV. Up to 3 minutes and 500 MB."
                 accept={ACCEPT}
               />

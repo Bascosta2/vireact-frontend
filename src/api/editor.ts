@@ -11,7 +11,6 @@ export interface EditorUsage {
   used: number;
   remaining: number;
   resetsOn: string;
-  trialAvailable: boolean;
   canStart: boolean;
   locked: boolean;
   available: boolean;
