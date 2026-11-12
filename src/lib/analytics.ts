@@ -20,7 +20,11 @@ export type AnalyticsEvent =
   | 'results_email_captured'
   | 'book_call_clicked'
   | 'analytics_viewed'
-  | 'strategy_upgrade_clicked';
+  | 'strategy_upgrade_clicked'
+  | 'editor_viewed'
+  | 'editor_upgrade_clicked'
+  | 'edit_change_toggled'
+  | 'edit_export_clicked';
 
 const MAX_QUEUED_CALLS = 100;
 

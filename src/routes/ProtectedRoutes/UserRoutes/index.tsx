@@ -8,6 +8,8 @@ import Fallback from "@/components/Fallback";
 const Dashboard = lazy(() => import('@/pages/User/Dashboard'));
 const NewAnalysis = lazy(() => import('@/pages/User/NewAnalysis'));
 const Analytics = lazy(() => import('@/pages/User/Analytics'));
+const Editor = lazy(() => import('@/pages/User/Editor'));
+const EditProject = lazy(() => import('@/pages/User/Editor/ProjectPage'));
 const Videos = lazy(() => import('@/pages/User/Videos'));
 const Chat = lazy(() => import('@/pages/User/Chat'));
 const Profile = lazy(() => import('@/pages/User/Profile'));
@@ -31,6 +33,8 @@ function UserRoutes() {
                 <Route path='/upload' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/features' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/analytics' element={<Analytics />} />
+                <Route path='/editor' element={<Editor />} />
+                <Route path='/editor/:projectId' element={<EditProject />} />
                 <Route path='/videos' element={<Videos />} />
                 <Route path='/videos/:videoId' element={<Chat />} />
                 <Route path='/settings' element={<Profile />} />

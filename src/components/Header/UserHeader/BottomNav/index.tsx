@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Home, Library, Plus, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Clapperboard, Home, Library, Plus, Settings, type LucideIcon } from 'lucide-react';
 import { isNavActive } from '@/lib/app-nav';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ const TABS: { id: string; label: string; icon: LucideIcon; href: string }[] = [
   { id: 'home', label: 'Home', icon: Home, href: '/dashboard' },
   { id: 'new', label: 'New', icon: Plus, href: '/new' },
   { id: 'library', label: 'Library', icon: Library, href: '/videos' },
+  { id: 'editor', label: 'Editor', icon: Clapperboard, href: '/editor' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' },
 ];
@@ -37,13 +38,13 @@ function BottomNav() {
                 to={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'app-focus relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium tracking-wide transition-colors duration-200',
+                  'app-focus relative flex h-full flex-col items-center justify-center gap-1 text-[10.5px] font-medium tracking-normal transition-colors duration-200',
                   active ? 'text-fg' : 'text-fg-subtle hover:text-fg'
                 )}
               >
                 <span
                   className={cn(
-                    'relative flex h-8 w-11 items-center justify-center rounded-full transition-[background-color,box-shadow] duration-200',
+                    'relative flex h-8 w-10 items-center justify-center rounded-full transition-[background-color,box-shadow] duration-200',
                     active && 'bg-accent-tint shadow-[0_0_18px_rgba(232,103,53,0.25)]',
                     tab.id === 'new' && !active && 'border border-line bg-white/[0.04]'
                   )}

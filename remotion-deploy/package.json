@@ -1,0 +1,19 @@
+{
+  "name": "vireact-remotion-deploy",
+  "private": true,
+  "description": "Deploys the Editor tab's render function and composition to Remotion Lambda. Kept out of the web app's install.",
+  "scripts": {
+    "policies:role": "remotion lambda policies role",
+    "policies:user": "remotion lambda policies user",
+    "functions": "remotion lambda functions deploy --memory=3000 --disk=4096 --timeout=600",
+    "site": "remotion lambda sites create ../src/remotion/index.ts --site-name=vireact-edit",
+    "check": "remotion lambda sites ls && remotion lambda functions ls"
+  },
+  "devDependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/lambda": "4.0.539",
+    "remotion": "4.0.539",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}

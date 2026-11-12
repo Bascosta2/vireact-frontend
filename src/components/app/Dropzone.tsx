@@ -11,11 +11,14 @@ type DropzoneProps = {
   disabled?: boolean;
   label?: string;
   className?: string;
+  /** Rules shown under the label (defaults to the analysis upload rules). */
+  hint?: string;
+  accept?: string;
 };
 
 /** File picker that is a real button (Enter/Space open the dialog) and also accepts a dropped file. */
 export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(function Dropzone(
-  { onFile, error, disabled = false, label = 'Drop a video here or choose a file', className },
+  { onFile, error, disabled = false, label = 'Drop a video here or choose a file', className, hint = VIDEO_RULES_HINT, accept = VIDEO_ACCEPT },
   ref
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,13 +67,13 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(function Dropz
         </span>
         <span className="text-base font-medium text-fg">{label}</span>
         <span id={hintId} className="text-sm text-fg-muted">
-          {VIDEO_RULES_HINT}
+          {hint}
         </span>
       </button>
       <input
         ref={inputRef}
         type="file"
-        accept={VIDEO_ACCEPT}
+        accept={accept}
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
