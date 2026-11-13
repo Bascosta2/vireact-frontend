@@ -1,127 +1,85 @@
-import React from 'react';
-import { FaCheck, FaStar } from 'react-icons/fa';
-import { IoWarningOutline } from 'react-icons/io5';
-import type { PricingCardProps, PricingFeature } from '@/types/pricing';
+import { Check, X } from 'lucide-react';
+import { planFeatures, type Tier } from '@/config/tiers';
 
-const PricingCard: React.FC<PricingCardProps> = ({
-    isYearly,
-    title,
-    description,
-    price,
-    originalPrice,
-    discountPrice,
-    billingPeriod,
-    features,
-    ctaText,
-    ctaSubtext,
-    isPopular = false,
-    isDisabled = false,
-    className = '',
-    onClick,
-    disabled = false
-}) => {
-    const buttonDisabled = isDisabled || disabled;
+export interface PricingCardProps {
+    tier: Tier;
+    ctaText: string;
+    onClick?: () => void;
+    disabled?: boolean;
+    /** Shows a "Your plan" badge (logged-in plans page). */
+    isCurrent?: boolean;
+}
+
+/**
+ * One plan: name, the monthly price in large type, the button, then every plan row with a green check
+ * (included, with the amount when it varies by plan) or an X (not on this plan). Rows come from
+ * PLAN_FEATURE_ROWS so the cards line up row by row.
+ */
+const PricingCard = ({ tier, ctaText, onClick, disabled = false, isCurrent = false }: PricingCardProps) => {
+    const popular = !!tier.highlight;
+    const isCustom = tier.priceMonthly === null;
     return (
-        <article className={`
-            relative bg-black border-2 rounded-2xl p-6
-            ${isPopular
-                ? 'border-gradient-primary shadow-lg shadow-orange-500/20'
-                : 'border-white/60 hover:border-white/80'
-            }
-            ${buttonDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
-            ${className}
-        `}>
-            {/* Popular Badge */}
-            {/* {isPopular && (
-                <div className="flex justify-center mb-4">
-                    <div className="bg-white text-black px-3 py-1 rounded-full flex items-center gap-2">
-                        <FaStar className="w-3 h-3 text-black" />
-                        <span className="text-xs font-semibold text-black">
-                            80% users choose this
-                        </span>
-                    </div>
-                </div>
-            )} */}
+        <article
+            className={`relative flex h-full flex-col rounded-2xl border bg-zinc-950 p-6 ${
+                popular ? 'border-orange-500/70 shadow-[0_0_40px_-12px_rgba(249,115,22,0.55)]' : 'border-white/15'
+            }`}
+            aria-label={`${tier.name} plan, ${isCustom ? 'custom pricing' : `${tier.priceDisplay} ${tier.priceSubtext}`}`}
+        >
+            {(popular || isCurrent) && (
+                <span
+                    className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-xs font-semibold ${
+                        isCurrent ? 'bg-white text-zinc-950' : 'bg-gradient-to-r from-pink-500 to-orange-500 text-white'
+                    }`}
+                >
+                    {isCurrent ? 'Your plan' : 'Most popular'}
+                </span>
+            )}
 
-            {/* Header */}
-            <div className="mb-6">
-                <h3 className="text-6xl font-heading font-normal leading-tight text-white mb-2">
-                    {title}
-                </h3>
-                <p className="text-sm font-normal leading-relaxed text-gray-400 mb-4">
-                    {description}
-                </p>
+            <h3 className="text-2xl font-semibold tracking-tight text-white normal-case" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+                {tier.name}
+            </h3>
+            <p className="mt-1 min-h-[2.5rem] text-sm text-zinc-400">{tier.tagline}</p>
 
-
-
-                {/* CTA Button */}
-                <div className="space-y-2 mb-4">
-                    <button
-                        type="button"
-                        onClick={onClick}
-                        className={`${isPopular ? 'btn-secondary' : 'btn-outline'} w-full`}
-                        disabled={buttonDisabled}
-                    >
-                        {ctaText}
-                    </button>
-                    {ctaSubtext && (
-                        <p className="text-xs font-normal leading-relaxed text-gray-400">
-                            {ctaSubtext}
-                        </p>
-                    )}
-                </div>
-
-                {/* Price */}
-                {originalPrice && (
-                    <div className="mb-4">
-                        {isYearly && discountPrice ? (
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <div className="text-4xl font-heading font-normal leading-tight text-white">
-                                        ${discountPrice}/mo
-                                    </div>
-                                    {originalPrice && (
-                                        <div className="text-2xl font-heading font-normal leading-tight text-gray-500 line-through">
-                                            ${originalPrice}/mo
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="text-sm font-normal leading-relaxed text-green-500">
-                                    Save ${originalPrice && discountPrice ? (originalPrice * 12) - (discountPrice * 12) : 0} with yearly billing
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-4xl font-heading font-normal leading-tight text-white mb-1">
-                                ${originalPrice}/mo
-                            </div>
-                        )}
-                        {billingPeriod && (
-                            <div className="text-base font-heading font-normal leading-tight text-white">
-                                {billingPeriod}
-                            </div>
-                        )}
-                    </div>
-                )}
+            <div className="mt-5 flex items-baseline gap-2">
+                <span className="text-5xl font-bold tracking-tight text-white tabular-nums">{tier.priceDisplay}</span>
+                {!isCustom && <span className="text-sm text-zinc-400">{tier.priceMonthly === 0 ? 'forever' : '/ month'}</span>}
             </div>
+            <p className="mt-1 h-5 text-xs text-zinc-500">
+                {isCustom ? tier.priceSubtext : tier.priceMonthly === 0 ? 'No card needed' : 'Billed monthly, cancel anytime'}
+            </p>
 
-            {/* Features */}
-            <div className="space-y-3 mb-8">
-                {features.map((feature: PricingFeature, index: number) => (
-                    <div key={index} className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                            {feature.type === 'warning' ? (
-                                <IoWarningOutline className="w-3.5 h-3.5 text-orange-500" />
+            <button
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                className={`${popular ? 'btn-secondary' : 'btn-outline'} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+                {ctaText}
+            </button>
+
+            <ul className="mt-6 space-y-3 border-t border-white/10 pt-5">
+                {planFeatures(tier).map(({ id, label, value }) => {
+                    const included = value !== false;
+                    return (
+                        <li key={id} className="flex items-start gap-3">
+                            {included ? (
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500/15">
+                                    <Check className="h-3.5 w-3.5 text-green-400" strokeWidth={3} aria-hidden="true" />
+                                </span>
                             ) : (
-                                <FaCheck className="w-3.5 h-3.5 text-green-500" />
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/10">
+                                    <X className="h-3.5 w-3.5 text-red-400" strokeWidth={3} aria-hidden="true" />
+                                </span>
                             )}
-                        </div>
-                        <span className="text-xs font-normal leading-relaxed text-gray-400">
-                            {feature.text}
-                        </span>
-                    </div>
-                ))}
-            </div>
-
+                            <span className={`text-sm leading-snug ${included ? 'text-zinc-200' : 'text-zinc-500'}`}>
+                                <span className="sr-only">{included ? 'Included: ' : 'Not included: '}</span>
+                                {label}
+                                {typeof value === 'string' && <span className="mt-0.5 block font-semibold text-white">{value}</span>}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
         </article>
     );
 };

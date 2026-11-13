@@ -6,11 +6,7 @@ import PlanChangeModal from '@/components/PlanChangeModal';
 import { TIERS, type Tier, type TierId, type CheckoutPlan } from '@/config/tiers';
 import { createCheckoutSession } from '@/api/subscription';
 import { ErrorNotification } from '@/utils/toast';
-import type { PricingFeature } from '@/types/pricing';
 import { useSubscription } from '@/redux/hooks/use-subscription';
-
-const toCardFeatures = (features: string[]): PricingFeature[] =>
-  features.map(text => ({ text, type: 'check' }));
 
 type CardAction =
   | { kind: 'noop' }
@@ -149,11 +145,11 @@ function SubscriptionPlans() {
           </button>
           <h1 className="text-white text-3xl font-bebas-neue mb-3">Choose Your Plan</h1>
           <p className="text-gray-400 text-lg">
-            Upgrade your account to analyze more videos and get more insights
+            Every plan, its exact monthly price, and what's included. Prices in USD.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto pt-3">
           {TIERS.map(tier => {
             const cta = getCardCta(currentPlan, tier);
             const isLoadingThis = loadingTier === tier.id;
@@ -165,14 +161,9 @@ function SubscriptionPlans() {
             const card = (
               <PricingCard
                 key={tier.id}
-                isYearly={false}
-                title={tier.name}
-                description={tier.tagline}
-                price={`${tier.priceDisplay} ${tier.priceSubtext}`}
-                billingPeriod={tier.priceSubtext}
-                features={toCardFeatures(tier.features)}
+                tier={tier}
                 ctaText={ctaText}
-                isPopular={!!tier.highlight}
+                isCurrent={currentPlan === tier.id}
                 disabled={buttonDisabled}
                 onClick={() => handleCardClick(tier, cta)}
               />

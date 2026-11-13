@@ -7,10 +7,7 @@ import { TIERS, type Tier } from '@/config/tiers';
 import { createCheckoutSession } from '@/api/subscription';
 import { useAuth } from '@/redux/hooks/use-auth';
 import { ErrorNotification } from '@/utils/toast';
-import type { PricingPageProps, PricingFeature } from '@/types/pricing';
-
-const toCardFeatures = (features: string[]): PricingFeature[] =>
-    features.map(text => ({ text, type: 'check' }));
+import type { PricingPageProps } from '@/types/pricing';
 
 const Pricing: React.FC<PricingPageProps> = () => {
     const navigate = useNavigate();
@@ -69,21 +66,15 @@ const Pricing: React.FC<PricingPageProps> = () => {
                 </div>
 
                 {/* Pricing Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto pb-16">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto pt-3 pb-16">
                     {TIERS.map(tier => {
                         const ctaText =
                             loadingTier === tier.id ? 'Processing...' : tier.ctaLabel;
                         return (
                             <PricingCard
                                 key={tier.id}
-                                isYearly={false}
-                                title={tier.name}
-                                description={tier.tagline}
-                                price={`${tier.priceDisplay} ${tier.priceSubtext}`}
-                                billingPeriod={tier.priceSubtext}
-                                features={toCardFeatures(tier.features)}
+                                tier={tier}
                                 ctaText={ctaText}
-                                isPopular={!!tier.highlight}
                                 disabled={loadingTier !== null && loadingTier !== tier.id}
                                 onClick={() => handleCtaClick(tier)}
                             />
