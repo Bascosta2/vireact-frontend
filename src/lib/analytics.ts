@@ -24,7 +24,8 @@ export type AnalyticsEvent =
   | 'editor_viewed'
   | 'editor_upgrade_clicked'
   | 'edit_change_toggled'
-  | 'edit_export_clicked';
+  | 'edit_export_clicked'
+  | 'demo_step_clicked';
 
 const MAX_QUEUED_CALLS = 100;
 

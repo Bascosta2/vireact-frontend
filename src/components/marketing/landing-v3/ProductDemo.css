@@ -1,0 +1,196 @@
+/*
+ * Product demo on the landing page (ProductDemo.tsx). Everything is CSS animation so it stays cheap:
+ * each scene remounts on step change, which restarts its animations. Per-element timing comes from
+ * custom properties: --d (delay), --t (duration), --w (final width), --to / --from (count-up values).
+ * Under reduced motion every animation is off and each element shows its final state.
+ */
+
+@property --pd-n {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+/* Pause everything in the stage and the step timer together. */
+.pd-root[data-paused='true'] .pd-stage *,
+.pd-root[data-paused='true'] .pd-bar {
+  animation-play-state: paused !important;
+}
+
+/* Step timer: fills over the step's duration; its animationend advances the demo. */
+.pd-bar {
+  transform-origin: left;
+  animation: pd-scale-x var(--pd-dur, 4000ms) linear both;
+}
+
+@keyframes pd-scale-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Rise in. */
+.pd-rise {
+  animation: pd-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-rise {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* A file landing in the dropzone. */
+.pd-drop {
+  animation: pd-drop 780ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-drop {
+  0% { opacity: 0; transform: translateY(-36px) scale(0.92) rotate(-4deg); }
+  60% { opacity: 1; transform: translateY(3px) scale(1.02) rotate(1deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Pop for badges, checks and overlay text. */
+.pd-pop {
+  animation: pd-pop 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Bars that fill to --w. */
+.pd-meter {
+  width: var(--w, 100%);
+  transform-origin: left;
+  animation: pd-scale-x var(--t, 1000ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Count-up numbers: rendered with a CSS counter, so the value lives in --to. */
+.pd-count {
+  --pd-n: var(--to, 0);
+  counter-reset: pd var(--pd-n);
+  animation: pd-count var(--t, 1200ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.pd-count::after {
+  content: counter(pd);
+}
+@keyframes pd-count {
+  from { --pd-n: var(--from, 0); }
+  to { --pd-n: var(--to, 0); }
+}
+
+/* Score ring: draws from --c (the offset for --from) to the element's own offset. */
+.pd-ring {
+  animation: pd-ring var(--t, 1200ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-ring {
+  from { stroke-dashoffset: var(--c); }
+}
+
+/* Scan line sweeping the footage while it is analysed. */
+.pd-scan {
+  animation: pd-scan 1600ms ease-in-out infinite;
+}
+@keyframes pd-scan {
+  0% { transform: translateY(-10%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(1000%); opacity: 0; }
+}
+
+/* Removed stretches of the timeline collapse away. */
+.pd-cut {
+  animation: pd-cut 520ms cubic-bezier(0.6, 0, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-cut {
+  to { flex-grow: 0; opacity: 0; margin: 0; }
+}
+
+/* Punch-in zoom on the footage. */
+.pd-zoom {
+  animation: pd-zoom 5600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes pd-zoom {
+  0%, 28% { transform: scale(1); }
+  32%, 52% { transform: scale(1.16); }
+  56%, 76% { transform: scale(1); }
+  80%, 100% { transform: scale(1.12); }
+}
+
+/* Word captions: each group pops in, holds, then makes way for the next. The last group stays. */
+.pd-cap {
+  opacity: 0;
+  animation: pd-cap var(--t, 1100ms) ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+.pd-cap-last {
+  animation-name: pd-cap-last;
+}
+@keyframes pd-cap {
+  0% { opacity: 0; transform: scale(0.6); }
+  14% { opacity: 1; transform: scale(1.08); }
+  24%, 88% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+@keyframes pd-cap-last {
+  0% { opacity: 0; transform: scale(0.6); }
+  14% { opacity: 1; transform: scale(1.08); }
+  24%, 100% { opacity: 1; transform: none; }
+}
+
+/* Music equaliser. */
+.pd-eq {
+  transform-origin: bottom;
+  animation: pd-eq 900ms ease-in-out infinite alternate;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-eq {
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(1); }
+}
+
+/* Soft pulse for the play button. */
+.pd-pulse {
+  animation: pd-pulse 1600ms ease-out infinite;
+}
+@keyframes pd-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.55); }
+  100% { box-shadow: 0 0 0 18px rgba(236, 72, 153, 0); }
+}
+
+/* Button press. */
+.pd-press {
+  animation: pd-press 360ms ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-press {
+  50% { transform: scale(0.95); filter: brightness(1.25); }
+}
+
+/* Fade out (upload overlay). */
+.pd-fade-out {
+  animation: pd-fade-out 400ms ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pd-fade-out {
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-root .pd-stage *,
+  .pd-root .pd-bar {
+    animation: none !important;
+  }
+  /* Final states for elements whose resting style is the "before" state. */
+  /* !important: the stretch's length is an inline style. */
+  .pd-root .pd-cut { flex-grow: 0 !important; opacity: 0; margin: 0; }
+  .pd-root .pd-cap { opacity: 0; }
+  .pd-root .pd-cap-last { opacity: 1; }
+  .pd-root .pd-fade-out { opacity: 0; }
+  .pd-root .pd-zoom { transform: scale(1.12); }
+}

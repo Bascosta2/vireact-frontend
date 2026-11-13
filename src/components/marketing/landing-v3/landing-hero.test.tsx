@@ -12,7 +12,6 @@ import {
   parseCount,
   ratingScore,
   resultSlides,
-  showHeroImage,
   verifiedRatingLabel,
 } from './hero-data';
 import { CreatorGrowthCard } from './CreatorGrowthCard';
@@ -30,9 +29,11 @@ describe('Landing V3 hero', () => {
     expect(html).toContain('Creator results');
   });
 
-  it('hides the empty founder image column in production until the asset exists', () => {
-    expect(showHeroImage(true)).toBe(false);
-    expect(showHeroImage(false)).toBe(true);
+  it('shows the product demo in place of the founder image', () => {
+    const html = inRouter(React.createElement(FounderHero));
+    expect(html).toContain('aria-label="Product demo"');
+    expect(html).not.toContain('hero-founder');
+    expect(html).toContain('src="/demo/ils-hook.mp4"');
   });
 });
 

@@ -31,12 +31,11 @@ export const ratingScore = (value: string): number | null => {
 };
 
 /**
- * Production shows a growth card only when the claim is verified and both screenshots exist.
- * Dev shows every slot so missing assets and claims are obvious.
+ * A growth card shows only when the claim is verified and both screenshots exist, in dev too:
+ * the results carousel never shows empty placeholder cards.
  */
-export const visibleGrowthComparisons = (isProd: boolean = import.meta.env.PROD): GrowthComparison[] =>
+export const visibleGrowthComparisons = (): GrowthComparison[] =>
   claims.growthComparisons.filter((item) => {
-    if (!isProd) return true;
     const ready = item.verified && item.beforeFollowers && item.afterFollowers;
     return Boolean(ready) && assetExists(`growth-${item.slot}-before` as AssetId) && assetExists(`growth-${item.slot}-after` as AssetId);
   });
@@ -85,6 +84,3 @@ export const creatorGrowth = (win: Win): CreatorGrowth | null => {
     highlight: entry.highlight,
   };
 };
-
-/** Production drops the empty image column (and centers the hero) until hero-founder exists; dev keeps the placeholder visible. */
-export const showHeroImage = (isProd: boolean = import.meta.env.PROD): boolean => !isProd || assetExists('hero-founder');

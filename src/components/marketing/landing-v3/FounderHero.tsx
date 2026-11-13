@@ -1,10 +1,10 @@
 import { claims } from '@/content/claims';
 import { Highlight } from './Highlight';
-import { showHeroImage } from './hero-data';
 import { PrimaryCta } from './PrimaryCta';
 import { HeroProofRow } from './HeroProofRow';
 import { HeroResultsCarousel } from './HeroResultsCarousel';
 import { AssetSlot } from '@/components/marketing/AssetSlot';
+import { ProductDemo } from './ProductDemo';
 
 export interface FounderHeroProps {
   onSeeHowItWorksClick?: () => void;
@@ -20,26 +20,17 @@ const founderSubline = () => {
 export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
   const subline = founderSubline();
   const accounts = claims.founderAccounts.filter((a) => a.handle && a.followers && a.pfpSlot);
-  const withImage = showHeroImage();
-  const align = withImage ? 'items-start text-left' : 'items-center text-center';
+  // Centered and stacked on phones and tablets; text left, demo right from lg up.
+  const align = 'items-center text-center lg:items-start lg:text-left';
 
   return (
     <section id="hero-v3" className="relative mx-auto max-w-6xl px-4 pt-8 pb-12 md:pt-16 md:pb-16">
-      <div className={withImage ? 'flex flex-col items-center gap-8 md:flex-row md:gap-10' : 'flex flex-col items-center'}>
-        {withImage && (
-          // Image first on mobile, right column on desktop
-          <div className="w-full md:order-2 md:w-1/2">
-            <div className="mx-auto max-h-[320px] max-w-sm overflow-hidden rounded-2xl md:max-h-none">
-              <AssetSlot id="hero-founder" alt="The founder of Vireact" aspect="4 / 5" priority />
-            </div>
-          </div>
-        )}
-
-        <div className={`flex w-full flex-col gap-6 ${align} ${withImage ? 'md:order-1 md:w-1/2' : 'max-w-4xl'}`}>
+      <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-10">
+        <div className={`flex w-full flex-col gap-6 lg:w-[46%] ${align}`}>
           <div className="inline-flex items-center rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1 text-xs font-medium text-pink-200">
             Free crystal ball for short form creators
           </div>
-          <h1 className="!text-4xl font-extrabold tracking-tight text-white sm:!text-5xl md:!text-6xl lg:!text-7xl">
+          <h1 className="!text-4xl font-extrabold tracking-tight text-white sm:!text-5xl md:!text-6xl lg:!text-[3.5rem] xl:!text-6xl">
             <Highlight>Predict your views.</Highlight> Know exactly what to fix. Then post.
           </h1>
           {subline && (
@@ -52,7 +43,7 @@ export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
           )}
 
           {accounts.length > 0 && (
-            <ul className={`flex flex-wrap gap-2 ${withImage ? '' : 'justify-center'}`}>
+            <ul className="flex flex-wrap justify-center gap-2 lg:justify-start">
               {accounts.slice(0, 4).map((acc) => (
                 <li
                   key={acc.handle}
@@ -68,7 +59,7 @@ export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
             </ul>
           )}
 
-          <div className={`flex flex-col gap-3 sm:flex-row sm:items-center ${align}`}>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
             <PrimaryCta location="hero" />
             <button
               type="button"
@@ -79,8 +70,10 @@ export function FounderHero({ onSeeHowItWorksClick }: FounderHeroProps) {
             </button>
           </div>
 
-          <HeroProofRow className={withImage ? '' : 'justify-center'} />
+          <HeroProofRow className="justify-center lg:justify-start" />
         </div>
+
+        <ProductDemo className="max-w-2xl lg:w-[54%] lg:max-w-none" />
       </div>
 
       <HeroResultsCarousel className="mt-10 md:mt-12" />
