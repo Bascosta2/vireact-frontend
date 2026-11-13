@@ -1,161 +1,121 @@
-import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronDown, ChevronRight, MessageSquareText, Sparkles, TrendingUp, Wand2, type LucideIcon } from 'lucide-react';
+import { ArrowRight, MessageSquareText, Sparkles, TrendingUp, Wand2, type LucideIcon } from 'lucide-react';
+import { ButtonLink } from '@/components/app/Button';
 import { track } from '@/lib/analytics';
-import { nextWorkflowStep, workflowSteps, type WorkflowData, type WorkflowStepId } from './workflow-steps';
+import { workflowProgress, workflowSpotlight, workflowSteps, type WorkflowData, type WorkflowStepId } from './workflow-steps';
+import './workflow.css';
 
-/* ─── Mini pictures of each feature (decorative) ─────────────────────────────── */
-
-const VISUAL = 'relative h-16 overflow-hidden rounded-lg border border-line bg-canvas px-3 py-2.5';
-
-function AnalyzeVisual() {
-  const bars = [
-    { k: 'Hook', v: 46, c: 'bg-warning' },
-    { k: 'Pacing', v: 72, c: 'bg-accent' },
-    { k: 'Audio', v: 84, c: 'bg-success' },
-    { k: 'Captions', v: 58, c: 'bg-accent' },
-  ];
-  return (
-    <div className={`${VISUAL} flex items-center gap-3`}>
-      <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0 -rotate-90">
-        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--app-border-subtle)" strokeWidth="4" />
-        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--app-accent)" strokeWidth="4" strokeLinecap="round" strokeDasharray="100.5" strokeDashoffset="38" />
-      </svg>
-      <div className="grid flex-1 gap-1">
-        {bars.map((b) => (
-          <span key={b.k} className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-            <span className={`block h-full rounded-full ${b.c}`} style={{ width: `${b.v}%` }} />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FixVisual() {
-  return (
-    <div className={`${VISUAL} flex flex-col justify-between`}>
-      <div className="relative h-1.5 rounded-full bg-white/[0.08]">
-        <span className="absolute top-1/2 left-[8%] h-3 w-3 -translate-y-1/2 rounded-full border-2 border-canvas bg-warning" />
-        <span className="absolute top-1/2 left-[62%] h-3 w-3 -translate-y-1/2 rounded-full border-2 border-canvas bg-warning" />
-      </div>
-      <span className="w-fit max-w-full truncate rounded-md bg-accent-tint px-2 py-0.5 text-[11px] font-medium text-accent">0:01 · Open on the result</span>
-    </div>
-  );
-}
-
-function EditVisual() {
-  const parts = [3, 0.8, 4, 0.9, 3];
-  return (
-    <div className={`${VISUAL} flex flex-col justify-between`}>
-      <div className="flex h-3 gap-0.5">
-        {parts.map((g, i) => (
-          <span
-            key={i}
-            style={{ flexGrow: g }}
-            className={
-              i % 2
-                ? 'rounded-sm bg-[repeating-linear-gradient(135deg,rgba(255,99,105,0.6)_0_3px,transparent_3px_6px)]'
-                : 'rounded-sm bg-accent/60'
-            }
-          />
-        ))}
-      </div>
-      <span className="w-fit rounded-md bg-white/[0.06] px-2 py-0.5 text-[11px] font-bold tracking-tight text-fg">
-        AT <span className="text-warning">5AM</span> EVERY DAY
-      </span>
-    </div>
-  );
-}
-
-function GrowVisual() {
-  return (
-    <div className={VISUAL}>
-      <svg viewBox="0 0 120 40" preserveAspectRatio="none" className="h-full w-full">
-        <polyline points="0,34 20,30 40,32 60,22 80,24 100,12 120,6" fill="none" stroke="var(--app-success)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        <polyline points="0,34 20,30 40,32 60,22 80,24 100,12 120,6 120,40 0,40" fill="var(--app-success)" opacity="0.12" />
-      </svg>
-    </div>
-  );
-}
-
-/** Icon and picture for each step; copy lives in workflow-steps.ts. */
-const STEP_VIEW: Record<WorkflowStepId, { Icon: LucideIcon; Visual: () => ReactElement }> = {
-  analyze: { Icon: Sparkles, Visual: AnalyzeVisual },
-  fix: { Icon: MessageSquareText, Visual: FixVisual },
-  edit: { Icon: Wand2, Visual: EditVisual },
-  grow: { Icon: TrendingUp, Visual: GrowVisual },
+const ICONS: Record<WorkflowStepId, LucideIcon> = {
+  analyze: Sparkles,
+  fix: MessageSquareText,
+  edit: Wand2,
+  grow: TrendingUp,
 };
 
-/* ─── Map ───────────────────────────────────────────────────────────────────── */
+type NodeState = 'done' | 'next' | 'upcoming';
+
+function Orb({ Icon, state }: { Icon: LucideIcon; state: NodeState }) {
+  return (
+    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden="true">
+      {state === 'next' && (
+        <>
+          <span className="wf-ring absolute inset-0 rounded-full" />
+          <span className="absolute inset-[2px] rounded-full bg-surface shadow-[0_0_28px_rgba(232,103,53,0.45)]" />
+        </>
+      )}
+      {state === 'done' && <span className="absolute inset-0 rounded-full border border-accent/45 bg-accent-tint" />}
+      {state === 'upcoming' && <span className="absolute inset-0 rounded-full border border-line bg-canvas" />}
+      <Icon className={`relative h-6 w-6 ${state === 'upcoming' ? 'text-fg-subtle' : 'text-accent'}`} />
+    </span>
+  );
+}
 
 /**
- * Home: the app as four connected steps (analyze, fix, edit, grow). Each step says what it does in one
- * line, shows a tiny picture of it, the creator's live status and one link. The step that makes most
- * sense next is highlighted.
+ * Home: the app as one pipeline (analyze, fix, edit, grow). The trail is lit up to the creator's next
+ * step, which spins; every step links to its feature. One spotlight underneath says what to do next.
+ * New creators see the same pipeline, pointed at their first analysis.
  */
 export function WorkflowMap({ data, headingId }: { data: WorkflowData; headingId: string }) {
   const steps = workflowSteps(data);
-  const next = nextWorkflowStep(data);
+  const { next, done } = workflowProgress(data);
+  const spotlight = workflowSpotlight(data);
+  const nextIndex = steps.findIndex((s) => s.id === next);
+
+  const stateOf = (id: WorkflowStepId): NodeState => (id === next ? 'next' : done.has(id) ? 'done' : 'upcoming');
 
   return (
-    <ol aria-labelledby={headingId} className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
-      {steps.map((s, i) => {
-        const isNext = s.id === next;
-        const { Icon, Visual } = STEP_VIEW[s.id];
-        return (
-          <li
-            key={s.id}
-            className={`group relative flex min-w-0 flex-col rounded-xl border bg-surface p-4 transition-colors hover:bg-surface-raised ${
-              isNext ? 'border-accent/60 shadow-[0_0_0_1px_var(--app-accent-tint),0_8px_32px_-8px_rgba(232,103,53,0.35)]' : 'border-line'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isNext ? 'bg-accent text-on-brand' : 'bg-accent-tint text-accent'}`} aria-hidden="true">
-                <Icon className="h-[18px] w-[18px]" />
-              </span>
-              <span className="app-label">
-                <span className="tabular">{i + 1}</span> · {s.label}
-              </span>
-              {isNext && <span className="ml-auto rounded-full bg-accent-tint px-2 py-0.5 text-[11px] font-semibold text-accent">Next step</span>}
-            </div>
+    <section aria-labelledby={headingId} className="app-panel overflow-hidden">
+      <div className="wf-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-2/3 -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
 
-            <h3 className="mt-3 text-base font-semibold text-fg">{s.title}</h3>
-            <p className="mt-1 text-sm text-fg-muted">{s.body}</p>
+      <div className="relative flex items-center justify-between gap-4 px-5 pt-5 sm:px-6">
+        <h2 id={headingId} className="app-label">
+          Your workflow
+        </h2>
+        <span className="tabular font-mono text-xs text-fg-subtle" aria-hidden="true">
+          {String(nextIndex + 1).padStart(2, '0')} / 04
+        </span>
+      </div>
 
-            {/* Pinned to the bottom so pictures and links line up across a row. */}
-            <div className="mt-auto pt-4" aria-hidden="true">
-              <Visual />
-            </div>
-
-            <p className="mt-3 truncate text-xs text-fg-subtle" title={s.status}>
-              {s.status}
-            </p>
-            <Link
-              to={s.cta.to}
-              onClick={() => track('cta_clicked', { location: `home_workflow_${s.id}` })}
-              className={`app-focus mt-3 inline-flex items-center gap-1.5 self-start rounded-lg text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] ${
-                isNext ? 'bg-accent px-3 py-2 text-on-brand' : 'text-accent group-hover:underline'
-              }`}
-            >
-              {s.cta.label}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-
-            {i < steps.length - 1 && (
-              <span
-                className={`pointer-events-none absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-canvas text-fg-subtle -bottom-[22px] left-1/2 -translate-x-1/2 xl:top-1/2 xl:-right-[20px] xl:bottom-auto xl:left-auto xl:translate-x-0 xl:-translate-y-1/2 ${
-                  i === 1 ? 'sm:hidden xl:flex' : ''
-                } ${i === 0 || i === 2 ? 'sm:top-1/2 sm:-right-[22px] sm:bottom-auto sm:left-auto sm:translate-x-0 sm:-translate-y-1/2' : ''}`}
-                aria-hidden="true"
+      <ol className="relative flex flex-col px-3 pt-3 pb-4 sm:grid sm:grid-cols-4 sm:px-4 sm:pt-6 sm:pb-6">
+        {steps.map((s, i) => {
+          const state = stateOf(s.id);
+          const lit = done.has(s.id);
+          return (
+            <li key={s.id} className="relative">
+              {i < steps.length - 1 && (
+                <span
+                  className={`absolute top-[72px] -bottom-2 left-[39px] w-0.5 overflow-hidden rounded-full sm:top-[39px] sm:bottom-auto sm:left-[calc(50%+34px)] sm:h-0.5 sm:w-[calc(100%-68px)] ${
+                    lit ? 'wf-trail' : 'bg-white/10'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {lit && (
+                    <span
+                      className="wf-pulse absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-transparent via-white/80 to-transparent sm:inset-x-auto sm:inset-y-0 sm:left-0 sm:h-auto sm:w-1/3 sm:bg-gradient-to-r"
+                      style={{ animationDelay: `${i * 0.4}s` }}
+                    />
+                  )}
+                </span>
+              )}
+              <Link
+                to={s.to}
+                aria-current={state === 'next' ? 'step' : undefined}
+                onClick={() => track('cta_clicked', { location: `home_workflow_${s.id}` })}
+                className="app-focus group flex items-center gap-4 rounded-xl p-3 transition-colors hover:bg-white/[0.03] sm:flex-col sm:gap-3 sm:text-center"
               >
-                <ChevronDown className="h-3.5 w-3.5 sm:hidden" />
-                <ChevronRight className="hidden h-3.5 w-3.5 sm:block" />
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                <Orb Icon={ICONS[s.id]} state={state} />
+                <span className="min-w-0">
+                  <span className="flex items-baseline gap-2 sm:justify-center">
+                    <span className="tabular font-mono text-[11px] text-fg-subtle">{String(i + 1).padStart(2, '0')}</span>
+                    <span className={`text-base font-semibold ${state === 'upcoming' ? 'text-fg-muted group-hover:text-fg' : 'text-fg'}`}>{s.name}</span>
+                  </span>
+                  <span className="mt-0.5 block text-sm text-fg-muted sm:mx-auto sm:max-w-[24ch]">{s.line}</span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="relative flex flex-col gap-4 border-t border-line bg-white/[0.02] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-accent uppercase">
+            <span className="wf-dot h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+            {spotlight.eyebrow}
+          </p>
+          <p className="mt-1 text-base font-semibold text-fg">{spotlight.title}</p>
+          <p className="mt-0.5 text-sm text-fg-muted">{spotlight.body}</p>
+        </div>
+        <ButtonLink
+          to={spotlight.cta.to}
+          className="shrink-0 self-start sm:self-auto"
+          onClick={() => track('cta_clicked', { location: `home_workflow_spotlight_${next}` })}
+        >
+          {spotlight.cta.label}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </ButtonLink>
+      </div>
+    </section>
   );
 }

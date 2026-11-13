@@ -1,20 +1,36 @@
 import type { EditorUsage } from '@/api/editor';
 import type { AnalyticsOverview } from '@/api/analytics';
-import { cleanVideoTitle } from '@/lib/video-file';
 
-/** Copy and live status for the Home workflow map (WorkflowMap.tsx). */
+/** Copy and state for the Home workflow pipeline (WorkflowMap.tsx). */
 
 export type WorkflowStepId = 'analyze' | 'fix' | 'edit' | 'grow';
 
 export interface WorkflowData {
   /** Completed analyses. */
   analyzed: number;
-  /** Latest completed analysis, for the Fix step. */
-  latest: { id: string; title: string; score: number | null } | null;
+  /** Latest completed analysis id, for the Fix step's link. */
+  latestId: string | null;
   /** Undefined while loading; null when it could not load. */
   editor?: EditorUsage | null;
   overview?: AnalyticsOverview | null;
 }
+
+export interface WorkflowStep {
+  id: WorkflowStepId;
+  name: string;
+  /** One short line: what the step does. */
+  line: string;
+  to: string;
+}
+
+export const workflowSteps = ({ latestId }: Pick<WorkflowData, 'latestId'>): WorkflowStep[] => [
+  { id: 'analyze', name: 'Analyze', line: 'Score your hook, pacing, audio and captions', to: '/new' },
+  { id: 'fix', name: 'Fix', line: 'See what to change, second by second', to: latestId ? `/videos/${latestId}` : '/videos' },
+  { id: 'edit', name: 'Edit', line: 'AI cuts, captions, zooms and music', to: '/editor' },
+  { id: 'grow', name: 'Grow', line: 'Track real views, get a posting plan', to: '/analytics' },
+];
+
+const ORDER: WorkflowStepId[] = ['analyze', 'fix', 'edit', 'grow'];
 
 /** The one step to nudge toward. */
 export const nextWorkflowStep = ({ analyzed, editor, overview }: WorkflowData): WorkflowStepId => {
@@ -24,73 +40,58 @@ export const nextWorkflowStep = ({ analyzed, editor, overview }: WorkflowData): 
   return 'analyze';
 };
 
-const freeResetDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+/**
+ * How far the trail is lit: steps before the next one are done. A creator who has been through the loop
+ * and is back at Analyze has every step lit.
+ */
+export const workflowProgress = (data: WorkflowData): { next: WorkflowStepId; done: Set<WorkflowStepId> } => {
+  const next = nextWorkflowStep(data);
+  if (next === 'analyze' && data.analyzed > 0) return { next, done: new Set(ORDER) };
+  return { next, done: new Set(ORDER.slice(0, ORDER.indexOf(next))) };
+};
 
-export interface WorkflowStep {
-  id: WorkflowStepId;
-  label: string;
+export interface Spotlight {
+  eyebrow: string;
   title: string;
   body: string;
-  status: string;
   cta: { label: string; to: string };
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** Copy, live status and link for each step. */
-export const workflowSteps = (data: WorkflowData): WorkflowStep[] => {
-  const { analyzed, latest, editor, overview } = data;
-  const waiting = overview?.needsResults.length ?? 0;
-  const withResults = overview?.totals.withResults ?? 0;
-
-  const editStatus =
-    editor === undefined
-      ? 'Checking your edits…'
-      : editor === null || !editor.available
-        ? 'Opening soon'
-        : editor.plan === 'free'
-          ? editor.canStart
-            ? 'Free AI edit ready to use'
-            : `Next free edit on ${freeResetDate(editor.resetsOn)}`
-          : `${editor.remaining} of ${editor.limit} AI edits left`;
-
-  return [
-    {
-      id: 'analyze',
-      label: 'Analyze',
-      title: 'Score it before you post',
-      body: 'Hook, pacing, audio and captions, each scored, plus a views prediction. Takes 2 to 5 minutes.',
-      status: analyzed > 0 ? `${plural(analyzed, 'video')} scored so far` : 'Start with any short you have',
-      cta: { label: 'New analysis', to: '/new' },
-    },
-    {
-      id: 'fix',
-      label: 'Fix',
-      title: 'Know exactly what to change',
-      body: 'Notes on the exact second to fix, a rewritten hook, and an AI coach to ask anything.',
-      status: latest ? `Latest: ${cleanVideoTitle(latest.title)}${latest.score != null ? ` · ${latest.score}` : ''}` : 'Your notes appear after the first analysis',
-      cta: latest ? { label: 'Open latest report', to: `/videos/${latest.id}` } : { label: 'See your library', to: '/videos' },
-    },
-    {
-      id: 'edit',
-      label: 'Edit',
-      title: 'Let AI make the edit',
-      body: 'Upload raw footage and get tighter cuts, captions, zooms, a stronger hook and music.',
-      status: editStatus,
-      cta: { label: 'Open editor', to: '/editor' },
-    },
-    {
-      id: 'grow',
-      label: 'Grow',
-      title: 'Post, track, repeat',
-      body: 'Log real views, see what is working for you and get a 2-week plan of what to post.',
-      status:
-        waiting > 0
-          ? `${plural(waiting, 'video')} waiting for views`
-          : withResults > 0
-            ? `${plural(withResults, 'video')} with real views`
-            : 'Log views after you post',
-      cta: { label: 'Open analytics', to: '/analytics' },
-    },
-  ];
+/** The single call to action under the pipeline. */
+export const workflowSpotlight = (data: WorkflowData): Spotlight => {
+  const next = nextWorkflowStep(data);
+  if (next === 'edit') {
+    const editor = data.editor as EditorUsage;
+    return {
+      eyebrow: 'Next step',
+      title: editor.plan === 'free' ? 'Your free AI edit is ready' : `${editor.remaining} AI edits ready to use`,
+      body: 'Drop in raw footage and get back a tighter, captioned edit with a stronger hook.',
+      cta: { label: 'Open the editor', to: '/editor' },
+    };
+  }
+  if (next === 'grow') {
+    const waiting = data.overview?.needsResults ?? [];
+    return {
+      eyebrow: 'Next step',
+      title: `${plural(waiting.length, 'video')} waiting for views`,
+      body: 'Log how they did so Vireact learns what works for you and plans your next posts.',
+      cta: { label: 'Log views', to: waiting[0] ? `/analytics?tab=videos&log=${waiting[0].videoId}` : '/analytics' },
+    };
+  }
+  if (data.analyzed === 0) {
+    return {
+      eyebrow: 'Start here',
+      title: 'Analyze your first video',
+      body: 'Upload any short. You get a score and exactly what to fix in 2 to 5 minutes.',
+      cta: { label: 'Analyze a video', to: '/new' },
+    };
+  }
+  return {
+    eyebrow: 'Next step',
+    title: 'Score your next video before you post',
+    body: 'Every analysis sharpens your plan. Run your next short through Vireact.',
+    cta: { label: 'New analysis', to: '/new' },
+  };
 };

@@ -1,0 +1,59 @@
+/* Home workflow pipeline (WorkflowMap.tsx). Motion is decorative and off under reduced motion. */
+
+/* Faint grid behind the pipeline, fading out from the top. */
+.wf-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 75%);
+}
+
+/* Lit trail between steps. */
+.wf-trail {
+  background: var(--app-brand-gradient);
+  box-shadow: 0 0 10px rgba(232, 103, 53, 0.45);
+}
+
+/* Light running along a lit trail: down on phones, across from sm up. */
+.wf-pulse {
+  animation: wf-pulse-y 2.4s linear infinite;
+}
+@media (min-width: 40rem) {
+  .wf-pulse {
+    animation-name: wf-pulse-x;
+  }
+}
+@keyframes wf-pulse-y {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(300%); }
+}
+@keyframes wf-pulse-x {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+/* Spinning ring on the current step. */
+.wf-ring {
+  background: conic-gradient(from 0deg, transparent 0deg, var(--app-accent) 90deg, #9a1848 180deg, transparent 260deg);
+  animation: wf-spin 3.2s linear infinite;
+}
+@keyframes wf-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Breathing dot next to "Next step". */
+.wf-dot {
+  animation: wf-breathe 1.8s ease-in-out infinite;
+}
+@keyframes wf-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 103, 53, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(232, 103, 53, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-pulse { display: none; }
+  .wf-ring,
+  .wf-dot { animation: none; }
+}

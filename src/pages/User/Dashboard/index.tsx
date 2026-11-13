@@ -36,16 +36,6 @@ function useEditorUsage() {
   return usage;
 }
 
-function WorkflowHeading({ id, sub }: { id: string; sub: string }) {
-  return (
-    <div className="mb-4">
-      <h2 id={id} className="text-lg font-semibold text-fg">
-        Your workflow
-      </h2>
-      <p className="mt-1 text-sm text-fg-muted">{sub}</p>
-    </div>
-  );
-}
 
 const firstNameOf = (name?: string | null) => (name || '').trim().split(/\s+/)[0] || 'there';
 
@@ -124,15 +114,17 @@ function NewUserHome({ firstName }: { firstName: string }) {
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="app-title">Hi {firstName}</h1>
-        <p className="mt-2 text-base text-fg-muted">Welcome to Vireact. Here's everything it can do for your videos.</p>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="app-title break-words">Welcome, {firstName}</h1>
+          <p className="mt-2 text-base text-fg-muted">Start with one short. Vireact takes it from there.</p>
+        </div>
+        <ButtonLink to="/new">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          New analysis
+        </ButtonLink>
       </header>
-      <section aria-labelledby={stepsHeading}>
-        <WorkflowHeading id={stepsHeading} sub="Four steps from raw clip to a post you're sure about. Start with step 1 below." />
-        <WorkflowMap headingId={stepsHeading} data={{ analyzed: 0, latest: null, editor }} />
-      </section>
-      <section className="mt-10" aria-label="Add your first video">
+      <section className="mb-10" aria-label="Add your first video">
         <Dropzone
           onFile={(f) => void onFile(f)}
           error={error}
@@ -140,6 +132,8 @@ function NewUserHome({ firstName }: { firstName: string }) {
           label={checking ? 'Checking your video' : 'Drop your first video here or choose a file'}
         />
       </section>
+      {/* Same pipeline as returning creators, pointed at the first analysis. */}
+      <WorkflowMap headingId={stepsHeading} data={{ analyzed: 0, latestId: null, editor }} />
     </>
   );
 }
@@ -165,9 +159,6 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
   const recent = sorted.filter((v) => v.analysisStatus === ANALYSIS_STATUS.COMPLETED).slice(0, 3);
   const localUploading = job && (job.stage === 'uploading' || job.stage === 'preparing');
   const analyzed = sorted.filter((v) => v.analysisStatus === ANALYSIS_STATUS.COMPLETED);
-  const latest = analyzed[0]
-    ? { id: analyzed[0]._id, title: analyzed[0].filename, score: typeof analyzed[0].viralityScore === 'number' ? Math.round(analyzed[0].viralityScore) : null }
-    : null;
 
   return (
     <>
@@ -205,11 +196,6 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
           </section>
       )}
 
-      <section aria-labelledby={workflowHeading} className="mb-10">
-        <WorkflowHeading id={workflowHeading} sub="Everything Vireact does, in the order that gets results. Pick up wherever you are." />
-        <WorkflowMap headingId={workflowHeading} data={{ analyzed: analyzed.length, latest, editor, overview }} />
-      </section>
-
       {recent.length > 0 && overview && <ProgressCard overview={overview} />}
 
       <section aria-labelledby={recentHeading}>
@@ -235,6 +221,10 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
           </ul>
         )}
       </section>
+
+      <div className="mt-10">
+        <WorkflowMap headingId={workflowHeading} data={{ analyzed: analyzed.length, latestId: analyzed[0]?._id ?? null, editor, overview }} />
+      </div>
 
     </>
   );

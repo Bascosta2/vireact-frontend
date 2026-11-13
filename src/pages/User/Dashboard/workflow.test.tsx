@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import type { EditorUsage } from '@/api/editor';
 import type { AnalyticsOverview } from '@/api/analytics';
-import { nextWorkflowStep, workflowSteps, type WorkflowData } from './workflow-steps';
+import { nextWorkflowStep, workflowProgress, workflowSpotlight, workflowSteps, type WorkflowData } from './workflow-steps';
 import { WorkflowMap } from './WorkflowMap';
 
 const editor = (over: Partial<EditorUsage> = {}): EditorUsage => ({
@@ -21,64 +21,75 @@ const editor = (over: Partial<EditorUsage> = {}): EditorUsage => ({
   maxDurationSec: 1,
   ...over,
 });
+const usedEdit = editor({ used: 1, remaining: 0, canStart: false, locked: true });
 
-const overview = (waiting: number, withResults = 0) =>
-  ({ totals: { videos: 3, withResults }, needsResults: Array.from({ length: waiting }, (_, i) => ({ videoId: `v${i}`, title: `Video ${i}` })) }) as unknown as AnalyticsOverview;
+const overview = (waiting: number) =>
+  ({ totals: { videos: 3, withResults: 0 }, needsResults: Array.from({ length: waiting }, (_, i) => ({ videoId: `v${i}`, title: `Video ${i}` })) }) as unknown as AnalyticsOverview;
 
-const base: WorkflowData = { analyzed: 3, latest: { id: 'abc', title: 'ScreenRecording 08-17.mp4', score: 41 } };
+const returning: WorkflowData = { analyzed: 3, latestId: 'abc' };
+const fresh: WorkflowData = { analyzed: 0, latestId: null, editor: editor() };
+
+const render = (data: WorkflowData) =>
+  renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(WorkflowMap, { headingId: 'h', data })));
 
 describe('next workflow step', () => {
-  it('starts new creators on Analyze', () => {
-    expect(nextWorkflowStep({ analyzed: 0, latest: null, editor: editor() })).toBe('analyze');
+  it('starts new creators on Analyze with nothing lit', () => {
+    expect(nextWorkflowStep(fresh)).toBe('analyze');
+    expect([...workflowProgress(fresh).done]).toEqual([]);
   });
 
-  it('points to the free AI edit when it is unused', () => {
-    expect(nextWorkflowStep({ ...base, editor: editor(), overview: overview(2) })).toBe('edit');
+  it('points to the unused AI edit and lights the steps before it', () => {
+    const data = { ...returning, editor: editor(), overview: overview(2) };
+    expect(nextWorkflowStep(data)).toBe('edit');
+    expect([...workflowProgress(data).done]).toEqual(['analyze', 'fix']);
   });
 
   it('points to logging views once the edit is used', () => {
-    expect(nextWorkflowStep({ ...base, editor: editor({ used: 1, remaining: 0, canStart: false, locked: true }), overview: overview(2) })).toBe('grow');
+    expect(nextWorkflowStep({ ...returning, editor: usedEdit, overview: overview(2) })).toBe('grow');
   });
 
-  it('falls back to a new analysis when everything is caught up', () => {
-    expect(nextWorkflowStep({ ...base, editor: null, overview: overview(0, 3) })).toBe('analyze');
+  it('loops back to Analyze with the whole trail lit when everything is caught up', () => {
+    const data = { ...returning, editor: usedEdit, overview: overview(0) };
+    expect(nextWorkflowStep(data)).toBe('analyze');
+    expect(workflowProgress(data).done.size).toBe(4);
   });
 });
 
-describe('workflow status lines', () => {
-  it('reflects the creator account', () => {
-    const steps = workflowSteps({ ...base, editor: editor(), overview: overview(2) });
-    expect(steps.map((s) => s.id)).toEqual(['analyze', 'fix', 'edit', 'grow']);
-    expect(steps[0].status).toBe('3 videos scored so far');
-    expect(steps[1].status).toBe('Latest: ScreenRecording 08-17 · 41');
-    expect(steps[1].cta.to).toBe('/videos/abc');
-    expect(steps[2].status).toBe('Free AI edit ready to use');
-    expect(steps[3].status).toBe('2 videos waiting for views');
+describe('spotlight', () => {
+  it('sends new creators to their first analysis', () => {
+    expect(workflowSpotlight(fresh)).toMatchObject({ eyebrow: 'Start here', title: 'Analyze your first video', cta: { to: '/new' } });
   });
 
-  it('shows the next free edit date in UTC and paid allowances', () => {
-    expect(workflowSteps({ ...base, editor: editor({ canStart: false, used: 1, remaining: 0 }) })[2].status).toBe(
-      `Next free edit on ${new Date('2026-12-01T00:00:00.000Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })}`
-    );
-    expect(workflowSteps({ ...base, editor: editor({ plan: 'pro', limit: 20, used: 3, remaining: 17 }) })[2].status).toBe('17 of 20 AI edits left');
+  it('offers the free edit, then paid allowances', () => {
+    expect(workflowSpotlight({ ...returning, editor: editor() }).title).toBe('Your free AI edit is ready');
+    expect(workflowSpotlight({ ...returning, editor: editor({ plan: 'pro', limit: 20, remaining: 20 }) }).title).toBe('20 AI edits ready to use');
   });
 
-  it('never shows numbers it does not have', () => {
-    const steps = workflowSteps({ analyzed: 0, latest: null });
-    expect(steps[0].status).toBe('Start with any short you have');
-    expect(steps[1].cta.to).toBe('/videos');
-    expect(steps[2].status).toBe('Checking your edits…');
-    expect(steps[3].status).toBe('Log views after you post');
+  it('links straight to logging the first waiting video', () => {
+    const s = workflowSpotlight({ ...returning, editor: usedEdit, overview: overview(2) });
+    expect(s.title).toBe('2 videos waiting for views');
+    expect(s.cta.to).toBe('/analytics?tab=videos&log=v0');
+  });
+
+  it('links Fix to the latest report when there is one', () => {
+    expect(workflowSteps(returning)[1].to).toBe('/videos/abc');
+    expect(workflowSteps(fresh)[1].to).toBe('/videos');
   });
 });
 
 describe('WorkflowMap', () => {
-  it('renders four linked steps and marks exactly one as next', () => {
-    const html = renderToStaticMarkup(
-      React.createElement(MemoryRouter, null, React.createElement(WorkflowMap, { headingId: 'h', data: { ...base, editor: editor(), overview: overview(1) } }))
-    );
-    expect(html.match(/<li/g)).toHaveLength(4);
-    expect(html.match(/Next step/g)).toHaveLength(1);
-    for (const to of ['/new', '/videos/abc', '/editor', '/analytics']) expect(html).toContain(`href="${to}"`);
+  it('renders the same four-step pipeline for new and returning creators', () => {
+    for (const data of [fresh, { ...returning, editor: editor(), overview: overview(1) }]) {
+      const html = render(data);
+      expect(html.match(/<li/g)).toHaveLength(4);
+      expect(html.match(/aria-current="step"/g)).toHaveLength(1);
+      for (const name of ['Analyze', 'Fix', 'Edit', 'Grow']) expect(html).toContain(name);
+    }
+  });
+
+  it('marks the next step and shows its single call to action', () => {
+    const html = render({ ...returning, editor: editor(), overview: overview(1) });
+    expect(html.match(/<a[^>]*aria-current="step"[^>]*>/)?.[0]).toContain('href="/editor"');
+    expect(html).toContain('Open the editor');
   });
 });
