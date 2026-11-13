@@ -235,23 +235,6 @@
   animation: chat-typing 1.2s ease-in-out infinite;
 }
 
-/* Home intro: the active step's ring fades in and out. Only opacity animates. */
-.intro-step::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 12px;
-  outline: 2px solid var(--app-accent);
-  box-shadow: 0 0 24px var(--app-accent-tint);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--app-dur-3) var(--app-ease-out);
-}
-
-.intro-step[data-active='true']::after {
-  opacity: 1;
-}
-
 .app-root {
   font-family: 'Poppins', system-ui, sans-serif;
   color: var(--app-text-primary);

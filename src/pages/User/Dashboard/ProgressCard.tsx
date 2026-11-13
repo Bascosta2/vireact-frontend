@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays } from 'lucide-react';
-import { getAnalyticsOverview, getStrategy, type AnalyticsOverview, type StrategySlot } from '@/api/analytics';
+import { getStrategy, type AnalyticsOverview, type StrategySlot } from '@/api/analytics';
 import { cleanVideoTitle } from '@/lib/video-file';
 import { PLATFORM_LABELS, WEEKDAYS } from '@/pages/User/Analytics/labels';
 
@@ -12,17 +12,14 @@ const todayLocal = () => {
 
 /**
  * Home: a compact read of the Analytics tab (score trend, results to log, next planned post).
- * Renders nothing until the creator has at least one analyzed video, and never blocks Home on errors.
+ * Home loads the overview once and shares it with the workflow map. Renders nothing until the creator has
+ * at least one analyzed video, and never blocks Home on errors.
  */
-export default function ProgressCard() {
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+export default function ProgressCard({ overview }: { overview: AnalyticsOverview }) {
   const [nextSlot, setNextSlot] = useState<StrategySlot | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    getAnalyticsOverview('30d')
-      .then((o) => !cancelled && setOverview(o))
-      .catch(() => {});
     getStrategy()
       .then((s) => {
         if (cancelled || s.usage.locked) return;
@@ -36,7 +33,7 @@ export default function ProgressCard() {
     };
   }, []);
 
-  if (!overview || overview.totals.videos === 0) return null;
+  if (overview.totals.videos === 0) return null;
   const { kpis, needsResults } = overview;
   const delta = kpis.scoreDelta;
   const slotDay = nextSlot ? WEEKDAYS[new Date(`${nextSlot.date}T12:00:00`).getDay()] : null;

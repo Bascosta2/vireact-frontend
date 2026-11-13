@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Film, Plus } from 'lucide-react';
+import { Film, Plus } from 'lucide-react';
 import { useUser } from '@/redux/hooks/use-user';
 import UserPage from '@/components/Layout/UserPage';
 import { getUserVideos, type Video } from '@/api/video';
@@ -17,7 +17,35 @@ import { usePendingUpload } from '@/contexts/PendingUploadContext';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { inspectVideoFile } from '@/lib/video-metadata';
 import { cleanVideoTitle } from '@/lib/video-file';
-import { HowItWorks } from './HowItWorks';
+import { getEditorUsage, type EditorUsage } from '@/api/editor';
+import { getAnalyticsOverview, type AnalyticsOverview } from '@/api/analytics';
+import { WorkflowMap } from './WorkflowMap';
+
+/** Editor allowance for the workflow map; null when it can't load (Home never blocks on it). */
+function useEditorUsage() {
+  const [usage, setUsage] = useState<EditorUsage | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    getEditorUsage()
+      .then((u) => !cancelled && setUsage(u))
+      .catch(() => !cancelled && setUsage(null));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return usage;
+}
+
+function WorkflowHeading({ id, sub }: { id: string; sub: string }) {
+  return (
+    <div className="mb-4">
+      <h2 id={id} className="text-lg font-semibold text-fg">
+        Your workflow
+      </h2>
+      <p className="mt-1 text-sm text-fg-muted">{sub}</p>
+    </div>
+  );
+}
 
 const firstNameOf = (name?: string | null) => (name || '').trim().split(/\s+/)[0] || 'there';
 
@@ -79,6 +107,7 @@ function NewUserHome({ firstName }: { firstName: string }) {
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const stepsHeading = useId();
+  const editor = useEditorUsage();
 
   const onFile = async (file: File) => {
     setChecking(true);
@@ -97,11 +126,12 @@ function NewUserHome({ firstName }: { firstName: string }) {
     <>
       <header className="mb-8">
         <h1 className="app-title">Hi {firstName}</h1>
-        <p id={stepsHeading} className="mt-2 text-base text-fg-muted">
-          Here's how Vireact works.
-        </p>
+        <p className="mt-2 text-base text-fg-muted">Welcome to Vireact. Here's everything it can do for your videos.</p>
       </header>
-      <HowItWorks animateIntro headingId={stepsHeading} headingLevel="h2" />
+      <section aria-labelledby={stepsHeading}>
+        <WorkflowHeading id={stepsHeading} sub="Four steps from raw clip to a post you're sure about. Start with step 1 below." />
+        <WorkflowMap headingId={stepsHeading} data={{ analyzed: 0, latest: null, editor }} />
+      </section>
       <section className="mt-10" aria-label="Add your first video">
         <Dropzone
           onFile={(f) => void onFile(f)}
@@ -117,10 +147,27 @@ function NewUserHome({ firstName }: { firstName: string }) {
 function ReturningHome({ firstName, videos }: { firstName: string; videos: Video[] }) {
   const { job } = useActiveAnalyses();
   const recentHeading = useId();
+  const workflowHeading = useId();
+  const editor = useEditorUsage();
+  const [overview, setOverview] = useState<AnalyticsOverview | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAnalyticsOverview('30d')
+      .then((o) => !cancelled && setOverview(o))
+      .catch(() => !cancelled && setOverview(null));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const sorted = [...videos].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const inProgress = sorted.filter((v) => isInProgress(statusKind(v.analysisStatus, v.uploadStatus)));
   const recent = sorted.filter((v) => v.analysisStatus === ANALYSIS_STATUS.COMPLETED).slice(0, 3);
   const localUploading = job && (job.stage === 'uploading' || job.stage === 'preparing');
+  const analyzed = sorted.filter((v) => v.analysisStatus === ANALYSIS_STATUS.COMPLETED);
+  const latest = analyzed[0]
+    ? { id: analyzed[0]._id, title: analyzed[0].filename, score: typeof analyzed[0].viralityScore === 'number' ? Math.round(analyzed[0].viralityScore) : null }
+    : null;
 
   return (
     <>
@@ -158,7 +205,12 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
           </section>
       )}
 
-      {recent.length > 0 && <ProgressCard />}
+      <section aria-labelledby={workflowHeading} className="mb-10">
+        <WorkflowHeading id={workflowHeading} sub="Everything Vireact does, in the order that gets results. Pick up wherever you are." />
+        <WorkflowMap headingId={workflowHeading} data={{ analyzed: analyzed.length, latest, editor, overview }} />
+      </section>
+
+      {recent.length > 0 && overview && <ProgressCard overview={overview} />}
 
       <section aria-labelledby={recentHeading}>
         <div className="mb-4 flex items-center justify-between gap-4">
@@ -184,7 +236,6 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
         )}
       </section>
 
-      <HowItWorksDisclosure />
     </>
   );
 }
@@ -192,14 +243,16 @@ function ReturningHome({ firstName, videos }: { firstName: string; videos: Video
 function RecentCard({ video }: { video: Video }) {
   const title = cleanVideoTitle(video.filename);
   const hasScore = typeof video.viralityScore === 'number' && !Number.isNaN(video.viralityScore);
+  // Thumbnail links can expire; fall back to the film icon instead of a broken image.
+  const [thumbFailed, setThumbFailed] = useState(false);
                 return (
     <Link
       to={`/videos/${video._id}`}
       className="app-focus flex h-full min-w-0 items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-surface-raised"
     >
       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-canvas text-fg-subtle">
-        {video.thumbnailUrl ? (
-          <img src={video.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+        {video.thumbnailUrl && !thumbFailed ? (
+          <img src={video.thumbnailUrl} alt="" loading="lazy" onError={() => setThumbFailed(true)} className="h-full w-full object-cover" />
         ) : (
           <Film className="h-6 w-6" aria-hidden="true" />
         )}
@@ -210,33 +263,6 @@ function RecentCard({ video }: { video: Video }) {
               </div>
       {hasScore && <ScoreRing score={video.viralityScore as number} size={44} />}
     </Link>
-  );
-}
-
-function HowItWorksDisclosure() {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
-                return (
-    <section className="mt-10 border-t border-line pt-6">
-      <h2 className="text-base">
-                      <button
-                        type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((v) => !v)}
-          className="app-focus inline-flex h-11 items-center gap-2 rounded-lg text-base font-medium text-fg"
-        >
-          How Vireact works
-          <ChevronDown
-            className={`h-4 w-4 text-fg-muted transition-transform duration-200 ease-app-out ${open ? 'rotate-180' : ''}`}
-            aria-hidden="true"
-          />
-                      </button>
-      </h2>
-      <div id={panelId} hidden={!open} className="mt-4">
-        <HowItWorks />
-                  </div>
-    </section>
   );
 }
 
