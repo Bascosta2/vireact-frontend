@@ -73,7 +73,7 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
       </div>
       <ul className="space-y-3">
         {plan.changes.map((c, k) => {
-          const ev = EVIDENCE[c.evidence];
+          const ev = EVIDENCE[c.evidence] ?? EVIDENCE.footage;
           return (
             <li key={k} className="rounded-lg border border-line p-3">
               <p className="text-sm font-medium text-fg">{c.label}</p>
