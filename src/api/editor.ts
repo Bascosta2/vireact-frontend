@@ -2,7 +2,7 @@ import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
 
 export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'ready' | 'failed';
-export type ChangeKind = 'cut' | 'reorder' | 'captions' | 'zoom' | 'hook' | 'overlay' | 'music' | 'sfx' | 'framing';
+export type ChangeKind = 'cut' | 'reorder' | 'captions' | 'zoom' | 'hook' | 'overlay' | 'graphics' | 'transition' | 'effects' | 'music' | 'sfx' | 'framing' | 'look';
 export type Evidence = 'knowledge' | 'viral_example' | 'footage';
 
 export interface EditorUsage {
@@ -52,8 +52,13 @@ export interface EditPlanView {
   zooms: { index: number; at: number; scale: number; reason: string }[];
   music: { trackId: string | null; volume: number; reason: string };
   framing: { mode: 'fill' | 'fit_blur'; focusX: number };
+  /** Counts with every layer on (sounds include the automatic sound design). */
   sfxCount: number;
   overlayCount: number;
+  transitionCount?: number;
+  effectCount?: number;
+  graphics?: { type: string; text: string }[];
+  look?: { grade: string; accent: string; progressBar: boolean; motion: boolean };
 }
 
 export interface Edits {
@@ -66,6 +71,8 @@ export interface Edits {
   zoomsOff?: boolean;
   overlaysOff?: boolean;
   sfxOff?: boolean;
+  transitionsOff?: boolean;
+  effectsOff?: boolean;
   captionPreset?: CaptionPreset;
   hookText?: string;
   captionText?: Record<string, string>;

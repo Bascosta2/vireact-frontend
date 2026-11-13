@@ -48,6 +48,8 @@ export default function Preview({ props, proxyUrl, originalSec }: { props: Previ
             clickToPlay
             doubleClickToFullscreen
             acknowledgeRemotionLicense
+            // Dense sound design overlaps several effects; the default of 5 shared tags errors out.
+            numberOfSharedAudioTags={20}
             style={{ width: '100%', aspectRatio: `${props.width} / ${props.height}` }}
           />
         ) : (
