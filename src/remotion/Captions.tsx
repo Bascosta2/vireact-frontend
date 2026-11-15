@@ -1,75 +1,93 @@
 import { Fragment, type CSSProperties } from 'react';
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { DISPLAY, FONT } from './fonts';
-import type { CaptionPage, CaptionPreset, CaptionWord } from './types';
+import { CAPTION_CENTER } from './graphics-utils';
+import type { CaptionPage, CaptionPreset } from './types';
 
-const STROKE: CSSProperties = { WebkitTextStroke: '3px #000', paintOrder: 'stroke fill', textShadow: '0 6px 18px rgba(0,0,0,0.6)' };
+/**
+ * Captions: 2-3 words at a time on one line, centered just below the middle of the frame (clear of
+ * the speaker's face and of the apps' buttons at the bottom). The whole phrase appears at once and
+ * holds still; nothing follows the spoken word. Emphasis words take the accent color.
+ */
 
-function Word({ w, preset, frame, fps, accent, last }: { w: CaptionWord; preset: CaptionPreset; frame: number; fps: number; accent: string; last: boolean }) {
-  const active = frame >= w.startFrame && frame < w.endFrame;
-  const spoken = frame >= w.endFrame;
-  const pop = active ? spring({ frame: frame - w.startFrame, fps, config: { damping: 12, stiffness: 220 }, durationInFrames: 8 }) : 0;
-  let style: CSSProperties;
-  if (preset === 'clean') {
-    style = { color: w.emphasis ? accent : '#fff', opacity: spoken || active ? 1 : 0.85 };
-  } else if (preset === 'karaoke') {
-    style = { color: spoken || active ? (w.emphasis ? accent : '#7CF29A') : '#fff' };
-  } else if (preset === 'highlight') {
-    // The spoken word sits in an accent box that pops in.
-    style = {
-      display: 'inline-block',
-      margin: '0 0.04em',
-      padding: '0 0.18em',
-      borderRadius: 14,
-      color: active ? '#0a0a0f' : w.emphasis ? accent : '#fff',
-      background: active ? accent : 'transparent',
-      transform: active ? `scale(${1 + 0.08 * pop}) rotate(${-2 + 2 * pop}deg)` : 'none',
-      ...(active ? {} : STROKE),
-    };
-  } else {
-    // bold_pop and impact: the spoken word pops, emphasis words take the accent color.
-    style = {
-      display: 'inline-block',
-      margin: '0 0.07em',
-      color: w.emphasis ? accent : '#fff',
-      transform: active ? `scale(${1 + (preset === 'impact' ? 0.2 : 0.12) * pop})` : 'scale(1)',
-    };
-  }
-  return (
-    <Fragment>
-      <span style={style}>{w.text}</span>
-      {last ? null : ' '}
-    </Fragment>
-  );
+/** The line never gets wider than this share of the frame; long phrases shrink to fit. */
+const MAX_WIDTH = 0.86;
+
+interface Look {
+  box: CSSProperties;
+  /** Font size before any shrink-to-fit. */
+  size: number;
+  /** Average glyph width as a share of the font size, for shrink-to-fit. */
+  glyph: number;
+  word: (emphasis: boolean, accent: string) => CSSProperties;
 }
 
-/** Word-timed captions in five looks. */
+const outline = (px: number): CSSProperties => ({ WebkitTextStroke: `${px}px #000`, paintOrder: 'stroke fill', textShadow: '0 6px 20px rgba(0,0,0,0.6)' });
+
+const LOOKS: Record<CaptionPreset, Look> = {
+  bold_pop: {
+    box: { fontFamily: FONT, fontWeight: 900, textTransform: 'uppercase', letterSpacing: -0.5, ...outline(8) },
+    size: 78,
+    glyph: 0.74,
+    word: (emphasis, accent) => ({ color: emphasis ? accent : '#fff' }),
+  },
+  highlight: {
+    box: { fontFamily: FONT, fontWeight: 900, textTransform: 'uppercase' },
+    size: 72,
+    glyph: 0.8,
+    // Emphasis words sit in a colored box; the box stays put for as long as the phrase shows.
+    word: (emphasis, accent) =>
+      emphasis
+        ? { display: 'inline-block', padding: '0.02em 0.2em', borderRadius: 14, background: accent, color: '#0a0a0f' }
+        : { color: '#fff', ...outline(8) },
+  },
+  impact: {
+    box: { fontFamily: DISPLAY, textTransform: 'uppercase', letterSpacing: 2, ...outline(8) },
+    size: 136,
+    glyph: 0.5,
+    word: (emphasis, accent) => ({ color: emphasis ? accent : '#fff' }),
+  },
+  clean: {
+    box: { fontFamily: FONT, fontWeight: 800, background: 'rgba(8,10,18,0.74)', borderRadius: 22, padding: '14px 34px' },
+    size: 60,
+    glyph: 0.64,
+    word: (emphasis, accent) => ({ color: emphasis ? accent : '#fff' }),
+  },
+};
+
 export function Captions({ pages, preset, accent }: { pages: CaptionPage[]; preset: CaptionPreset; accent: string }) {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const page = pages.find((p) => frame >= p.startFrame && frame < p.endFrame);
   if (!page) return null;
 
-  const enter = spring({ frame: frame - page.startFrame, fps, config: { damping: 14, stiffness: 200 }, durationInFrames: 8 });
-  let box: CSSProperties;
-  let bottom = '24%';
-  if (preset === 'clean') {
-    box = { background: 'rgba(0,0,0,0.55)', borderRadius: 18, padding: '14px 26px', fontFamily: FONT, fontWeight: 800, fontSize: 58, lineHeight: 1.25 };
-  } else if (preset === 'impact') {
-    // One big word at a time, a little above center.
-    box = { fontFamily: DISPLAY, fontSize: 150, lineHeight: 1, textTransform: 'uppercase', letterSpacing: 1, ...STROKE, WebkitTextStroke: '6px #000', transform: `scale(${0.7 + 0.3 * enter})` };
-    bottom = '34%';
-  } else if (preset === 'highlight') {
-    box = { fontFamily: FONT, fontWeight: 900, fontSize: 70, lineHeight: 1.3, textTransform: 'uppercase', ...STROKE };
-  } else {
-    box = { fontFamily: FONT, fontWeight: 900, fontSize: 76, lineHeight: 1.15, textTransform: 'uppercase', ...STROKE };
-  }
-  const opacity = preset === 'impact' ? 1 : interpolate(enter, [0, 1], [0.4, 1]);
+  // Edits saved with a look that no longer exists (karaoke) play as the default.
+  const look = LOOKS[preset] ?? LOOKS.bold_pop;
+  const chars = page.words.reduce((n, w) => n + w.text.length, 0) + page.words.length - 1;
+  const size = Math.min(look.size, Math.floor((width * MAX_WIDTH) / (Math.max(1, chars) * look.glyph)));
+  // The phrase settles in over a few frames: a small scale-up with no bounce and no fade.
+  const enter = spring({ frame: frame - page.startFrame, fps, config: { damping: 22, stiffness: 300, mass: 0.5 }, durationInFrames: 6 });
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: bottom }}>
-      <div style={{ maxWidth: '88%', textAlign: 'center', opacity, ...box }}>
+    <AbsoluteFill>
+      <div
+        data-captions={look === LOOKS[preset] ? preset : 'bold_pop'}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: Math.round(height * CAPTION_CENTER),
+          transform: `translate(-50%, -50%) scale(${0.9 + 0.1 * enter})`,
+          whiteSpace: 'nowrap',
+          textAlign: 'center',
+          lineHeight: 1.15,
+          fontSize: size,
+          ...look.box,
+        }}
+      >
         {page.words.map((w, k) => (
-          <Word key={`${w.i}-${k}`} w={w} preset={preset} frame={frame} fps={fps} accent={accent} last={k === page.words.length - 1} />
+          <Fragment key={`${w.i}-${k}`}>
+            <span style={look.word(w.emphasis, accent)}>{w.text}</span>
+            {k === page.words.length - 1 ? null : ' '}
+          </Fragment>
         ))}
       </div>
     </AbsoluteFill>

@@ -22,12 +22,12 @@ const EVIDENCE: Record<Evidence, { label: string; icon: typeof BookOpen }> = {
   footage: { label: 'Your footage', icon: Film },
 };
 
+/** Every look shows 2 to 3 words at a time in the middle of the screen; none follows the spoken word. */
 const PRESETS: { id: CaptionPreset; label: string; hint: string }[] = [
-  { id: 'bold_pop', label: 'Bold pop', hint: 'Big uppercase words that pop as they are said' },
-  { id: 'highlight', label: 'Highlight', hint: 'The spoken word lights up in a colored box' },
-  { id: 'impact', label: 'Impact', hint: 'One huge word at a time, for punchy lines' },
-  { id: 'clean', label: 'Clean', hint: 'Calm sentence captions on a dark pill' },
-  { id: 'karaoke', label: 'Karaoke', hint: 'Words light up as they are spoken' },
+  { id: 'bold_pop', label: 'Bold', hint: 'Heavy white capitals, 2 to 3 words at a time' },
+  { id: 'highlight', label: 'Highlight', hint: 'Key words sit in a colored box' },
+  { id: 'impact', label: 'Impact', hint: 'Tall condensed capitals, 2 words at a time' },
+  { id: 'clean', label: 'Clean', hint: 'Calm sentence case on a dark pill' },
 ];
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -98,7 +98,7 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
           />
         )}
         {plan.zooms.length > 0 && <Toggle checked={!edits.zoomsOff} onChange={(v) => onEdit({ zoomsOff: !v })} label={`Zooms (${plan.zooms.length})`} />}
-        {plan.overlayCount > 0 && <Toggle checked={!edits.overlaysOff} onChange={(v) => onEdit({ overlaysOff: !v })} label={`Text and graphics (${plan.overlayCount})`} />}
+        {plan.overlayCount > 0 && <Toggle checked={!edits.overlaysOff} onChange={(v) => onEdit({ overlaysOff: !v })} label={`Text, graphics and illustrations (${plan.overlayCount})`} />}
         {(plan.transitionCount ?? 0) > 0 && <Toggle checked={!edits.transitionsOff} onChange={(v) => onEdit({ transitionsOff: !v })} label={`Transitions and jump-cut zooms (${plan.transitionCount})`} />}
         {(plan.effectCount ?? 0) > 0 && <Toggle checked={!edits.effectsOff} onChange={(v) => onEdit({ effectsOff: !v })} label={`Shake and flash effects (${plan.effectCount})`} />}
         {plan.sfxCount > 0 && <Toggle checked={!edits.sfxOff} onChange={(v) => onEdit({ sfxOff: !v })} label={`Sound effects (${plan.sfxCount})`} />}

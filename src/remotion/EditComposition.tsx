@@ -4,8 +4,10 @@ import { Captions } from './Captions';
 import { Footage } from './Footage';
 import { pieceIndexAt } from './timeline-utils';
 import { GraphicLayer } from './Graphics';
+import { SMOOTH } from './graphics-utils';
 import { FONT } from './fonts';
-import type { EditProps, Grade, Graphic, Look, SfxType } from './types';
+import { SFX_SECONDS } from './sfx';
+import type { EditProps, Grade, Graphic, Look } from './types';
 
 /**
  * One AI edit: the creator's own footage cut into the planned order and framed for 9:16, with
@@ -27,11 +29,6 @@ const GRADE_FILTER: Record<Grade, string> = {
 };
 const DEFAULT_LOOK: Look = { grade: 'none', accent: '#FFD43B', progressBar: false, motion: false };
 
-/** How long each built-in sound lasts (seconds), so an effect only holds an audio tag while it plays. */
-const SFX_SECONDS: Record<SfxType, number> = {
-  whoosh: 0.7, swoosh: 0.35, pop: 0.14, click: 0.05, ding: 1.4, sparkle: 1.0, boom: 1.6,
-  hit: 0.45, riser: 1.5, bass_drop: 1.4, glitch: 0.45, shutter: 0.3, typing: 1.1, notify: 0.75,
-};
 /** Uploaded effects can run a little longer than the built-in ones. */
 const SFX_TAIL_SEC = 0.4;
 
@@ -66,15 +63,16 @@ function cameraAt(frame: number, transitions: NonNullable<EditProps['transitions
     const d = frame - t.frame;
     if (d < -2 || d >= 10) continue;
     if (t.type === 'punch' && d >= 0) {
-      scale *= interpolate(d, [0, 8], [1.18, 1], clamp);
-      blur = Math.max(blur, interpolate(d, [0, 4], [6, 0], clamp));
+      // Eases out, so the push lands softly instead of stopping dead.
+      scale *= interpolate(d, [0, 9], [1.16, 1], { ...clamp, easing: (v) => 1 - Math.pow(1 - v, 3) });
+      blur = Math.max(blur, interpolate(d, [0, 4], [5, 0], clamp));
     } else if (t.type === 'whip') {
       x += d < 0 ? interpolate(d, [-2, 0], [0, -18], clamp) : interpolate(d, [0, 7], [32, 0], { ...clamp, easing: (v) => 1 - Math.pow(1 - v, 3) });
       // Zoomed in while sliding, so the edge of the frame never shows black.
       scale *= d < 0 ? 1.25 : interpolate(d, [0, 7], [1.45, 1], clamp);
       blur = Math.max(blur, d < 0 ? 10 : interpolate(d, [0, 6], [18, 0], clamp));
     } else if (t.type === 'flash') {
-      flash = Math.max(flash, d < 0 ? 0.5 : interpolate(d, [0, 7], [0.95, 0], clamp));
+      flash = Math.max(flash, d < 0 ? 0.4 : interpolate(d, [0, 7], [0.8, 0], clamp));
     } else if (t.type === 'glitch' && d >= -1 && d < 7) {
       glitch = Math.max(glitch, 1 - Math.max(0, d) / 7);
     }
@@ -83,13 +81,14 @@ function cameraAt(frame: number, transitions: NonNullable<EditProps['transitions
     const d = frame - e.frame;
     if (d < 0 || d >= 12) continue;
     if (e.type === 'shake') {
-      const amp = interpolate(d, [0, 12], [34, 0], clamp);
+      // A short, tight shake that dies away quickly; a long loose one reads as a glitch.
+      const amp = interpolate(d, [0, 10], [24, 0], clamp);
       x += (jitter(frame, 1) * amp) / 10.8; // percent of width
       y += (jitter(frame, 2) * amp) / 19.2;
-      rotate += jitter(frame, 3) * amp * 0.05;
+      rotate += jitter(frame, 3) * amp * 0.03;
       scale *= 1.04;
     } else if (e.type === 'flash') {
-      flash = Math.max(flash, interpolate(d, [0, 6], [0.85, 0], clamp));
+      flash = Math.max(flash, interpolate(d, [0, 6], [0.7, 0], clamp));
     }
   }
   if (glitch > 0) {
@@ -116,7 +115,7 @@ function GlitchBars({ frame, strength, accent }: { frame: number; strength: numb
 function HookOverlay({ text, durationFrames, accent }: { text: string; durationFrames: number; accent: string }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const enter = spring({ frame, fps, config: { damping: 12, stiffness: 200 } });
+  const enter = spring({ frame, fps, config: SMOOTH });
   const exit = interpolate(frame, [durationFrames - 6, durationFrames], [1, 0], clamp);
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: '12%' }}>
@@ -131,10 +130,11 @@ function HookOverlay({ text, durationFrames, accent }: { text: string; durationF
           lineHeight: 1.12,
           textAlign: 'center',
           padding: '20px 34px',
-          borderRadius: 18,
+          borderRadius: 20,
           borderBottom: `10px solid ${accent}`,
-          transform: `translateY(${interpolate(enter, [0, 1], [-60, 0])}px) scale(${0.85 + 0.15 * enter}) rotate(${interpolate(enter, [0, 1], [-4, -1.5])}deg)`,
-          opacity: Math.min(enter, exit),
+          // Upright and settled: it drops in and stops, with no tilt or bounce.
+          transform: `translateY(${interpolate(enter, [0, 1], [-50, 0])}px) scale(${0.9 + 0.1 * enter})`,
+          opacity: Math.min(1, enter * 1.6, exit),
           boxShadow: '0 16px 44px rgba(0,0,0,0.45)',
         }}
       >

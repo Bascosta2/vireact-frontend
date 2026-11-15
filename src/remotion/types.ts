@@ -3,11 +3,17 @@
  * unchanged by the in-browser Player (preview) and Remotion Lambda (final render).
  * Keep the unions in step with vireact-backend/src/service/editor/edl.js.
  */
-export type CaptionPreset = 'bold_pop' | 'highlight' | 'impact' | 'clean' | 'karaoke';
-export type SfxType =
-  | 'whoosh' | 'swoosh' | 'pop' | 'click' | 'ding' | 'sparkle' | 'boom'
-  | 'hit' | 'riser' | 'bass_drop' | 'glitch' | 'shutter' | 'typing' | 'notify';
-export type GraphicType = 'slam' | 'pill' | 'headline' | 'lower_third' | 'counter' | 'list' | 'callout' | 'cta';
+export type CaptionPreset = 'bold_pop' | 'highlight' | 'impact' | 'clean';
+/** Built-in sounds, one file each at public/sfx/<type>.mp3 (SFX_TYPES in the backend). */
+export const SFX_TYPES = [
+  'whoosh', 'swoosh', 'swish', 'whip', 'sweep_up', 'sweep_down', 'reverse', 'riser', 'launch',
+  'boom', 'hit', 'thud', 'impact', 'bass_drop', 'kick', 'snap', 'clap',
+  'pop', 'click', 'tick', 'tap', 'blip', 'bubble', 'drip', 'typing', 'page', 'shutter',
+  'ding', 'chime', 'bell', 'sparkle', 'shimmer', 'notify', 'success', 'coin', 'cash', 'power_up',
+  'suspense', 'glitch', 'static', 'zap', 'error', 'alert', 'power_down', 'pulse', 'heartbeat',
+] as const;
+export type SfxType = (typeof SFX_TYPES)[number];
+export type GraphicType = 'slam' | 'pill' | 'headline' | 'lower_third' | 'counter' | 'list' | 'callout' | 'cta' | 'visual';
 export type TransitionType = 'punch' | 'whip' | 'flash' | 'glitch';
 export type EffectType = 'shake' | 'flash';
 export type Grade = 'vivid' | 'warm' | 'cool' | 'punchy_bw' | 'none';
@@ -46,6 +52,10 @@ export interface Graphic {
   items: string[];
   focusX: number;
   focusY: number;
+  /** For type "visual": which illustration to draw (a key of VISUALS in ./visuals). */
+  visual?: string;
+  /** For type "slam": draw it under the captions because the top of the frame is taken. */
+  low?: boolean;
 }
 
 export interface Look {
