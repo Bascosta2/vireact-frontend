@@ -1,6 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import Fallback from "@/components/Fallback";
+import { useEditorAccess } from "@/lib/editor-access";
 
 // Module-scope lazy() so each render reuses the same component identities;
 // inline declarations would create a new component type per render, causing
@@ -23,6 +24,14 @@ function RedirectKeepingQuery({ to }: { to: string }) {
     return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
+/** Editor private beta: accounts without access are sent Home, and never download the editor code. */
+function EditorGate({ children }: { children: ReactNode }) {
+    const access = useEditorAccess();
+    if (access === 'loading') return <Fallback />;
+    if (access === 'denied') return <Navigate to="/dashboard" replace />;
+    return <>{children}</>;
+}
+
 function UserRoutes() {
     return (
         <Suspense fallback={<Fallback />}>
@@ -33,8 +42,8 @@ function UserRoutes() {
                 <Route path='/upload' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/features' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/analytics' element={<Analytics />} />
-                <Route path='/editor' element={<Editor />} />
-                <Route path='/editor/:projectId' element={<EditProject />} />
+                <Route path='/editor' element={<EditorGate><Editor /></EditorGate>} />
+                <Route path='/editor/:projectId' element={<EditorGate><EditProject /></EditorGate>} />
                 <Route path='/videos' element={<Videos />} />
                 <Route path='/videos/:videoId' element={<Chat />} />
                 <Route path='/settings' element={<Profile />} />

@@ -1,3 +1,5 @@
+import { isEditorPublic } from '@/lib/editor-flag';
+
 export type TierId = 'free' | 'premium' | 'pro' | 'enterprise';
 export type CheckoutPlan = 'premium' | 'pro';
 
@@ -135,9 +137,12 @@ export const TIERS: readonly Tier[] = [
   },
 ];
 
-/** Feature rows for a plan card, in the shared order. */
-export const planFeatures = (tier: Tier) =>
-  PLAN_FEATURE_ROWS.map((row) => ({ id: row.id, label: row.label, value: tier.includes[row.id] }));
+/**
+ * Feature rows for a plan card, in the shared order. The AI video edits row is left out while the
+ * editor is in private beta (VITE_EDITOR_PUBLIC is not 'true'), so plans never promise it.
+ */
+export const planFeatures = (tier: Tier, editorPublic: boolean = isEditorPublic()) =>
+  PLAN_FEATURE_ROWS.filter((row) => editorPublic || row.id !== 'editor').map((row) => ({ id: row.id, label: row.label, value: tier.includes[row.id] }));
 
 export const getTier = (id: TierId): Tier | undefined =>
   TIERS.find(t => t.id === id);

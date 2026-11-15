@@ -8,6 +8,8 @@
  * a lot of you had questions…". Clips are used with the clients' permission; scores are illustrative.
  */
 
+import { isEditorPublic } from '@/lib/editor-flag';
+
 export const CLIPS = {
   vlog: { src: '/demo/ils-hook.mp4', poster: '/demo/ils-hook.jpg' },
   talking: { src: '/demo/cedlom-hook.mp4', poster: '/demo/cedlom-hook.jpg' },
@@ -61,7 +63,7 @@ export interface DemoStep {
   ms: number;
 }
 
-export const DEMO_STEPS: DemoStep[] = [
+export const ALL_DEMO_STEPS: DemoStep[] = [
   {
     id: 'upload',
     title: 'Upload your video',
@@ -98,3 +100,9 @@ export const DEMO_STEPS: DemoStep[] = [
     ms: 4000,
   },
 ];
+
+/** The AI edit and export steps only show once the editor is public (VITE_EDITOR_PUBLIC). */
+export const demoSteps = (editorPublic: boolean = isEditorPublic()): DemoStep[] =>
+  editorPublic ? ALL_DEMO_STEPS : ALL_DEMO_STEPS.filter((s) => s.id !== 'edit' && s.id !== 'export');
+
+export const DEMO_STEPS: DemoStep[] = demoSteps();

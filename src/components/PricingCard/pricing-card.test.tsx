@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PricingCard from './index';
-import { PLAN_FEATURE_ROWS, TIERS, getTier, type TierId } from '@/config/tiers';
+import { PLAN_FEATURE_ROWS, TIERS, getTier, planFeatures, type TierId } from '@/config/tiers';
 
 const html = (id: TierId) => renderToStaticMarkup(React.createElement(PricingCard, { tier: getTier(id)!, ctaText: 'Go' }));
 const count = (s: string, needle: string) => s.split(needle).length - 1;
@@ -21,7 +21,16 @@ describe('plan cards', () => {
   it('give every plan the same rows, with a check or an X on each', () => {
     for (const tier of TIERS) {
       const out = html(tier.id);
-      expect(count(out, 'Included: ') + count(out, 'Not included: ')).toBe(PLAN_FEATURE_ROWS.length);
+      expect(count(out, 'Included: ') + count(out, 'Not included: ')).toBe(planFeatures(tier).length);
+    }
+  });
+
+  it('leave out AI video edits while the editor is in private beta', () => {
+    for (const tier of TIERS) {
+      expect(planFeatures(tier, false).map((r) => r.id)).toEqual(PLAN_FEATURE_ROWS.filter((r) => r.id !== 'editor').map((r) => r.id));
+      expect(planFeatures(tier, true).map((r) => r.id)).toEqual(PLAN_FEATURE_ROWS.map((r) => r.id));
+      // Default build (VITE_EDITOR_PUBLIC unset): the card never mentions it.
+      expect(html(tier.id)).not.toContain('AI video edits');
     }
   });
 

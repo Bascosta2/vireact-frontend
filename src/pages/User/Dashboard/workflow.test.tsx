@@ -87,6 +87,22 @@ describe('WorkflowMap', () => {
     }
   });
 
+  it('drops the Edit step for accounts without the editor (private beta)', () => {
+    const hidden = editor({ available: false, renderAvailable: false, canStart: false, remaining: 0, limit: 0 });
+    for (const data of [returning, { ...returning, editor: null }, { ...returning, editor: hidden, overview: overview(1) }, { ...fresh, editor: hidden }]) {
+      expect(workflowSteps(data).map((s) => s.id)).toEqual(['analyze', 'fix', 'grow']);
+      expect(nextWorkflowStep(data)).not.toBe('edit');
+      const html = render(data);
+      expect(html.match(/<li/g)).toHaveLength(3);
+      expect(html.match(/aria-current="step"/g)).toHaveLength(1);
+      expect(html).toContain('sm:grid-cols-3');
+      expect(html).not.toContain('/editor');
+      expect(html).not.toContain('AI edit');
+    }
+    // Waiting views light Analyze and Fix, with Grow as the last of three.
+    expect(render({ ...returning, editor: hidden, overview: overview(1) })).toContain('03 / 03');
+  });
+
   it('marks the next step and shows its single call to action', () => {
     const html = render({ ...returning, editor: editor(), overview: overview(1) });
     expect(html.match(/<a[^>]*aria-current="step"[^>]*>/)?.[0]).toContain('href="/editor"');

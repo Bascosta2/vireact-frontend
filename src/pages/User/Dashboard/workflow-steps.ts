@@ -23,12 +23,16 @@ export interface WorkflowStep {
   to: string;
 }
 
-export const workflowSteps = ({ latestId }: Pick<WorkflowData, 'latestId'>): WorkflowStep[] => [
-  { id: 'analyze', name: 'Analyze', line: 'Score your hook, pacing, audio and captions', to: '/new' },
-  { id: 'fix', name: 'Fix', line: 'See what to change, second by second', to: latestId ? `/videos/${latestId}` : '/videos' },
-  { id: 'edit', name: 'Edit', line: 'AI cuts, captions, zooms and music', to: '/editor' },
-  { id: 'grow', name: 'Grow', line: 'Track real views, get a posting plan', to: '/analytics' },
-];
+/** The Edit step only exists for accounts that have the editor (private beta: `available` from the backend). */
+export const workflowSteps = ({ latestId, editor }: Pick<WorkflowData, 'latestId' | 'editor'>): WorkflowStep[] => {
+  const steps: WorkflowStep[] = [
+    { id: 'analyze', name: 'Analyze', line: 'Score your hook, pacing, audio and captions', to: '/new' },
+    { id: 'fix', name: 'Fix', line: 'See what to change, second by second', to: latestId ? `/videos/${latestId}` : '/videos' },
+    { id: 'edit', name: 'Edit', line: 'AI cuts, captions, zooms and music', to: '/editor' },
+    { id: 'grow', name: 'Grow', line: 'Track real views, get a posting plan', to: '/analytics' },
+  ];
+  return editor?.available ? steps : steps.filter((s) => s.id !== 'edit');
+};
 
 const ORDER: WorkflowStepId[] = ['analyze', 'fix', 'edit', 'grow'];
 

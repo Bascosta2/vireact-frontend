@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ProductDemo } from './ProductDemo';
-import { CLIPS, DEMO_STEPS } from './product-demo-steps';
+import { ALL_DEMO_STEPS, CLIPS, DEMO_STEPS, demoSteps } from './product-demo-steps';
 
 describe('ProductDemo', () => {
   const html = renderToStaticMarkup(React.createElement(ProductDemo));
@@ -29,17 +29,24 @@ describe('ProductDemo', () => {
     expect(html).toMatch(/<video[^>]*muted/);
   });
 
+  it('hides the AI edit and export steps while the editor is in private beta', () => {
+    expect(demoSteps(false).map((s) => s.id)).toEqual(['upload', 'score', 'feedback']);
+    expect(demoSteps(true)).toEqual(ALL_DEMO_STEPS);
+    expect(DEMO_STEPS.map((s) => s.id)).toEqual(['upload', 'score', 'feedback']);
+    expect(html).not.toContain('AI edit');
+  });
+
   it('starts paused until scrolled into view', () => {
     expect(html).toContain('data-paused="true"');
   });
 
   it('every step has a title, screen-reader text and a duration', () => {
-    for (const s of DEMO_STEPS) {
+    for (const s of ALL_DEMO_STEPS) {
       expect(s.title.length).toBeGreaterThan(0);
       expect(s.sr.length).toBeGreaterThan(20);
       expect(s.ms).toBeGreaterThanOrEqual(3000);
     }
-    const loop = DEMO_STEPS.reduce((sum, s) => sum + s.ms, 0);
+    const loop = ALL_DEMO_STEPS.reduce((sum, s) => sum + s.ms, 0);
     expect(loop).toBeLessThanOrEqual(24000);
   });
 });

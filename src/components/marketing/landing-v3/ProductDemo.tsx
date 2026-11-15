@@ -388,7 +388,8 @@ const STEP_VIEW: Record<DemoStepId, { icon: LucideIcon; Scene: () => ReactNode }
 /* ─── Demo ──────────────────────────────────────────────────────────────────── */
 
 /**
- * Hero walk-through on real client clips: upload, score, feedback, AI edit, export.
+ * Hero walk-through on real client clips: upload, score, feedback, then AI edit and export once the
+ * editor is public (DEMO_STEPS in product-demo-steps.ts).
  * Plays while on screen, can be paused, and steps can be picked by hand. Under reduced motion
  * it does not autoplay, the clips stay on their first frame and each step shows its finished state.
  */

@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { BarChart3, Clapperboard, Home, Library, Plus, Settings, type LucideIcon } from 'lucide-react';
 import { isNavActive } from '@/lib/app-nav';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
+import { useEditorAccess } from '@/lib/editor-access';
 import { cn } from '@/lib/utils';
 
 const TABS: { id: string; label: string; icon: LucideIcon; href: string }[] = [
@@ -20,6 +21,9 @@ const TABS: { id: string; label: string; icon: LucideIcon; href: string }[] = [
 function BottomNav() {
   const { pathname } = useLocation();
   const { inProgressCount } = useActiveAnalyses();
+  // Private beta: the Editor tab only exists for accounts the backend grants it to.
+  const editorAccess = useEditorAccess();
+  const tabs = TABS.filter((tab) => tab.id !== 'editor' || editorAccess === 'granted');
 
   return (
     <nav
@@ -28,7 +32,7 @@ function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="mx-auto flex h-16 max-w-lg items-stretch px-1">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = tab.href === '/new' ? pathname === '/new' : isNavActive(pathname, tab.href);
           const Icon = tab.icon;
           const showBadge = tab.id === 'library' && inProgressCount > 0;

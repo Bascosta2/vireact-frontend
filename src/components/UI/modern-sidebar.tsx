@@ -7,6 +7,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { UsageMeter } from '@/components/app/UsageMeter';
 import { APP_NAV_ITEMS, isNavActive } from '@/lib/app-nav';
+import { useEditorAccess } from '@/lib/editor-access';
 import { cn } from '@/lib/utils';
 
 /** Desktop navigation (768 px and up). Below that, `BottomNav` takes over. */
@@ -16,6 +17,9 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const { logout } = useLogout();
   const { inProgressCount } = useActiveAnalyses();
+  // Private beta: the Editor item only exists for accounts the backend grants it to.
+  const editorAccess = useEditorAccess();
+  const navItems = APP_NAV_ITEMS.filter((item) => item.id !== 'editor' || editorAccess === 'granted');
 
   return (
     <>
@@ -58,7 +62,7 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label="Pages">
-          {APP_NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isNavActive(pathname, item.href);
             const Icon = item.icon;
             return (

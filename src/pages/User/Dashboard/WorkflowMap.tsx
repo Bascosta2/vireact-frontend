@@ -53,11 +53,11 @@ export function WorkflowMap({ data, headingId }: { data: WorkflowData; headingId
           Your workflow
         </h2>
         <span className="tabular font-mono text-xs text-fg-subtle" aria-hidden="true">
-          {String(nextIndex + 1).padStart(2, '0')} / 04
+          {String(nextIndex + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
         </span>
       </div>
 
-      <ol className="relative flex flex-col px-3 pt-3 pb-4 sm:grid sm:grid-cols-4 sm:px-4 sm:pt-6 sm:pb-6">
+      <ol className={`relative flex flex-col px-3 pt-3 pb-4 sm:grid ${steps.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} sm:px-4 sm:pt-6 sm:pb-6`}>
         {steps.map((s, i) => {
           const state = stateOf(s.id);
           const lit = done.has(s.id);
