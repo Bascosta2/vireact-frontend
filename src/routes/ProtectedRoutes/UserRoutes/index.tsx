@@ -13,6 +13,7 @@ const Editor = lazy(() => import('@/pages/User/Editor'));
 const EditProject = lazy(() => import('@/pages/User/Editor/ProjectPage'));
 const Videos = lazy(() => import('@/pages/User/Videos'));
 const Chat = lazy(() => import('@/pages/User/Chat'));
+const VideoHub = lazy(() => import('@/pages/User/VideoHub'));
 const Profile = lazy(() => import('@/pages/User/Profile'));
 const SubscriptionUsage = lazy(() => import('@/pages/User/SubscriptionUsage'));
 const SubscriptionPlans = lazy(() => import('@/pages/User/SubscriptionPlans'));
@@ -48,6 +49,10 @@ function UserRoutes() {
                 <Route path='/videos' element={<Videos />} />
                 {/* One video, three views: Feedback Report (default), /coach and /scripts. */}
                 <Route path='/videos/:videoId/:view?' element={<Chat />} />
+                {/* Sidebar entries: open that view on the last or newest analysed video, or show a sample. */}
+                <Route path='/reports' element={<VideoHub view="report" />} />
+                <Route path='/coach' element={<VideoHub view="coach" />} />
+                <Route path='/scripts' element={<VideoHub view="scripts" />} />
                 <Route path='/settings' element={<Profile />} />
                 <Route path='/profile' element={<RedirectKeepingQuery to="/settings" />} />
                 <Route path='/subscription-usage' element={<SubscriptionUsage />} />

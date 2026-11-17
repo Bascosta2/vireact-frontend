@@ -9,6 +9,7 @@ import {
     type ReactElement,
 } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import UserPage from '@/components/Layout/UserPage';
 import { motion } from 'framer-motion';
 import {
     LineChart,
@@ -33,7 +34,8 @@ import { useUser } from '@/redux/hooks/use-user';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import { LockedProFeatureSection } from '@/components/AnalysisReport/LockedSection';
 import { PlanLocksNotice } from '@/components/AnalysisReport/PlanLocksNotice';
-import { isLimitError, limitPath } from '@/lib/plan-limits';
+import { SCRIPT_IDEAS_PER_VIDEO, isLimitError, limitPath, scriptAccessForPlan } from '@/lib/plan-limits';
+import { completedVideos, rememberLastVideo } from '@/lib/video-hub';
 import { CHAT_WELCOME_MESSAGES, ANALYSIS_STATUS } from '@/constants';
 import { ErrorNotification } from '@/utils/toast';
 import {
@@ -41,6 +43,8 @@ import {
     BarChart3,
     ChevronDown,
     ChevronLeft,
+    ChevronRight,
+    ChevronsUpDown,
     Loader2,
     Lock,
     MessageSquare,
@@ -999,6 +1003,79 @@ const VIDEO_VIEWS: { id: VideoView; label: string; hint: string; icon: typeof Ba
     { id: 'scripts', label: 'Scripts', hint: '10 script ideas', icon: ScrollText },
 ];
 
+/** "Your video produced": the score, the fixes, the scripts and the coach, at the top of the report. */
+function VideoOutputs({
+    score,
+    fixes,
+    scriptsOpen,
+    coachMessagesLeft,
+    onFixes,
+    onScripts,
+    onCoach,
+}: {
+    score: number | null;
+    fixes: number;
+    scriptsOpen: number | null;
+    coachMessagesLeft: number | null;
+    onFixes?: () => void;
+    onScripts: () => void;
+    onCoach: () => void;
+}) {
+    const item = 'flex min-w-0 items-center gap-2.5 rounded-lg border border-line bg-white/[0.02] px-3 py-2.5 text-left';
+    const action = `${item} app-focus transition-colors hover:border-accent/40 hover:bg-white/[0.04]`;
+    const scriptsNote =
+        scriptsOpen != null && scriptsOpen < SCRIPT_IDEAS_PER_VIDEO ? `${scriptsOpen} of ${SCRIPT_IDEAS_PER_VIDEO} open` : 'Ready to film';
+    const coachNote = coachMessagesLeft != null ? `${coachMessagesLeft} messages left` : 'Knows this video';
+    const fixesBody = (
+        <>
+            <Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+            <span className="min-w-0">
+                <span className="block text-sm font-semibold text-fg tabular">
+                    {fixes > 0 ? `${fixes} timestamped ${fixes === 1 ? 'fix' : 'fixes'}` : 'Fixes and tips'}
+                </span>
+                <span className="block truncate text-xs text-fg-subtle">{fixes > 0 ? 'Exact moments to change' : 'In the report below'}</span>
+            </span>
+        </>
+    );
+    return (
+        <section aria-label="Your video produced" className="mb-6">
+            <p className="app-label mb-2">Your video produced</p>
+            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                <div className={item}>
+                    <BarChart3 className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                    <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-fg tabular">{score != null ? `Score ${score}` : 'Score'}</span>
+                        <span className="block truncate text-xs text-fg-subtle">Out of 100</span>
+                    </span>
+                </div>
+                {onFixes && fixes > 0 ? (
+                    <button type="button" onClick={onFixes} className={action}>
+                        {fixesBody}
+                    </button>
+                ) : (
+                    <div className={item}>{fixesBody}</div>
+                )}
+                <button type="button" onClick={onScripts} className={action}>
+                    <ScrollText className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-fg tabular">{SCRIPT_IDEAS_PER_VIDEO} script ideas</span>
+                        <span className="block truncate text-xs text-fg-subtle">{scriptsNote}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
+                </button>
+                <button type="button" onClick={onCoach} className={action}>
+                    <MessageSquare className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-fg">AI coach ready</span>
+                        <span className="block truncate text-xs text-fg-subtle tabular">{coachNote}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
+                </button>
+            </div>
+        </section>
+    );
+}
+
 function Chat() {
     const { videoId, view } = useParams<{ videoId: string; view?: string }>();
     const navigate = useNavigate();
@@ -1015,6 +1092,8 @@ function Chat() {
             ? Math.max(0, chatMessagesPerMonthLimit - (chatMessagesUsedThisPeriod ?? 0))
             : null;
     const [video, setVideo] = useState<Video | null>(null);
+    /** Analysed videos, newest first, for the switcher in the header. */
+    const [videoOptions, setVideoOptions] = useState<Video[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -1072,6 +1151,8 @@ function Chat() {
                 }
 
                 setVideo(foundVideo);
+                setVideoOptions(completedVideos(videos));
+                rememberLastVideo(foundVideo._id);
                 prevAnalysisStatusForPollRef.current = foundVideo.analysisStatus;
 
                 if (foundVideo.analysisStatus === ANALYSIS_STATUS.FAILED) {
@@ -1411,7 +1492,7 @@ function Chat() {
 
     if (isLoading || !video) {
         return (
-            <div className="app-root flex h-dvh items-center justify-center" role="status">
+            <div className="app-root flex min-h-0 flex-1 items-center justify-center" role="status">
                 <Loader2 className="h-8 w-8 text-fg-muted motion-safe:animate-spin" aria-hidden />
                 <span className="sr-only">Loading your analysis</span>
             </div>
@@ -1426,7 +1507,7 @@ function Chat() {
 
     if (isAnalysisPending) {
         return (
-            <div className="app-root flex min-h-dvh flex-col items-center justify-center px-4">
+            <div className="app-root flex flex-1 flex-col items-center justify-center px-4 py-8">
                 <div className="app-panel w-full max-w-md p-6 text-center">
                     <div className="relative mx-auto mb-5 h-16 w-16">
                         <div className="absolute inset-0 rounded-full border-2 border-white/10" />
@@ -1462,7 +1543,7 @@ function Chat() {
                 ? video.errorSummary.trim()
                 : null);
         return (
-            <div className="app-root flex min-h-dvh flex-col items-center justify-center px-4">
+            <div className="app-root flex flex-1 flex-col items-center justify-center px-4 py-8">
                 <div className="app-panel w-full max-w-md p-6 text-center">
                     <p className="font-semibold text-danger">Analysis failed for this video.</p>
                     {failedDetail ? (
@@ -1484,7 +1565,7 @@ function Chat() {
 
     if (isLoadingMessages) {
         return (
-            <div className="app-root flex h-dvh items-center justify-center" role="status">
+            <div className="app-root flex min-h-0 flex-1 items-center justify-center" role="status">
                 <Loader2 className="h-8 w-8 text-fg-muted motion-safe:animate-spin" aria-hidden />
                 <span className="sr-only">Loading your chat</span>
             </div>
@@ -1581,7 +1662,7 @@ function Chat() {
     const hasUserMessage = messages.some((m) => m.isUser);
 
     return (
-        <div className="app-root flex h-dvh flex-col overflow-hidden">
+        <div className="app-root flex min-h-0 flex-1 flex-col overflow-hidden">
             {/* ─── Header: back, title, score, and (mobile) the Analytics / Chat switch ─── */}
             <header className="app-chrome app-edge-bottom relative z-20 flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
                 <div className="flex h-14 items-center gap-3 px-3 md:px-5">
@@ -1595,15 +1676,36 @@ function Chat() {
                     </Link>
                     <div className="min-w-0 flex-1">
                         <p className="app-label hidden sm:block">{VIDEO_VIEWS.find((v) => v.id === activeTab)?.label}</p>
-                        <p className="truncate text-sm font-medium text-fg" title={video.filename}>
-                            {cleanVideoTitle(video.filename)}
-                        </p>
+                        {videoOptions.length > 1 && videoOptions.some((v) => v._id === video._id) ? (
+                            // Native select over the title: every platform's own picker, nothing custom to break.
+                            <label className="relative flex min-w-0 max-w-full items-center gap-1 rounded-md text-sm font-medium text-fg focus-within:ring-2 focus-within:ring-accent/60 hover:text-accent">
+                                <span className="truncate" title={video.filename}>{cleanVideoTitle(video.filename)}</span>
+                                <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
+                                <select
+                                    aria-label="Switch video"
+                                    value={video._id}
+                                    onChange={(e) => navigate(`/videos/${e.target.value}${VIDEO_VIEW_PATH[activeTab]}`)}
+                                    className="absolute inset-0 w-full cursor-pointer opacity-0"
+                                >
+                                    {videoOptions.map((v) => (
+                                        <option key={v._id} value={v._id}>
+                                            {cleanVideoTitle(v.filename)}
+                                            {v.createdAt ? ` (${new Date(v.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        ) : (
+                            <p className="truncate text-sm font-medium text-fg" title={video.filename}>
+                                {cleanVideoTitle(video.filename)}
+                            </p>
+                        )}
                     </div>
                     <ScoreChip score={viralityScore} />
                 </div>
 
-                <div className="px-3 pb-2 md:hidden">
-                    <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+                <div className="px-3 pb-2 md:px-5">
+                    <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1 md:max-w-md">
                         {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, icon: TabIcon }) => {
                             const isActive = activeTab === tab;
                             return (
@@ -1628,32 +1730,8 @@ function Chat() {
                 </div>
             </header>
 
-            {/* ─── One view at a time. Desktop: tabs on the left. Mobile: the switch above ─── */}
+            {/* ─── One view at a time, picked with the switch above or the main sidebar ─── */}
             <div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
-                <nav aria-label="Video views" className="hidden w-60 shrink-0 flex-col gap-1 border-r border-line p-3 md:flex">
-                    <p className="app-label px-3 pb-1 pt-2">This video</p>
-                    {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, hint, icon: TabIcon }) => {
-                        const isActive = activeTab === tab;
-                        return (
-                            <button
-                                key={tab}
-                                type="button"
-                                aria-current={isActive ? 'page' : undefined}
-                                onClick={() => setActiveTab(tab)}
-                                className={`app-focus relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
-                                    isActive ? 'bg-accent-tint text-fg' : 'text-fg-muted hover:bg-white/5 hover:text-fg'
-                                }`}
-                            >
-                                {isActive && <span aria-hidden className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent" />}
-                                <TabIcon className={`h-5 w-5 shrink-0 ${isActive ? 'text-accent' : ''}`} aria-hidden />
-                                <span className="min-w-0">
-                                    <span className="block text-sm font-medium">{tabLabel}</span>
-                                    <span className="block truncate text-xs text-fg-subtle">{hint}</span>
-                                </span>
-                            </button>
-                        );
-                    })}
-                </nav>
 
                 {/* ─── AI Coach ─── */}
                 <div
@@ -1888,6 +1966,17 @@ function Chat() {
                         className="mx-auto max-w-3xl px-4 pt-5 md:px-6 md:pt-6"
                         style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
                     >
+                        {/* Everything this one upload produced, each a step away. */}
+                        <VideoOutputs
+                            score={viralityScore}
+                            fixes={timestampFeedbackList.length}
+                            scriptsOpen={subscriptionFetchedAt != null ? scriptAccessForPlan(reportSubscriptionPlan) : null}
+                            coachMessagesLeft={reportSubscriptionPlan === 'free' ? chatMessagesLeft : null}
+                            onFixes={showFrameFeedbackSection ? () => jumpTo('report-moments') : undefined}
+                            onScripts={() => setActiveTab('scripts')}
+                            onCoach={() => setActiveTab('chat')}
+                        />
+
                         {/* What this plan does not include, stated up front. Nothing for Pro and Enterprise. */}
                         <PlanLocksNotice />
 
@@ -2187,4 +2276,13 @@ function Chat() {
     );
 }
 
-export default Chat;
+/** The video page lives inside the app layout, so the main sidebar (with these three views) stays in place. */
+function VideoPage() {
+    return (
+        <UserPage showMobileTopBar={false} mainClassName="flex flex-col overflow-y-hidden">
+            <Chat />
+        </UserPage>
+    );
+}
+
+export default VideoPage;

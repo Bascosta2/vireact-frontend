@@ -71,3 +71,8 @@ export const planLocks = (plan: string | null): PlanLock[] => {
   }
   return [];
 };
+
+/** Full scripts each plan can open per video (backend SCRIPT_ACCESS mirrors this). Each video has 10 ideas. */
+export const SCRIPT_IDEAS_PER_VIDEO = 10;
+const SCRIPT_ACCESS: Record<string, number> = { free: 2, premium: 6, pro: 10, enterprise: 10 };
+export const scriptAccessForPlan = (plan: string | null | undefined): number => SCRIPT_ACCESS[plan ?? ''] ?? SCRIPT_ACCESS.free;
