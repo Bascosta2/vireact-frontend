@@ -23,6 +23,8 @@ import {
 import { createPortalSession } from '@/api/subscription';
 import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { useSubscription } from '@/redux/hooks/use-subscription';
+import { PromoCodePanel } from '@/components/app/PromoCodePanel';
+import { promoSummary } from '@/lib/promo';
 
 interface ProfileFormValues {
   name: string;
@@ -42,9 +44,9 @@ const planNames: Record<'free' | 'premium' | 'pro' | 'enterprise', string> = {
   enterprise: 'Enterprise',
 };
 
-type SettingsTab = 'profile' | 'plan' | 'notifications' | 'password';
+type SettingsTab = 'profile' | 'plan' | 'promo' | 'notifications' | 'password';
 
-/** Settings page (/settings). Profile, plan, notifications and password are tabs; `?tab=` selects one. */
+/** Settings page (/settings). Profile, plan, promo code, notifications and password are tabs; `?tab=` selects one. */
 function Profile() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -76,6 +78,8 @@ function Profile() {
     currentPeriodStart,
     currentPeriodEnd,
     subscriptionLifecycleStatus,
+    promo,
+    hasBilling,
   } = useSubscription();
 
   useEffect(() => {
@@ -240,6 +244,7 @@ function Profile() {
   const tabs: TabDef<SettingsTab>[] = [
     { id: 'profile', label: 'Profile' },
     { id: 'plan', label: 'Plan' },
+    { id: 'promo', label: 'Promo code' },
     { id: 'notifications', label: 'Notifications' },
     ...(user?.provider === 'local' ? [{ id: 'password' as const, label: 'Password' }] : []),
   ];
@@ -368,6 +373,11 @@ function Profile() {
                           {subscription.status === 'trial' ? 'Free trial' : subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
                         </span>
                       </p>
+                      {promo && (
+                        <p className="mt-1 text-sm text-accent">
+                          Promo: {promoSummary(promo)}
+                        </p>
+                      )}
                       {subscription.currentPeriodStart && subscription.currentPeriodEnd && (
                         <p className="tabular mt-1 text-sm text-fg-muted">
                           {new Date(subscription.currentPeriodStart).toLocaleDateString()} to{' '}
@@ -376,13 +386,20 @@ function Profile() {
                       )}
                     </div>
 
-                    {subscription.plan === 'free' && <Button onClick={handleUpgrade}>Upgrade</Button>}
+                    {subscription.plan === 'free' && (
+                      <div className="flex flex-wrap gap-3">
+                        <Button onClick={handleUpgrade}>Upgrade</Button>
+                        <Button variant="secondary" onClick={() => setActiveTab('promo')}>Have a promo code?</Button>
+                      </div>
+                    )}
                     {(subscription.plan === 'premium' || subscription.plan === 'pro') && (
                       <div className="flex flex-wrap gap-3">
-                        <Button onClick={() => navigate('/subscription-plans')}>Change plan</Button>
-                        <Button variant="secondary" onClick={handleManageBilling} disabled={loadingPortal}>
-                          {loadingPortal ? 'Opening' : 'Manage billing'}
-                        </Button>
+                        <Button onClick={() => navigate('/subscription-plans')}>{promo && !hasBilling ? 'See plans' : 'Change plan'}</Button>
+                        {(hasBilling || !promo) && (
+                          <Button variant="secondary" onClick={handleManageBilling} disabled={loadingPortal}>
+                            {loadingPortal ? 'Opening' : 'Manage billing'}
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -436,6 +453,8 @@ function Profile() {
               )}
             </section>
           )}
+
+          {activeTab === 'promo' && <PromoCodePanel />}
 
           {activeTab === 'notifications' && (
             <div className="space-y-4">

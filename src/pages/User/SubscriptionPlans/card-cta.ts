@@ -18,9 +18,30 @@ export interface CardCta {
 
 const MANAGE_BILLING_TOOLTIP = 'Use Manage Billing to cancel your subscription';
 
-export const getCardCta = (currentPlan: TierId | null, tier: Tier, trial: { eligible: boolean; days: number } = { eligible: false, days: 7 }): CardCta => {
+const PLAN_RANK: Record<TierId, number> = { free: 0, premium: 1, pro: 2, enterprise: 3 };
+
+export const getCardCta = (
+  currentPlan: TierId | null,
+  tier: Tier,
+  trial: { eligible: boolean; days: number } = { eligible: false, days: 7 },
+  /** The current plan came from a promo code and is not billed through Stripe. */
+  promo: { unbilled: boolean; lifetime: boolean } = { unbilled: false, lifetime: false }
+): CardCta => {
   if (currentPlan === tier.id) {
-    return { label: 'Current Plan', disabled: true, action: { kind: 'noop' } };
+    return { label: promo.unbilled ? 'Current Plan (promo)' : 'Current Plan', disabled: true, action: { kind: 'noop' } };
+  }
+
+  // Promo plan with nothing billed: a higher plan is a normal checkout, lower plans are already included.
+  if (promo.unbilled && currentPlan && currentPlan !== 'free' && currentPlan !== 'enterprise' && !tier.isContactSales) {
+    if (PLAN_RANK[tier.id] > PLAN_RANK[currentPlan] && tier.checkoutPlan) {
+      return { label: tier.ctaLabel, disabled: false, action: { kind: 'checkout', plan: tier.checkoutPlan, trial: false } };
+    }
+    return {
+      label: 'Included in your plan',
+      disabled: true,
+      tooltip: promo.lifetime ? 'Your promo plan never ends' : 'Your promo plan includes this',
+      action: { kind: 'noop' },
+    };
   }
 
   // Enterprise customers manage everything via sales â€” every other tile points to /contact.

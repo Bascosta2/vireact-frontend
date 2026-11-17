@@ -48,11 +48,34 @@ export interface TrialInfo {
     chatMessageLimit?: number;
 }
 
+/** A plan granted by a promo code. `endsAt` null (and `lifetime` true) means it never ends. */
+export interface PromoInfo {
+    code: string;
+    plan: TierId;
+    grantedAt: string | null;
+    endsAt: string | null;
+    lifetime: boolean;
+}
+
 export interface SubscriptionData {
     subscription: Subscription;
     limits: SubscriptionLimits;
     trial?: TrialInfo;
+    promo?: PromoInfo | null;
 }
+
+export interface PromoRedeemResult {
+    /** e.g. "Premium for 1 month". */
+    label: string;
+    plan: TierId;
+    promo: PromoInfo | null;
+}
+
+/** Redeem a promo code for the signed-in account. Errors carry `data.code` (PROMO_INVALID, PROMO_USED, ...). */
+export const redeemPromoCode = async (code: string): Promise<PromoRedeemResult & { message: string }> => {
+    const response = await Axios.post<{ data: PromoRedeemResult; message: string }>('/subscription/promo', { code });
+    return { ...response.data.data, message: response.data.message };
+};
 
 export const getSubscription = async (): Promise<SubscriptionData> => {
     const response = await Axios.get<{ data: SubscriptionData }>('/subscription');

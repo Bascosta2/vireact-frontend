@@ -11,7 +11,7 @@ import { getCardCta, type CardCta } from './card-cta';
 
 function SubscriptionPlans() {
   const navigate = useNavigate();
-  const { plan: currentPlan, refetch, trialEligible, trialDays, trialActive, trialEndsAt } = useSubscription();
+  const { plan: currentPlan, refetch, trialEligible, trialDays, trialActive, trialEndsAt, promo, hasBilling } = useSubscription();
   const [loadingTier, setLoadingTier] = useState<TierId | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTargetPlan, setModalTargetPlan] = useState<CheckoutPlan | null>(null);
@@ -93,7 +93,7 @@ function SubscriptionPlans() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto pt-3">
           {TIERS.map(tier => {
-            const cta = getCardCta(currentPlan, tier, { eligible: trialEligible, days: trialDays });
+            const cta = getCardCta(currentPlan, tier, { eligible: trialEligible, days: trialDays }, { unbilled: promo != null && !hasBilling, lifetime: promo?.lifetime === true });
             const isLoadingThis = loadingTier === tier.id;
             const isOtherLoading = loadingTier !== null && !isLoadingThis;
 

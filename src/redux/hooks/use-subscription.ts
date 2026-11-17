@@ -40,6 +40,8 @@ export const useSubscription = () => {
         trialEndsAt: state.trialEndsAt,
         trialVideoLimit: state.trialVideoLimit,
         trialChatMessageLimit: state.trialChatMessageLimit,
+        promo: state.promo,
+        hasBilling: state.hasBilling,
         error: state.error,
         lastFetchedAt: state.lastFetchedAt,
         refetch,

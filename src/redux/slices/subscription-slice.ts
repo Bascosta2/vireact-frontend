@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import { getSubscription, type SubscriptionData } from "@/api/subscription";
+import { getSubscription, type PromoInfo, type SubscriptionData } from "@/api/subscription";
 import type { TierId } from "@/config/tiers";
 import type { RootState } from "@/redux/store";
 
@@ -40,6 +40,10 @@ export interface SubscriptionState {
     trialEndsAt: string | null;
     trialVideoLimit: number | null;
     trialChatMessageLimit: number | null;
+    /** Plan granted by a promo code, if one is running. */
+    promo: PromoInfo | null;
+    /** The plan is billed through Stripe (so Manage billing applies). */
+    hasBilling: boolean;
     error: string | null;
     lastFetchedAt: number | null;
 }
@@ -63,6 +67,8 @@ const initialState: SubscriptionState = {
     trialEndsAt: null,
     trialVideoLimit: null,
     trialChatMessageLimit: null,
+    promo: null,
+    hasBilling: false,
     error: null,
     lastFetchedAt: null,
 };
@@ -118,7 +124,7 @@ const subscriptionSlice = createSlice({
                 state.error = null;
             })
             .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<SubscriptionData>) => {
-                const { subscription, limits, trial } = action.payload;
+                const { subscription, limits, trial, promo } = action.payload;
                 state.plan = (subscription?.plan ?? "free") as TierId;
                 state.lifetimeFreeVideosUsed = limits?.lifetimeFreeVideosUsed ?? 0;
                 state.lifetimeFreeVideoLimit = limits?.lifetimeFreeVideoLimit ?? null;
@@ -136,6 +142,8 @@ const subscriptionSlice = createSlice({
                 state.trialEndsAt = trial?.endsAt ?? null;
                 state.trialVideoLimit = trial?.videoLimit ?? null;
                 state.trialChatMessageLimit = trial?.chatMessageLimit ?? null;
+                state.promo = promo ?? null;
+                state.hasBilling = Boolean(subscription?.stripeSubscriptionId);
                 state.status = "loaded";
                 state.error = null;
                 state.lastFetchedAt = Date.now();
