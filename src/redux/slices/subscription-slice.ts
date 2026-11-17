@@ -32,6 +32,14 @@ export interface SubscriptionState {
     /** Subscription document `status` (active, cancelled, etc.). */
     subscriptionLifecycleStatus: SubscriptionData['subscription']['status'] | null;
     paymentFailed: boolean;
+    /** This account can still start the free trial. */
+    trialEligible: boolean;
+    trialDays: number;
+    /** A free trial is running now. */
+    trialActive: boolean;
+    trialEndsAt: string | null;
+    trialVideoLimit: number | null;
+    trialChatMessageLimit: number | null;
     error: string | null;
     lastFetchedAt: number | null;
 }
@@ -49,6 +57,12 @@ const initialState: SubscriptionState = {
     currentPeriodEnd: null,
     subscriptionLifecycleStatus: null,
     paymentFailed: false,
+    trialEligible: false,
+    trialDays: 7,
+    trialActive: false,
+    trialEndsAt: null,
+    trialVideoLimit: null,
+    trialChatMessageLimit: null,
     error: null,
     lastFetchedAt: null,
 };
@@ -104,7 +118,7 @@ const subscriptionSlice = createSlice({
                 state.error = null;
             })
             .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<SubscriptionData>) => {
-                const { subscription, limits } = action.payload;
+                const { subscription, limits, trial } = action.payload;
                 state.plan = (subscription?.plan ?? "free") as TierId;
                 state.lifetimeFreeVideosUsed = limits?.lifetimeFreeVideosUsed ?? 0;
                 state.lifetimeFreeVideoLimit = limits?.lifetimeFreeVideoLimit ?? null;
@@ -116,6 +130,12 @@ const subscriptionSlice = createSlice({
                 state.currentPeriodEnd = subscription?.currentPeriodEnd ?? null;
                 state.subscriptionLifecycleStatus = subscription?.status ?? null;
                 state.paymentFailed = subscription?.paymentFailed ?? false;
+                state.trialEligible = trial?.eligible === true;
+                state.trialDays = trial?.days ?? 7;
+                state.trialActive = trial?.active === true;
+                state.trialEndsAt = trial?.endsAt ?? null;
+                state.trialVideoLimit = trial?.videoLimit ?? null;
+                state.trialChatMessageLimit = trial?.chatMessageLimit ?? null;
                 state.status = "loaded";
                 state.error = null;
                 state.lastFetchedAt = Date.now();

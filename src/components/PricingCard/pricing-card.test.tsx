@@ -41,9 +41,25 @@ describe('plan cards', () => {
     expect(count(html('enterprise'), 'Not included: ')).toBe(0);
   });
 
+  it('spell out the Free plan limits in a highlighted box, and only there', () => {
+    const free = html('free');
+    expect(free).toContain('data-testid="plan-limits"');
+    expect(free).toContain('Free plan limits');
+    expect(free).toContain('2 video analyses in total. They do not renew each month.');
+    expect(free).toContain('5 AI coach messages per month.');
+    for (const id of ['premium', 'pro', 'enterprise'] as const) expect(html(id)).not.toContain('data-testid="plan-limits"');
+  });
+
+  it('show free trial terms under the price when given', () => {
+    const out = renderToStaticMarkup(React.createElement(PricingCard, { tier: getTier('pro')!, ctaText: 'Start 7-day free trial', priceNote: '7 days free, then billed monthly. Cancel anytime.' }));
+    expect(out).toContain('7 days free, then billed monthly. Cancel anytime.');
+    expect(out).not.toContain('Billed monthly, cancel anytime');
+    expect(html('pro')).toContain('Billed monthly, cancel anytime');
+  });
+
   it('match the backend limits', () => {
     // vireact-backend/src/constants.js: LIFETIME_FREE_VIDEO_LIMIT, PLAN_LIMITS, EDITOR_LIMITS, STRATEGY_LIMITS
-    expect(getTier('free')!.includes).toMatchObject({ analyses: '2 videos in total', chat: '20 messages / month', editor: '1 / month', strategy: false });
+    expect(getTier('free')!.includes).toMatchObject({ analyses: '2 videos in total, not per month', chat: '5 messages / month', editor: '1 / month', strategy: false });
     expect(getTier('premium')!.includes).toMatchObject({ analyses: '15 / month', chat: '100 messages / month', editor: '5 / month', strategy: '3 / month' });
     expect(getTier('pro')!.includes).toMatchObject({ analyses: '30 / month', chat: '500 messages / month', editor: '20 / month', strategy: '10 / month', advanced: true });
   });

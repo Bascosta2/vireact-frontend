@@ -7,80 +7,11 @@ import { TIERS, type Tier, type TierId, type CheckoutPlan } from '@/config/tiers
 import { createCheckoutSession } from '@/api/subscription';
 import { ErrorNotification } from '@/utils/toast';
 import { useSubscription } from '@/redux/hooks/use-subscription';
-
-type CardAction =
-  | { kind: 'noop' }
-  | { kind: 'contact' }
-  | { kind: 'checkout'; plan: CheckoutPlan }
-  | { kind: 'switch'; plan: CheckoutPlan };
-
-interface CardCta {
-  label: string;
-  disabled: boolean;
-  tooltip?: string;
-  action: CardAction;
-}
-
-const MANAGE_BILLING_TOOLTIP = 'Use Manage Billing to cancel your subscription';
-
-const getCardCta = (currentPlan: TierId | null, tier: Tier): CardCta => {
-  if (currentPlan === tier.id) {
-    return { label: 'Current Plan', disabled: true, action: { kind: 'noop' } };
-  }
-
-  // Enterprise customers manage everything via sales — every other tile points to /contact.
-  if (currentPlan === 'enterprise') {
-    return { label: 'Contact Sales', disabled: false, action: { kind: 'contact' } };
-  }
-
-  if (tier.isContactSales) {
-    return { label: 'Contact Sales', disabled: false, action: { kind: 'contact' } };
-  }
-
-  // Free user (or unauthenticated read failure) — original checkout flow preserved.
-  if (currentPlan === null || currentPlan === 'free') {
-    if (tier.checkoutPlan) {
-      return {
-        label: tier.ctaLabel,
-        disabled: false,
-        action: { kind: 'checkout', plan: tier.checkoutPlan },
-      };
-    }
-    return { label: tier.ctaLabel, disabled: true, action: { kind: 'noop' } };
-  }
-
-  // Paid user (premium or pro) interacting with non-current, non-enterprise tile.
-  if (tier.id === 'free') {
-    return {
-      label: 'Downgrade to Free',
-      disabled: true,
-      tooltip: MANAGE_BILLING_TOOLTIP,
-      action: { kind: 'noop' },
-    };
-  }
-
-  if (tier.id === 'premium') {
-    return {
-      label: 'Switch to Premium',
-      disabled: false,
-      action: { kind: 'switch', plan: 'premium' },
-    };
-  }
-
-  if (tier.id === 'pro') {
-    return {
-      label: 'Switch to Pro',
-      disabled: false,
-      action: { kind: 'switch', plan: 'pro' },
-    };
-  }
-
-  return { label: tier.ctaLabel, disabled: true, action: { kind: 'noop' } };
-};
+import { getCardCta, type CardCta } from './card-cta';
 
 function SubscriptionPlans() {
   const navigate = useNavigate();
-  const { plan: currentPlan, refetch } = useSubscription();
+  const { plan: currentPlan, refetch, trialEligible, trialDays, trialActive, trialEndsAt } = useSubscription();
   const [loadingTier, setLoadingTier] = useState<TierId | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTargetPlan, setModalTargetPlan] = useState<CheckoutPlan | null>(null);
@@ -103,10 +34,10 @@ function SubscriptionPlans() {
     await refetch();
   };
 
-  const startCheckout = async (tier: Tier, plan: CheckoutPlan) => {
+  const startCheckout = async (tier: Tier, plan: CheckoutPlan, trial: boolean) => {
     try {
       setLoadingTier(tier.id);
-      const { url } = await createCheckoutSession(plan);
+      const { url } = await createCheckoutSession(plan, { trial });
       window.location.href = url;
     } catch (err: any) {
       setLoadingTier(null);
@@ -122,7 +53,7 @@ function SubscriptionPlans() {
         navigate('/contact');
         return;
       case 'checkout':
-        void startCheckout(tier, cta.action.plan);
+        void startCheckout(tier, cta.action.plan, cta.action.trial);
         return;
       case 'switch':
         openSwitchModal(cta.action.plan);
@@ -147,11 +78,22 @@ function SubscriptionPlans() {
           <p className="text-gray-400 text-lg">
             Every plan, its exact monthly price, and what's included. Prices in USD.
           </p>
+          {trialEligible && (
+            <p className="mx-auto mt-4 max-w-xl rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-3 text-sm text-white">
+              <span className="font-semibold">Premium and Pro start with a {trialDays}-day free trial.</span> Add a card, pay $0 today,
+              and cancel anytime before the trial ends.
+            </p>
+          )}
+          {trialActive && trialEndsAt && (
+            <p className="mx-auto mt-4 max-w-xl rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white">
+              Your free trial ends on {new Date(trialEndsAt).toLocaleDateString()}. Your card is charged then unless you cancel in Settings.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto pt-3">
           {TIERS.map(tier => {
-            const cta = getCardCta(currentPlan, tier);
+            const cta = getCardCta(currentPlan, tier, { eligible: trialEligible, days: trialDays });
             const isLoadingThis = loadingTier === tier.id;
             const isOtherLoading = loadingTier !== null && !isLoadingThis;
 
@@ -164,6 +106,7 @@ function SubscriptionPlans() {
                 tier={tier}
                 ctaText={ctaText}
                 isCurrent={currentPlan === tier.id}
+                priceNote={cta.priceNote}
                 disabled={buttonDisabled}
                 onClick={() => handleCardClick(tier, cta)}
               />

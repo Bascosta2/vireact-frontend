@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { formatResetDate, useQuota } from '@/hooks/useQuota';
+import { useSubscription } from '@/redux/hooks/use-subscription';
+import { TRIAL_PATH } from '@/lib/plan-limits';
 
 export function UsageMeter({ compact = false, className }: { compact?: boolean; className?: string }) {
   const q = useQuota();
+  const { trialEligible, trialDays, trialActive } = useSubscription();
   if (!q.loaded) return null;
   const reset = formatResetDate(q.resetsOn);
 
@@ -23,12 +26,12 @@ export function UsageMeter({ compact = false, className }: { compact?: boolean; 
   return (
     <div className={cn('rounded-xl border border-line bg-surface p-3', className)}>
       <p className="tabular text-sm text-fg">
-        {q.used} of {q.limit} analyses this month
+        {q.lifetime ? `${q.used} of ${q.limit} free analyses used` : trialActive ? `${q.used} of ${q.limit} trial analyses` : `${q.used} of ${q.limit} analyses this month`}
       </p>
       <div
         className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"
         role="progressbar"
-        aria-label="Analyses used this month"
+        aria-label={q.lifetime ? 'Free analyses used' : 'Analyses used this month'}
         aria-valuemin={0}
         aria-valuemax={q.limit}
         aria-valuenow={q.used}
@@ -39,11 +42,19 @@ export function UsageMeter({ compact = false, className }: { compact?: boolean; 
         />
       </div>
       <div className={cn('mt-2 flex items-center justify-between gap-2 text-xs', compact && 'flex-col items-start')}>
-        {reset && <span className="text-fg-muted">Resets {reset}</span>}
-        {showUpgrade && (
-          <Link to="/subscription-plans" className="app-focus rounded font-medium text-accent hover:underline">
-            Upgrade
+        {reset && <span className="text-fg-muted">{trialActive ? 'Trial ends' : 'Resets'} {reset}</span>}
+        {q.lifetime && !reset && <span className="text-fg-muted">Free plan</span>}
+        {trialEligible ? (
+          <Link to={TRIAL_PATH} className="app-focus rounded font-medium text-accent hover:underline">
+            Try free for {trialDays} days
           </Link>
+        ) : (
+          showUpgrade &&
+          !trialActive && (
+            <Link to="/subscription-plans" className="app-focus rounded font-medium text-accent hover:underline">
+              Upgrade
+            </Link>
+          )
         )}
       </div>
     </div>

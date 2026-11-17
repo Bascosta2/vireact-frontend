@@ -38,6 +38,8 @@ export interface Tier {
   isContactSales: boolean;
   ctaLabel: string;
   includes: Record<PlanFeatureId, PlanFeatureValue>;
+  /** Hard limits spelled out in a highlighted box on the plan card. */
+  limits?: string[];
   highlight?: boolean;
 }
 
@@ -53,17 +55,22 @@ export const TIERS: readonly Tier[] = [
     isContactSales: false,
     ctaLabel: 'Get Started',
     includes: {
-      analyses: '2 videos in total',
+      analyses: '2 videos in total, not per month',
       scores: true,
       views: true,
       feedback: true,
-      chat: '20 messages / month',
+      chat: '5 messages / month',
       editor: '1 / month',
       advanced: false,
       strategy: false,
       support: false,
       team: false,
     },
+    limits: [
+      '2 video analyses in total. They do not renew each month.',
+      '5 AI coach messages per month.',
+      'No Advanced Analytics and no AI posting plan.',
+    ],
   },
   {
     id: 'premium',

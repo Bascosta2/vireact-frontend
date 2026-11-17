@@ -43,7 +43,7 @@ const initialNotifyState = (): NotifyState => {
 const uploadErrorMessage = (err: unknown): string => {
   const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
   const message = e?.response?.data?.message;
-  if (e?.response?.status === 403 && message?.includes('limit')) return `${message} Visit Settings > Subscription to upgrade.`;
+  if (e?.response?.status === 403 && message?.includes('limit')) return `${message} See your options under Settings > Plan.`;
   return message || VIDEO_ERRORS.uploadFailed;
 };
 

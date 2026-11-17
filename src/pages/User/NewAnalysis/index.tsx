@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import UserPage from '@/components/Layout/UserPage';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Button } from '@/components/app/Button';
@@ -9,6 +9,7 @@ import { FeatureChecklist } from '@/components/app/FeatureChecklist';
 import { AdvancedAnalyticsCallout } from '@/components/app/AdvancedAnalyticsCallout';
 import { ProgressPanel } from '@/components/app/ProgressPanel';
 import { useQuota } from '@/hooks/useQuota';
+import { limitPath } from '@/lib/plan-limits';
 import { presetFeatureIds, type PresetId } from '@/lib/analysis-presets';
 import { usePendingUpload, type PendingUploadState } from '@/contexts/PendingUploadContext';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
@@ -78,6 +79,7 @@ function NewAnalysis() {
   const { job, notifyState, start, retry, reset, enableNotifications } = useActiveAnalyses();
   const { plan } = useSubscription();
   const quota = useQuota();
+  const goTo = useNavigate();
   const canUsePro = plan === 'pro' || plan === 'enterprise';
 
   const [fileError, setFileError] = useState<string | null>(null);
@@ -146,7 +148,9 @@ function NewAnalysis() {
       return;
     }
     if (outOfQuota) {
+      // Out of analyses: straight to the free trial offer (it forwards to the plans page if the trial was used).
       setQuotaError(true);
+      goTo(limitPath('videos'));
       return;
     }
     setFeatureError(null);
@@ -156,6 +160,14 @@ function NewAnalysis() {
       followers: followerCount != null && Number.isFinite(followerCount) ? followerCount : null,
     });
   };
+
+  // The server can still refuse (another tab used the last analysis): same destination.
+  const limitRefused = job?.stage === 'failed' && !job.videoId && /limit reached/i.test(job.errorMessage ?? '');
+  useEffect(() => {
+    if (!limitRefused) return;
+    reset();
+    goTo(limitPath('videos'));
+  }, [limitRefused, reset, goTo]);
 
   const startOver = () => {
     if (pending?.videoMetadata?.previewUrl) URL.revokeObjectURL(pending.videoMetadata.previewUrl);
@@ -291,7 +303,7 @@ function NewAnalysis() {
             <Button fullWidth onClick={analyze} className="md:w-auto md:min-w-[200px]">
               Analyze video
             </Button>
-            <QuotaLine remaining={quota.remaining} total={quota.limit} showError={quotaError} />
+            <QuotaLine remaining={quota.remaining} total={quota.limit} lifetime={quota.lifetime} showError={quotaError} />
           </div>
         </div>
         {/* Room for the docked bar so the last section can scroll fully into view on mobile. */}
@@ -301,15 +313,24 @@ function NewAnalysis() {
   );
 }
 
-function QuotaLine({ remaining, total, showError }: { remaining: number | null; total: number | null; showError: boolean }) {
+function QuotaLine({ remaining, total, lifetime, showError }: { remaining: number | null; total: number | null; lifetime: boolean; showError: boolean }) {
   if (remaining == null || total == null) return null;
   if (remaining === 0) {
     return (
       <p role={showError ? 'alert' : undefined} className="mt-2 text-sm text-fg-muted">
-        <span className={showError ? 'font-medium text-danger' : undefined}>You've used all {total} analyses this month.</span>{' '}
-        <Link to="/subscription-plans" className="app-focus rounded font-medium text-accent hover:underline">
-          Upgrade
+        <span className={showError ? 'font-medium text-danger' : undefined}>
+          {lifetime ? `You've used both free analyses on the Free plan.` : `You've used all ${total} analyses this month.`}
+        </span>{' '}
+        <Link to={limitPath('videos')} className="app-focus rounded font-medium text-accent hover:underline">
+          {lifetime ? 'Keep going' : 'Upgrade'}
         </Link>
+      </p>
+    );
+  }
+  if (lifetime) {
+    return (
+      <p className="tabular mt-2 text-sm text-fg-muted">
+        Uses 1 of your {remaining} remaining free {remaining === 1 ? 'analysis' : 'analyses'}. The Free plan includes {total} in total.
       </p>
     );
   }

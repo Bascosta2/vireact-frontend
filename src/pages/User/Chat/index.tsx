@@ -32,6 +32,8 @@ import { getChatMessages, sendChatMessage, type Message } from '@/api/chat';
 import { useUser } from '@/redux/hooks/use-user';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import { LockedProFeatureSection } from '@/components/AnalysisReport/LockedSection';
+import { PlanLocksNotice } from '@/components/AnalysisReport/PlanLocksNotice';
+import { isLimitError, limitPath } from '@/lib/plan-limits';
 import { CHAT_WELCOME_MESSAGES, ANALYSIS_STATUS } from '@/constants';
 import { ErrorNotification } from '@/utils/toast';
 import {
@@ -659,7 +661,7 @@ function ScoreTile({
                         className="app-focus inline-flex items-center gap-1 rounded-md text-sm font-semibold text-fg hover:text-accent"
                     >
                         <Lock className="h-3.5 w-3.5" aria-hidden />
-                        Pro
+                        Pro plan only
                     </Link>
                 ) : (
                     <span className={`tabular text-2xl font-semibold leading-none ${notAnalyzed ? 'text-fg-subtle' : 'text-fg'}`}>
@@ -993,7 +995,17 @@ function Chat() {
     const { videoId } = useParams<{ videoId: string }>();
     const navigate = useNavigate();
     const { name } = useUser();
-    const { plan: reportSubscriptionPlan } = useSubscription();
+    const {
+        plan: reportSubscriptionPlan,
+        chatMessagesUsedThisPeriod,
+        chatMessagesPerMonthLimit,
+        lastFetchedAt: subscriptionFetchedAt,
+        refetch: refetchSubscription,
+    } = useSubscription();
+    const chatMessagesLeft =
+        subscriptionFetchedAt != null && chatMessagesPerMonthLimit != null
+            ? Math.max(0, chatMessagesPerMonthLimit - (chatMessagesUsedThisPeriod ?? 0))
+            : null;
     const [video, setVideo] = useState<Video | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
@@ -1266,6 +1278,11 @@ function Chat() {
                     ? overrideText.trim()
                     : inputText.trim();
             if (!messageText || isSending || !videoId) return;
+            // Out of coach messages: go to the free trial offer instead of sending a request that will be refused.
+            if (chatMessagesLeft === 0) {
+                navigate(limitPath('chat'));
+                return;
+            }
             if (overrideText === undefined) setInputText('');
 
             setIsSending(true);
@@ -1304,13 +1321,16 @@ function Chat() {
 
                 // Highlight the report items this reply cited.
                 setCitedFeedbackIds(response.aiMessage.feedbackRefs ?? []);
+                // Keep the "messages left" count current.
+                void refetchSubscription();
             } catch (error: unknown) {
                 const err = error as { response?: { data?: { message?: string }; status?: number } };
                 console.error('Failed to send message:', error);
                 const errorMessage =
                     err?.response?.data?.message || 'Failed to send message. Please try again.';
-                if (err?.response?.status === 403 && errorMessage.includes('limit')) {
-                    ErrorNotification(errorMessage + ' Visit Settings > Subscription to upgrade.');
+                if (isLimitError(error)) {
+                    void refetchSubscription();
+                    navigate(limitPath('chat'));
                 } else {
                     ErrorNotification(errorMessage);
                 }
@@ -1319,7 +1339,7 @@ function Chat() {
                 setIsSending(false);
             }
         },
-        [inputText, isSending, videoId]
+        [inputText, isSending, videoId, chatMessagesLeft, navigate, refetchSubscription]
     );
 
     const handleKeyDown = useCallback(
@@ -1777,6 +1797,16 @@ function Chat() {
                                 )}
                             </button>
                         </div>
+                        {chatMessagesLeft != null && chatMessagesPerMonthLimit != null && (reportSubscriptionPlan === 'free' || chatMessagesLeft <= 3) && (
+                            <p className="tabular mt-2 px-1 text-xs text-fg-subtle" aria-live="polite">
+                                {chatMessagesLeft === 0
+                                    ? `You've used all ${chatMessagesPerMonthLimit} coach messages this month.`
+                                    : `${chatMessagesLeft} of ${chatMessagesPerMonthLimit} coach messages left this month.`}{' '}
+                                <Link to={limitPath('chat')} className="app-focus rounded font-medium text-accent hover:underline">
+                                    Get more
+                                </Link>
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -1838,6 +1868,9 @@ function Chat() {
                         className="mx-auto max-w-3xl px-4 pt-5 md:px-6 md:pt-6"
                         style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
                     >
+                        {/* What this plan does not include, stated up front. Nothing for Pro and Enterprise. */}
+                        <PlanLocksNotice />
+
                         {/* 01 Overview: one verdict, the score, and where to start */}
                         <ReportSection id="report-overview" index={sectionNumber('report-overview')} title="At a glance" className="">
                             <div className="app-panel p-5">

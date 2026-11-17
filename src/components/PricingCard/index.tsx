@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { planFeatures, type Tier } from '@/config/tiers';
 
 export interface PricingCardProps {
@@ -8,6 +8,8 @@ export interface PricingCardProps {
     disabled?: boolean;
     /** Shows a "Your plan" badge (logged-in plans page). */
     isCurrent?: boolean;
+    /** Replaces the line under the price (e.g. free trial terms). */
+    priceNote?: string;
 }
 
 /**
@@ -15,7 +17,7 @@ export interface PricingCardProps {
  * (included, with the amount when it varies by plan) or an X (not on this plan). Rows come from
  * PLAN_FEATURE_ROWS so the cards line up row by row.
  */
-const PricingCard = ({ tier, ctaText, onClick, disabled = false, isCurrent = false }: PricingCardProps) => {
+const PricingCard = ({ tier, ctaText, onClick, disabled = false, isCurrent = false, priceNote }: PricingCardProps) => {
     const popular = !!tier.highlight;
     const isCustom = tier.priceMonthly === null;
     return (
@@ -44,8 +46,8 @@ const PricingCard = ({ tier, ctaText, onClick, disabled = false, isCurrent = fal
                 <span className="text-5xl font-bold tracking-tight text-white tabular-nums">{tier.priceDisplay}</span>
                 {!isCustom && <span className="text-sm text-zinc-400">{tier.priceMonthly === 0 ? 'forever' : '/ month'}</span>}
             </div>
-            <p className="mt-1 h-5 text-xs text-zinc-500">
-                {isCustom ? tier.priceSubtext : tier.priceMonthly === 0 ? 'No card needed' : 'Billed monthly, cancel anytime'}
+            <p className={`mt-1 min-h-5 text-xs ${priceNote ? 'font-medium text-orange-300' : 'text-zinc-500'}`}>
+                {priceNote ?? (isCustom ? tier.priceSubtext : tier.priceMonthly === 0 ? 'No card needed' : 'Billed monthly, cancel anytime')}
             </p>
 
             <button
@@ -56,6 +58,22 @@ const PricingCard = ({ tier, ctaText, onClick, disabled = false, isCurrent = fal
             >
                 {ctaText}
             </button>
+
+            {tier.limits && tier.limits.length > 0 && (
+                <div className="mt-5 rounded-xl border border-amber-400/40 bg-amber-400/[0.07] p-3.5" data-testid="plan-limits">
+                    <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-amber-300 uppercase">
+                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                        {tier.name} plan limits
+                    </p>
+                    <ul className="mt-2 space-y-1.5">
+                        {tier.limits.map((limit) => (
+                            <li key={limit} className="text-sm leading-snug font-medium text-white">
+                                {limit}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             <ul className="mt-6 space-y-3 border-t border-white/10 pt-5">
                 {planFeatures(tier).map(({ id, label, value }) => {

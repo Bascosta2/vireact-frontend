@@ -16,6 +16,7 @@ const Chat = lazy(() => import('@/pages/User/Chat'));
 const Profile = lazy(() => import('@/pages/User/Profile'));
 const SubscriptionUsage = lazy(() => import('@/pages/User/SubscriptionUsage'));
 const SubscriptionPlans = lazy(() => import('@/pages/User/SubscriptionPlans'));
+const Trial = lazy(() => import('@/pages/User/Trial'));
 const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
 
 /** Old upload steps now live on /new; query params (e.g. ?onboarding=1) carry over. */
@@ -50,6 +51,7 @@ function UserRoutes() {
                 <Route path='/profile' element={<RedirectKeepingQuery to="/settings" />} />
                 <Route path='/subscription-usage' element={<SubscriptionUsage />} />
                 <Route path='/subscription-plans' element={<SubscriptionPlans />} />
+                <Route path='/trial' element={<Trial />} />
                 <Route path='/' element={<Navigate to="/dashboard" />} />
                 <Route path='*' element={<Navigate to="/dashboard" />} />
             </Routes>

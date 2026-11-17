@@ -365,7 +365,7 @@ function Profile() {
                       <p className="mt-1 flex flex-wrap items-center gap-3">
                         <span className="text-lg font-semibold text-fg">{planNames[subscription.plan]}</span>
                         <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-                          {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                          {subscription.status === 'trial' ? 'Free trial' : subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
                         </span>
                       </p>
                       {subscription.currentPeriodStart && subscription.currentPeriodEnd && (

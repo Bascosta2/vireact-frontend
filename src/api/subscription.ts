@@ -19,6 +19,8 @@ export interface Subscription {
     /** Set by Stripe invoice.payment_failed; cleared on successful invoice payment. */
     paymentFailed?: boolean;
     paymentFailedAt?: string;
+    /** When the running free trial ends (first charge). */
+    trialEndsAt?: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -34,9 +36,22 @@ export interface SubscriptionLimits {
     lifetimeFreeVideoLimit: number;
 }
 
+/** Free trial of a paid plan (card required, $0 today). The backend decides who can start one. */
+export interface TrialInfo {
+    eligible: boolean;
+    days: number;
+    /** A trial is running now. */
+    active: boolean;
+    endsAt: string | null;
+    /** Caps that apply while trialing. */
+    videoLimit?: number;
+    chatMessageLimit?: number;
+}
+
 export interface SubscriptionData {
     subscription: Subscription;
     limits: SubscriptionLimits;
+    trial?: TrialInfo;
 }
 
 export const getSubscription = async (): Promise<SubscriptionData> => {
@@ -44,8 +59,9 @@ export const getSubscription = async (): Promise<SubscriptionData> => {
     return response.data.data;
 };
 
-export const createCheckoutSession = async (plan: CheckoutPlan): Promise<{ url: string; sessionId: string }> => {
-    const response = await Axios.post<{ data: { url: string; sessionId: string } }>('/subscription/checkout', { plan });
+/** `trial: true` starts the plan with the free trial (the backend refuses if the account is not eligible). */
+export const createCheckoutSession = async (plan: CheckoutPlan, opts: { trial?: boolean } = {}): Promise<{ url: string; sessionId: string }> => {
+    const response = await Axios.post<{ data: { url: string; sessionId: string } }>('/subscription/checkout', opts.trial ? { plan, trial: true } : { plan });
     return response.data.data;
 };
 

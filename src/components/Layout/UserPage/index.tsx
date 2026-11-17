@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Plus, X } from 'lucide-react';
-import { Sidebar } from '@/components/UI/modern-sidebar';
+import { Sidebar, SIDEBAR_TRANSITION } from '@/components/UI/modern-sidebar';
 import BottomNav from '@/components/Header/UserHeader/BottomNav';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
@@ -102,7 +102,7 @@ function UserPage({
       {showHeader && <Sidebar />}
 
       {/* min-w-0: a flex child otherwise grows to its widest descendant and the page scrolls sideways. */}
-      <div className={cn('relative flex min-w-0 flex-1 flex-col overflow-hidden', showHeader && (isCollapsed ? 'md:ml-[72px]' : 'md:ml-60'))}>
+      <div className={cn('relative flex min-w-0 flex-1 flex-col overflow-hidden', showHeader && 'md:transition-[margin-left]', showHeader && SIDEBAR_TRANSITION, showHeader && (isCollapsed ? 'md:ml-[72px]' : 'md:ml-60'))}>
         {showHeader && <MobileTopBar />}
         <main
           id="main-content"

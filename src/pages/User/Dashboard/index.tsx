@@ -20,6 +20,7 @@ import { cleanVideoTitle } from '@/lib/video-file';
 import { getEditorUsage, type EditorUsage } from '@/api/editor';
 import { getAnalyticsOverview, type AnalyticsOverview } from '@/api/analytics';
 import { WorkflowMap } from './WorkflowMap';
+import { TrialBanner } from '@/components/app/TrialBanner';
 
 /** Editor allowance for the workflow map; null when it can't load (Home never blocks on it). */
 function useEditorUsage() {
@@ -84,7 +85,11 @@ function Dashboard() {
         ) : videos.length === 0 ? (
           <NewUserHome firstName={firstName} />
         ) : (
-          <ReturningHome firstName={firstName} videos={videos} />
+          <>
+            <ReturningHome firstName={firstName} videos={videos} />
+            {/* Free accounts that can still take the trial; nothing for everyone else. */}
+            <TrialBanner className="mt-8" />
+          </>
         )}
       </div>
     </UserPage>

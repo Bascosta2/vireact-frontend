@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { LogOut, PanelLeft, Plus, Loader2 } from 'lucide-react';
 import { useLogout } from '@/hooks/useLogout';
 import ConfirmationModal from '@/components/UI/ConfirmationModal';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -10,7 +10,15 @@ import { APP_NAV_ITEMS, isNavActive } from '@/lib/app-nav';
 import { useEditorAccess } from '@/lib/editor-access';
 import { cn } from '@/lib/utils';
 
-/** Desktop navigation (768 px and up). Below that, `BottomNav` takes over. */
+/** Shared timing so the rail, its labels and the page margin (UserPage) move as one. */
+export const SIDEBAR_TRANSITION = 'duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]';
+
+/**
+ * Desktop navigation (768 px and up). Below that, `BottomNav` takes over.
+ *
+ * Collapsing animates the width only. Every icon, and the toggle button, sits at a fixed distance from
+ * the left edge in both states, so nothing jumps: labels simply fade while the rail slides over them.
+ */
 export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -21,105 +29,104 @@ export function Sidebar() {
   const editorAccess = useEditorAccess();
   const navItems = APP_NAV_ITEMS.filter((item) => item.id !== 'editor' || editorAccess === 'granted');
 
+  // Text that is clipped by the narrow rail: it fades out and never wraps.
+  const label = cn('whitespace-nowrap transition-opacity', SIDEBAR_TRANSITION, isCollapsed ? 'opacity-0' : 'opacity-100');
+
   return (
     <>
       <aside
         aria-label="Main"
+        data-collapsed={isCollapsed}
         className={cn(
-          'fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-line bg-canvas md:flex',
+          'fixed left-0 top-0 z-40 hidden h-screen flex-col overflow-hidden border-r border-line bg-canvas transition-[width] md:flex',
+          SIDEBAR_TRANSITION,
           isCollapsed ? 'w-[72px]' : 'w-60'
         )}
       >
-        <div className={cn('flex h-16 items-center border-b border-line px-4', isCollapsed ? 'justify-center' : 'justify-between')}>
-          <Link to="/dashboard" className="app-focus rounded" aria-label="Vireact home">
-            <span className="font-heading text-2xl leading-none tracking-wide text-fg">{isCollapsed ? 'V' : 'VIREACT'}</span>
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-line pl-[18px] pr-4">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="app-focus inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors duration-150 hover:bg-white/5 hover:text-fg"
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!isCollapsed}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <PanelLeft className="h-[18px] w-[18px]" aria-hidden="true" />
+          </button>
+          <Link
+            to="/dashboard"
+            className={cn('app-focus rounded', label)}
+            aria-label="Vireact home"
+            tabIndex={isCollapsed ? -1 : undefined}
+            aria-hidden={isCollapsed || undefined}
+          >
+            <span className="font-heading text-2xl leading-none tracking-wide text-fg">VIREACT</span>
           </Link>
-          {!isCollapsed && (
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(true)}
-              className="app-focus inline-flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-white/5 hover:text-fg"
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
         </div>
 
-        <div className="p-3">
+        <div className="shrink-0 p-3">
           <Link
             to="/new"
             aria-current={pathname === '/new' ? 'page' : undefined}
-            aria-label={isCollapsed ? 'New analysis' : undefined}
-            className={cn(
-              'app-focus app-primary flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold',
-              !isCollapsed && 'px-4'
-            )}
+            aria-label="New analysis"
+            title={isCollapsed ? 'New analysis' : undefined}
+            className="app-focus app-primary flex h-11 items-center gap-2 overflow-hidden rounded-lg pl-4 text-sm font-semibold"
           >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            {!isCollapsed && 'New analysis'}
+            <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className={label}>New analysis</span>
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label="Pages">
+        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3" aria-label="Pages">
           {navItems.map((item) => {
             const active = isNavActive(pathname, item.href);
             const Icon = item.icon;
+            const analyzing = item.id === 'library' && inProgressCount > 0;
             return (
               <Link
                 key={item.id}
                 to={item.href}
                 aria-current={active ? 'page' : undefined}
-                aria-label={isCollapsed ? item.name : undefined}
+                title={isCollapsed ? item.name : undefined}
                 className={cn(
-                  'app-focus relative flex h-11 items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-100',
-                  isCollapsed ? 'justify-center' : 'px-3',
+                  'app-focus relative flex h-11 items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium transition-colors duration-100',
                   active ? 'bg-accent-tint text-fg' : 'text-fg-muted hover:bg-white/5 hover:text-fg'
                 )}
               >
                 {active && <span aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent" />}
                 <Icon className={cn('h-5 w-5 shrink-0', active && 'text-accent')} aria-hidden="true" />
-                {!isCollapsed && <span className="flex-1">{item.name}</span>}
-                {item.id === 'library' && inProgressCount > 0 && !isCollapsed && (
-                  <span className="tabular inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                <span className={cn('flex-1', label)}>{item.name}</span>
+                {analyzing && (
+                  <span className={cn('tabular inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning', label)}>
                     <Loader2 className="h-3 w-3 motion-safe:animate-spin" aria-hidden="true" />
                     {inProgressCount} analyzing
                   </span>
                 )}
-                {item.id === 'library' && inProgressCount > 0 && isCollapsed && (
-                  <span aria-hidden="true" className="absolute right-3 top-2.5 h-2 w-2 rounded-full bg-warning" />
-                )}
-                {item.id === 'library' && inProgressCount > 0 && isCollapsed && (
-                  <span className="sr-only">, {inProgressCount} analyzing</span>
+                {analyzing && (
+                  <span
+                    aria-hidden="true"
+                    className={cn('absolute left-[30px] top-2.5 h-2 w-2 rounded-full bg-warning transition-opacity', SIDEBAR_TRANSITION, isCollapsed ? 'opacity-100' : 'opacity-0')}
+                  />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="space-y-2 border-t border-line p-3">
-          {!isCollapsed && <UsageMeter />}
-          {isCollapsed && (
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(false)}
-              className="app-focus flex h-11 w-full items-center justify-center rounded-lg text-fg-muted hover:bg-white/5 hover:text-fg"
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
+        <div className="shrink-0 space-y-2 border-t border-line p-3">
+          {/* Kept mounted at its full width so the footer height never changes; hidden (and unfocusable) when collapsed. */}
+          <div className={cn('w-[215px] transition-[opacity,visibility]', SIDEBAR_TRANSITION, isCollapsed ? 'invisible opacity-0' : 'visible opacity-100')}>
+            <UsageMeter />
+          </div>
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
-            aria-label={isCollapsed ? 'Log out' : undefined}
-            className={cn(
-              'app-focus flex h-11 w-full items-center gap-3 rounded-lg text-sm font-medium text-fg-muted hover:bg-white/5 hover:text-fg',
-              isCollapsed ? 'justify-center' : 'px-3'
-            )}
+            title={isCollapsed ? 'Log out' : undefined}
+            className="app-focus flex h-11 w-full items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium text-fg-muted hover:bg-white/5 hover:text-fg"
           >
             <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
-            {!isCollapsed && 'Log out'}
+            <span className={label}>Log out</span>
           </button>
         </div>
       </aside>
