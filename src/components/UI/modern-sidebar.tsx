@@ -45,7 +45,7 @@ export function Sidebar() {
         className={cn(
           'fixed left-0 top-0 z-40 hidden h-screen flex-col overflow-hidden border-r border-line bg-canvas transition-[width] md:flex',
           SIDEBAR_TRANSITION,
-          isCollapsed ? 'w-[72px]' : 'w-60'
+          isCollapsed ? 'w-[72px]' : 'w-64'
         )}
       >
         <div className="flex h-16 shrink-0 items-center gap-2 border-b border-line pl-[18px] pr-4">
@@ -108,7 +108,7 @@ export function Sidebar() {
                       className="relative flex h-11 cursor-default items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium text-fg-subtle"
                     >
                       <Icon className="h-5 w-5 shrink-0 opacity-60" aria-hidden="true" />
-                      <span className={cn('flex-1', label)}>{item.name}</span>
+                      <span className={cn('min-w-0 flex-1 truncate', label)}>{item.name}</span>
                       <span className={cn('rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-fg-subtle', label)}>Soon</span>
                     </div>
                   );
@@ -131,7 +131,7 @@ export function Sidebar() {
                   >
                     {active && <span aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent" />}
                     <Icon className={cn('h-5 w-5 shrink-0', active && 'text-accent')} aria-hidden="true" />
-                    <span className={cn('flex-1', label)}>{item.name}</span>
+                    <span className={cn('min-w-0 flex-1 truncate', label)}>{item.name}</span>
                     {badge && (
                       <span
                         className={cn('tabular inline-flex items-center gap-1 rounded-full border border-line bg-white/[0.03] px-2 py-0.5 text-[11px] font-medium text-fg-muted', label)}
@@ -163,7 +163,7 @@ export function Sidebar() {
 
         <div className="shrink-0 space-y-2 border-t border-line p-3">
           {/* Kept mounted at its full width so the footer height never changes; hidden (and unfocusable) when collapsed. */}
-          <div className={cn('w-[215px] transition-[opacity,visibility]', SIDEBAR_TRANSITION, isCollapsed ? 'invisible opacity-0' : 'visible opacity-100')}>
+          <div className={cn('w-[231px] transition-[opacity,visibility]', SIDEBAR_TRANSITION, isCollapsed ? 'invisible opacity-0' : 'visible opacity-100')}>
             <UsageMeter />
           </div>
           <Link

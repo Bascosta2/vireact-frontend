@@ -31,7 +31,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     items: [
       { id: 'library', name: 'Library', icon: Library, href: '/videos' },
       { id: 'report', name: 'Feedback Reports', icon: FileBarChart, href: VIDEO_HUB_PATH.report },
-      { id: 'coach', name: 'AI Coach', icon: MessageSquare, href: VIDEO_HUB_PATH.coach },
+      { id: 'coach', name: 'Personal Video Coach', icon: MessageSquare, href: VIDEO_HUB_PATH.coach },
       { id: 'scripts', name: 'Scripts', icon: ScrollText, href: VIDEO_HUB_PATH.scripts },
     ],
   },

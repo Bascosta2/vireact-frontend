@@ -50,6 +50,34 @@ export const cleanVideoTitle = (raw: string): string => {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
+/**
+ * Undo UTF-8 text that was read as Latin-1 somewhere upstream ("CurseÃ°Â" back to an emoji).
+ * Returns the input unchanged when it is not that kind of garbling.
+ */
+export const repairMojibake = (text: string): string => {
+  if (!/[Â-ô][\u0080-¿]/.test(text) || [...text].some((c) => c.charCodeAt(0) > 0xff)) return text;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(text, (c) => c.charCodeAt(0)));
+  } catch {
+    return text;
+  }
+};
+
+/** File names that are only an id (platform downloads, uuids): nothing a person would recognise. */
+const MACHINE_NAME = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[A-Za-z0-9_-]{28,})$/i;
+
+/** Title for lists and pickers: cleaned, encoding repaired, and "Video from Apr 27" for id-only names. */
+export const displayVideoTitle = (filename: string | undefined, createdAt?: string): string => {
+  const raw = (filename ?? '').trim().replace(/\.[a-z0-9]{2,4}$/i, '');
+  const date = createdAt ? new Date(createdAt) : null;
+  if (!raw || MACHINE_NAME.test(raw)) {
+    return date && !Number.isNaN(date.getTime())
+      ? `Video from ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+      : 'Untitled video';
+  }
+  return cleanVideoTitle(repairMojibake(filename ?? ''));
+};
+
 export const formatFileSize = (bytes: number): string => {
   if (!bytes) return '0 MB';
   const mb = bytes / (1024 * 1024);

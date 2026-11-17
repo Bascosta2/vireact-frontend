@@ -19,7 +19,7 @@ const COPY: Record<VideoViewId, { title: string; subtitle: string; pitch: string
     pitch: 'Analyze a video to get your first Feedback Report.',
   },
   coach: {
-    title: 'AI Coach',
+    title: 'Personal Video Coach',
     subtitle: 'A coach that has watched your video and answers questions about it.',
     pitch: 'Analyze a video and the coach is ready to talk it through with you.',
   },

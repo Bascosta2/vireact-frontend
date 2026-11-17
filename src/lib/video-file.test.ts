@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanVideoTitle,
+  displayVideoTitle,
+  repairMojibake,
   formatDuration,
   scoreTone,
   validateVideoDuration,
@@ -63,5 +65,17 @@ describe('helpers', () => {
     expect(scoreTone(69)).toBe('warning');
     expect(scoreTone(40)).toBe('warning');
     expect(scoreTone(39)).toBe('danger');
+  });
+});
+
+describe('displayVideoTitle', () => {
+  it('repairs garbled emoji, keeps normal names, and names id-only files by date', () => {
+    const garbled = Array.from(new TextEncoder().encode('Blessing And a Curse😳'), (b) => String.fromCharCode(b)).join('');
+    expect(displayVideoTitle(`${garbled}.mp4`)).toBe('Blessing And a Curse😳');
+    expect(displayVideoTitle('@ladbible 1775618743301.mp4')).toBe('@ladbible 1775618743301');
+    expect(displayVideoTitle('6a43f54b-85f4-4943-a677-178c337e173e.mp4', '2026-04-27T12:00:00Z')).toMatch(/^Video from /);
+    expect(displayVideoTitle('AQN38npVxbRSZERXhrtG4swTB7gtxOnY5H50wfaim.mp4', '2026-04-27T12:00:00Z')).toMatch(/^Video from /);
+    expect(displayVideoTitle('', undefined)).toBe('Untitled video');
+    expect(repairMojibake('Café')).toBe('Café');
   });
 });

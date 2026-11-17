@@ -44,7 +44,6 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    ChevronsUpDown,
     Loader2,
     Lock,
     MessageSquare,
@@ -52,8 +51,9 @@ import {
     ScrollText,
     Sparkles,
 } from 'lucide-react';
-import { cleanVideoTitle } from '@/lib/video-file';
+import { displayVideoTitle } from '@/lib/video-file';
 import ScriptSuggestions from '@/components/domain/ScriptSuggestions';
+import { VideoSwitcher } from '@/components/domain/VideoSwitcher';
 import ActualViewsCard from '@/components/domain/ActualViews';
 
 function normalizeChatText(text: string): string {
@@ -997,10 +997,10 @@ function AccordionCard({
 
 type VideoView = 'analytics' | 'chat' | 'scripts';
 const VIDEO_VIEW_PATH: Record<VideoView, string> = { analytics: '', chat: '/coach', scripts: '/scripts' };
-const VIDEO_VIEWS: { id: VideoView; label: string; hint: string; icon: typeof BarChart3 }[] = [
-    { id: 'analytics', label: 'Feedback Report', hint: 'Scores, predictions and fixes', icon: BarChart3 },
-    { id: 'chat', label: 'AI Coach', hint: 'Ask about this video', icon: MessageSquare },
-    { id: 'scripts', label: 'Scripts', hint: '10 script ideas', icon: ScrollText },
+const VIDEO_VIEWS: { id: VideoView; label: string; short: string; hint: string; icon: typeof BarChart3 }[] = [
+    { id: 'analytics', label: 'Feedback Report', short: 'Report', hint: 'Scores, predictions and fixes', icon: BarChart3 },
+    { id: 'chat', label: 'Personal Video Coach', short: 'Coach', hint: 'Ask about this video', icon: MessageSquare },
+    { id: 'scripts', label: 'Scripts', short: 'Scripts', hint: '10 script ideas', icon: ScrollText },
 ];
 
 /** "Your video produced": the score, the fixes, the scripts and the coach, at the top of the report. */
@@ -1025,7 +1025,7 @@ function VideoOutputs({
     const action = `${item} app-focus transition-colors hover:border-accent/40 hover:bg-white/[0.04]`;
     const scriptsNote =
         scriptsOpen != null && scriptsOpen < SCRIPT_IDEAS_PER_VIDEO ? `${scriptsOpen} of ${SCRIPT_IDEAS_PER_VIDEO} open` : 'Ready to film';
-    const coachNote = coachMessagesLeft != null ? `${coachMessagesLeft} messages left` : 'Knows this video';
+    const coachNote = coachMessagesLeft != null ? `${coachMessagesLeft} messages left` : 'Ready to help';
     const fixesBody = (
         <>
             <Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden />
@@ -1066,7 +1066,7 @@ function VideoOutputs({
                 <button type="button" onClick={onCoach} className={action}>
                     <MessageSquare className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                     <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-fg">AI coach ready</span>
+                        <span className="block truncate text-sm font-semibold text-fg">Video Coach</span>
                         <span className="block truncate text-xs text-fg-subtle tabular">{coachNote}</span>
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
@@ -1107,7 +1107,7 @@ function Chat() {
     const playerRef = useRef<SeekableVideoPlayerHandle>(null);
     const [analysisErrorSummary, setAnalysisErrorSummary] = useState<string | null>(null);
     // Three separate views of one video, each with its own address: Feedback Report (default),
-    // /coach (the AI coach) and /scripts.
+    // /coach (the Personal Video Coach) and /scripts.
     const activeTab: VideoView = view === 'coach' ? 'chat' : view === 'scripts' ? 'scripts' : 'analytics';
     const setActiveTab = useCallback(
         (tab: VideoView) => {
@@ -1677,27 +1677,14 @@ function Chat() {
                     <div className="min-w-0 flex-1">
                         <p className="app-label hidden sm:block">{VIDEO_VIEWS.find((v) => v.id === activeTab)?.label}</p>
                         {videoOptions.length > 1 && videoOptions.some((v) => v._id === video._id) ? (
-                            // Native select over the title: every platform's own picker, nothing custom to break.
-                            <label className="relative flex min-w-0 max-w-full items-center gap-1 rounded-md text-sm font-medium text-fg focus-within:ring-2 focus-within:ring-accent/60 hover:text-accent">
-                                <span className="truncate" title={video.filename}>{cleanVideoTitle(video.filename)}</span>
-                                <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
-                                <select
-                                    aria-label="Switch video"
-                                    value={video._id}
-                                    onChange={(e) => navigate(`/videos/${e.target.value}${VIDEO_VIEW_PATH[activeTab]}`)}
-                                    className="absolute inset-0 w-full cursor-pointer opacity-0"
-                                >
-                                    {videoOptions.map((v) => (
-                                        <option key={v._id} value={v._id}>
-                                            {cleanVideoTitle(v.filename)}
-                                            {v.createdAt ? ` (${new Date(v.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                            <VideoSwitcher
+                                current={video}
+                                videos={videoOptions}
+                                onSelect={(id) => navigate(`/videos/${id}${VIDEO_VIEW_PATH[activeTab]}`)}
+                            />
                         ) : (
                             <p className="truncate text-sm font-medium text-fg" title={video.filename}>
-                                {cleanVideoTitle(video.filename)}
+                                {displayVideoTitle(video.filename, video.createdAt)}
                             </p>
                         )}
                     </div>
@@ -1705,8 +1692,8 @@ function Chat() {
                 </div>
 
                 <div className="px-3 pb-2 md:px-5">
-                    <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1 md:max-w-md">
-                        {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, icon: TabIcon }) => {
+                    <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1 sm:grid-cols-[1fr_1.45fr_0.85fr] md:max-w-xl">
+                        {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, short: shortLabel, icon: TabIcon }) => {
                             const isActive = activeTab === tab;
                             return (
                                 <button
@@ -1721,8 +1708,9 @@ function Chat() {
                                             : 'text-fg-muted'
                                     }`}
                                 >
-                                    <TabIcon className={`hidden h-4 w-4 min-[400px]:block ${isActive ? 'text-accent' : ''}`} aria-hidden />
-                                    {tabLabel}
+                                    <TabIcon className={`hidden h-4 w-4 shrink-0 min-[400px]:block ${isActive ? 'text-accent' : ''}`} aria-hidden />
+                                    <span className="sm:hidden">{shortLabel}</span>
+                                    <span className="hidden sm:inline">{tabLabel}</span>
                                 </button>
                             );
                         })}
@@ -1733,7 +1721,7 @@ function Chat() {
             {/* ─── One view at a time, picked with the switch above or the main sidebar ─── */}
             <div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
 
-                {/* ─── AI Coach ─── */}
+                {/* ─── Personal Video Coach ─── */}
                 <div
                     className={`${activeTab === 'chat' ? 'flex' : 'hidden'} min-h-0 w-full min-w-0 flex-1 flex-col md:mx-auto md:max-w-4xl md:border-x md:border-line`}
                 >
@@ -1746,7 +1734,7 @@ function Chat() {
                             <span className="app-glow-dot absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-success" />
                         </span>
                         <div className="min-w-0">
-                            <h2 className="text-sm font-semibold text-fg">Personalized Video Coach</h2>
+                            <h2 className="text-sm font-semibold text-fg">Personal Video Coach</h2>
                             <p className="text-xs text-fg-muted">Ask anything about your video</p>
                         </div>
                     </div>

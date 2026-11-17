@@ -8,7 +8,7 @@ describe('sidebar', () => {
   it('groups the pages under headings, with the three video views under Your videos', () => {
     expect(APP_NAV_SECTIONS.map((s) => [s.label, s.items.map((i) => i.name)])).toEqual([
       [null, ['Home']],
-      ['Your videos', ['Library', 'Feedback Reports', 'AI Coach', 'Scripts']],
+      ['Your videos', ['Library', 'Feedback Reports', 'Personal Video Coach', 'Scripts']],
       ['Grow', ['Analytics', 'Editor']],
     ]);
   });
@@ -64,12 +64,12 @@ describe('hub pages', () => {
 });
 
 describe('sidebar plan badges', () => {
-  const base = { loaded: true, chatMessagesUsed: 3, chatMessagesLimit: 5 };
+  const base = { loaded: true };
 
-  it('shows scripts open and coach messages left on Free', () => {
+  it('shows the scripts open on Free, and no badge on the coach (its full name needs the room)', () => {
     const b = viewBadges({ ...base, plan: 'free' });
     expect(b.scripts).toMatchObject({ text: '2/10', locked: true });
-    expect(b.coach).toMatchObject({ text: '2 left', locked: false });
+    expect(b.coach).toBeNull();
     expect(b.report).toBeNull();
   });
 
