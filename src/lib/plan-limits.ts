@@ -60,8 +60,14 @@ export const planLocks = (plan: string | null): PlanLock[] => {
     on: 'Pro',
   };
   if (plan === 'free') {
-    return [advanced, { feature: '2-week AI posting plan', detail: 'A posting schedule built from your results', on: 'Premium and Pro' }];
+    return [
+      advanced,
+      { feature: '8 of the 10 full scripts', detail: 'You can read 2 scripts per video; the other idea names are shown locked', on: 'Premium (6) and Pro (10)' },
+      { feature: '2-week AI posting plan', detail: 'A posting schedule built from your results', on: 'Premium and Pro' },
+    ];
   }
-  if (plan === 'premium') return [advanced];
+  if (plan === 'premium') {
+    return [advanced, { feature: '4 of the 10 full scripts', detail: 'You can read 6 scripts per video', on: 'Pro' }];
+  }
   return [];
 };

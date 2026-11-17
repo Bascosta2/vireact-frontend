@@ -38,7 +38,7 @@ export function PlanLocksNotice() {
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-fg">
-            You are on the {planName} plan. {locks.length === 1 ? 'One part of this report is locked.' : 'Some parts of this report are locked.'}
+            You are on the {planName} plan. Some features are locked.
           </h2>
           <ul className="mt-2 space-y-1.5">
             {locks.map((l) => (

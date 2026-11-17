@@ -46,7 +46,8 @@ function UserRoutes() {
                 <Route path='/editor' element={<EditorGate><Editor /></EditorGate>} />
                 <Route path='/editor/:projectId' element={<EditorGate><EditProject /></EditorGate>} />
                 <Route path='/videos' element={<Videos />} />
-                <Route path='/videos/:videoId' element={<Chat />} />
+                {/* One video, three views: Feedback Report (default), /coach and /scripts. */}
+                <Route path='/videos/:videoId/:view?' element={<Chat />} />
                 <Route path='/settings' element={<Profile />} />
                 <Route path='/profile' element={<RedirectKeepingQuery to="/settings" />} />
                 <Route path='/subscription-usage' element={<SubscriptionUsage />} />

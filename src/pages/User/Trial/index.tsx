@@ -17,6 +17,7 @@ const planPoints = (tier: Tier): string[] => {
   return [
     `Video analyses: ${inc.analyses}`,
     `AI coach chat: ${inc.chat}`,
+    `Full scripts per video: ${inc.scripts}`,
     typeof inc.strategy === 'string' ? `2-week AI posting plan: ${inc.strategy}` : null,
     inc.advanced ? 'Advanced Analytics: emotional triggers, retention drivers, weakest moment' : null,
     inc.support ? 'Priority support' : null,

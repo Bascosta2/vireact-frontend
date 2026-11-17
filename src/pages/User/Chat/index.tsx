@@ -991,8 +991,16 @@ function AccordionCard({
     );
 }
 
+type VideoView = 'analytics' | 'chat' | 'scripts';
+const VIDEO_VIEW_PATH: Record<VideoView, string> = { analytics: '', chat: '/coach', scripts: '/scripts' };
+const VIDEO_VIEWS: { id: VideoView; label: string; hint: string; icon: typeof BarChart3 }[] = [
+    { id: 'analytics', label: 'Feedback Report', hint: 'Scores, predictions and fixes', icon: BarChart3 },
+    { id: 'chat', label: 'AI Coach', hint: 'Ask about this video', icon: MessageSquare },
+    { id: 'scripts', label: 'Scripts', hint: '10 script ideas', icon: ScrollText },
+];
+
 function Chat() {
-    const { videoId } = useParams<{ videoId: string }>();
+    const { videoId, view } = useParams<{ videoId: string; view?: string }>();
     const navigate = useNavigate();
     const { name } = useUser();
     const {
@@ -1019,7 +1027,16 @@ function Chat() {
     const [citedFeedbackIds, setCitedFeedbackIds] = useState<string[]>([]);
     const playerRef = useRef<SeekableVideoPlayerHandle>(null);
     const [analysisErrorSummary, setAnalysisErrorSummary] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'chat' | 'analytics' | 'scripts'>('analytics');
+    // Three separate views of one video, each with its own address: Feedback Report (default),
+    // /coach (the AI coach) and /scripts.
+    const activeTab: VideoView = view === 'coach' ? 'chat' : view === 'scripts' ? 'scripts' : 'analytics';
+    const setActiveTab = useCallback(
+        (tab: VideoView) => {
+            if (!videoId) return;
+            navigate(`/videos/${videoId}${VIDEO_VIEW_PATH[tab]}`);
+        },
+        [navigate, videoId]
+    );
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const prevAnalysisStatusForPollRef = useRef<string | null>(null);
@@ -1577,7 +1594,7 @@ function Chat() {
                         <span className="hidden sm:inline">Library</span>
                     </Link>
                     <div className="min-w-0 flex-1">
-                        <p className="app-label hidden sm:block">Analysis report</p>
+                        <p className="app-label hidden sm:block">{VIDEO_VIEWS.find((v) => v.id === activeTab)?.label}</p>
                         <p className="truncate text-sm font-medium text-fg" title={video.filename}>
                             {cleanVideoTitle(video.filename)}
                         </p>
@@ -1587,9 +1604,8 @@ function Chat() {
 
                 <div className="px-3 pb-2 md:hidden">
                     <div role="tablist" aria-label="Video view" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
-                        {(['analytics', 'chat', 'scripts'] as const).map((tab) => {
+                        {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, icon: TabIcon }) => {
                             const isActive = activeTab === tab;
-                            const TabIcon = tab === 'analytics' ? BarChart3 : tab === 'chat' ? MessageSquare : ScrollText;
                             return (
                                 <button
                                     key={tab}
@@ -1597,14 +1613,14 @@ function Chat() {
                                     role="tab"
                                     aria-selected={isActive}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`app-focus flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
+                                    className={`app-focus flex h-9 items-center justify-center gap-1.5 rounded-lg px-1 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-200 ${
                                         isActive
                                             ? 'bg-surface-raised text-fg shadow-[0_0_0_1px_rgba(232,103,53,0.35),0_0_16px_rgba(232,103,53,0.15)]'
                                             : 'text-fg-muted'
                                     }`}
                                 >
-                                    <TabIcon className={`h-4 w-4 ${isActive ? 'text-accent' : ''}`} aria-hidden />
-                                    {tab === 'analytics' ? 'Analytics' : tab === 'chat' ? 'Chat' : 'Scripts'}
+                                    <TabIcon className={`hidden h-4 w-4 min-[400px]:block ${isActive ? 'text-accent' : ''}`} aria-hidden />
+                                    {tabLabel}
                                 </button>
                             );
                         })}
@@ -1612,11 +1628,36 @@ function Chat() {
                 </div>
             </header>
 
-            {/* ─── Two panels: Chat (left) | Analysis (right). Mobile: one at a time via the switch above ─── */}
+            {/* ─── One view at a time. Desktop: tabs on the left. Mobile: the switch above ─── */}
             <div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
-                {/* ─── Chat ─── */}
+                <nav aria-label="Video views" className="hidden w-60 shrink-0 flex-col gap-1 border-r border-line p-3 md:flex">
+                    <p className="app-label px-3 pb-1 pt-2">This video</p>
+                    {VIDEO_VIEWS.map(({ id: tab, label: tabLabel, hint, icon: TabIcon }) => {
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                type="button"
+                                aria-current={isActive ? 'page' : undefined}
+                                onClick={() => setActiveTab(tab)}
+                                className={`app-focus relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
+                                    isActive ? 'bg-accent-tint text-fg' : 'text-fg-muted hover:bg-white/5 hover:text-fg'
+                                }`}
+                            >
+                                {isActive && <span aria-hidden className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent" />}
+                                <TabIcon className={`h-5 w-5 shrink-0 ${isActive ? 'text-accent' : ''}`} aria-hidden />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-medium">{tabLabel}</span>
+                                    <span className="block truncate text-xs text-fg-subtle">{hint}</span>
+                                </span>
+                            </button>
+                        );
+                    })}
+                </nav>
+
+                {/* ─── AI Coach ─── */}
                 <div
-                    className={`${activeTab === 'chat' ? 'flex' : 'hidden'} min-h-0 w-full flex-1 flex-col md:flex md:w-[42%] md:max-w-[560px] md:flex-none md:flex-shrink-0 md:border-r md:border-line`}
+                    className={`${activeTab === 'chat' ? 'flex' : 'hidden'} min-h-0 w-full min-w-0 flex-1 flex-col md:mx-auto md:max-w-4xl md:border-x md:border-line`}
                 >
                     <div className="flex flex-shrink-0 items-center gap-3 border-b border-line px-4 py-3">
                         <span
@@ -1693,6 +1734,7 @@ function Chat() {
                                                             onClick={() => {
                                                                 setCitedFeedbackIds([ref]);
                                                                 if (canSeek) handleSeek(seconds);
+                                                                else setActiveTab('analytics');
                                                             }}
                                                             className="app-focus inline-flex items-center gap-1 rounded-md border border-line bg-white/[0.04] px-2 py-0.5 font-mono text-[11px] text-fg-muted transition-colors hover:border-accent/40 hover:text-fg"
                                                             title="Show this item in the report"
@@ -1812,36 +1854,14 @@ function Chat() {
 
                 {/* ─── Analytics report ─── */}
                 <div
-                    className={`${activeTab !== 'chat' ? 'block' : 'hidden'} min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain md:block`}
+                    className={`${activeTab !== 'chat' ? 'block' : 'hidden'} min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain`}
                 >
                     {/* Jump bar: every report section one tap away. Opaque so headings never show through it. */}
                     <nav
                         aria-label="Report sections"
-                        className={`sticky top-0 z-10 border-b border-line bg-canvas ${showScripts ? 'hidden md:block' : ''}`}
+                        className={`sticky top-0 z-10 border-b border-line bg-canvas ${showScripts ? 'hidden' : ''}`}
                     >
                         <div className="mx-auto flex max-w-3xl items-center gap-1.5 overflow-x-auto px-4 py-2 [scrollbar-width:none] md:px-6">
-                            {/* Desktop: the chat is always visible, so the right panel switches between report and scripts. */}
-                            <div role="tablist" aria-label="Right panel" className="mr-1 hidden shrink-0 rounded-full border border-line bg-white/[0.02] p-0.5 md:flex">
-                                {(['analytics', 'scripts'] as const).map((tab) => {
-                                    const isActive = tab === 'scripts' ? showScripts : !showScripts;
-                                    const TabIcon = tab === 'scripts' ? ScrollText : BarChart3;
-                                    return (
-                                        <button
-                                            key={tab}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={isActive}
-                                            onClick={() => setActiveTab(tab)}
-                                            className={`app-focus inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                                                isActive ? 'bg-surface-raised text-fg shadow-[0_0_0_1px_rgba(232,103,53,0.35)]' : 'text-fg-muted hover:text-fg'
-                                            }`}
-                                        >
-                                            <TabIcon className={`h-3.5 w-3.5 ${isActive ? 'text-accent' : ''}`} aria-hidden />
-                                            {tab === 'scripts' ? 'Scripts' : 'Report'}
-                                        </button>
-                                    );
-                                })}
-                            </div>
                             {!showScripts && jumpTargets.map((t) => (
                                 <button
                                     key={t.id}

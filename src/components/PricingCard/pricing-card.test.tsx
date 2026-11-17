@@ -10,11 +10,11 @@ const count = (s: string, needle: string) => s.split(needle).length - 1;
 describe('plan cards', () => {
   it('show the exact Stripe prices', () => {
     expect(getTier('premium')!.priceMonthly).toBe(11.99);
-    expect(getTier('pro')!.priceMonthly).toBe(19);
+    expect(getTier('pro')!.priceMonthly).toBe(19.99);
     expect(html('free')).toContain('$0');
     expect(html('premium')).toContain('$11.99');
     expect(html('premium')).toContain('/ month');
-    expect(html('pro')).toContain('$19');
+    expect(html('pro')).toContain('$19.99');
     expect(html('enterprise')).toContain('Custom');
   });
 
@@ -47,6 +47,7 @@ describe('plan cards', () => {
     expect(free).toContain('Free plan limits');
     expect(free).toContain('2 video analyses in total. They do not renew each month.');
     expect(free).toContain('5 AI coach messages per month.');
+    expect(free).toContain('2 of 10 full scripts per video.');
     for (const id of ['premium', 'pro', 'enterprise'] as const) expect(html(id)).not.toContain('data-testid="plan-limits"');
   });
 
@@ -59,8 +60,8 @@ describe('plan cards', () => {
 
   it('match the backend limits', () => {
     // vireact-backend/src/constants.js: LIFETIME_FREE_VIDEO_LIMIT, PLAN_LIMITS, EDITOR_LIMITS, STRATEGY_LIMITS
-    expect(getTier('free')!.includes).toMatchObject({ analyses: '2 videos in total, not per month', chat: '5 messages / month', editor: '1 / month', strategy: false });
+    expect(getTier('free')!.includes).toMatchObject({ analyses: '2 videos in total, not per month', chat: '5 messages / month', scripts: '2 of 10', editor: '1 / month', strategy: false });
     expect(getTier('premium')!.includes).toMatchObject({ analyses: '15 / month', chat: '100 messages / month', editor: '5 / month', strategy: '3 / month' });
-    expect(getTier('pro')!.includes).toMatchObject({ analyses: '30 / month', chat: '500 messages / month', editor: '20 / month', strategy: '10 / month', advanced: true });
+    expect(getTier('pro')!.includes).toMatchObject({ analyses: '40 / month', chat: '500 messages / month', scripts: 'All 10', editor: '20 / month', strategy: '10 / month', advanced: true });
   });
 });

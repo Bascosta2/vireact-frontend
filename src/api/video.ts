@@ -343,6 +343,10 @@ export interface ScriptOption {
     beats: ScriptBeat[];
     cta: string;
     whyItWorks: string;
+    /** Locked on the creator's plan: only `id` and `title` (the idea name) are sent. */
+    locked?: boolean;
+    /** Cheapest plan that opens a locked script. */
+    requiredPlan?: 'premium' | 'pro';
 }
 
 export interface ScriptSuggestions {
@@ -350,10 +354,14 @@ export interface ScriptSuggestions {
     targetSeconds: number | null;
     generatedAt: string | null;
     regenerationsLeft: number;
+    /** How many full scripts this plan opens per video, out of `total` ideas. */
+    access?: { plan: string; unlocked: number; total: number };
+    /** An older four-script set: asking to generate rewrites it as ten ideas without using a refresh. */
+    needsRefresh?: boolean;
 }
 
-/** Writing scripts takes a model call or two; allow well over the default 30 s client timeout. */
-const SCRIPT_GENERATION_TIMEOUT_MS = 90000;
+/** Writing ten scripts takes two model calls; allow well over the default 30 s client timeout. */
+const SCRIPT_GENERATION_TIMEOUT_MS = 180000;
 
 export const getScriptSuggestions = async (videoId: string): Promise<ScriptSuggestions> => {
     const response = await Axios.get<{ data: ScriptSuggestions }>(`/videos/${videoId}/scripts`);

@@ -6,7 +6,7 @@ export type CheckoutPlan = 'premium' | 'pro';
 /**
  * Rows every plan card shows, in this order, so plans compare line by line.
  * Values mirror the backend limits (vireact-backend/src/constants.js: PLAN_LIMITS, LIFETIME_FREE_VIDEO_LIMIT,
- * EDITOR_LIMITS, STRATEGY_LIMITS, PLAN_FEATURES). Change both together.
+ * EDITOR_LIMITS, STRATEGY_LIMITS, SCRIPT_ACCESS, PLAN_FEATURES). Change both together.
  */
 export const PLAN_FEATURE_ROWS = [
   { id: 'analyses', label: 'Video analyses' },
@@ -14,6 +14,7 @@ export const PLAN_FEATURE_ROWS = [
   { id: 'views', label: 'Views prediction' },
   { id: 'feedback', label: 'Second-by-second fixes and hook rewrites' },
   { id: 'chat', label: 'AI coach chat' },
+  { id: 'scripts', label: 'Full scripts per video (10 ideas shown)' },
   { id: 'editor', label: 'AI video edits' },
   { id: 'advanced', label: 'Advanced Analytics: emotional triggers, retention drivers, weakest moment' },
   { id: 'strategy', label: '2-week AI posting plan' },
@@ -60,6 +61,7 @@ export const TIERS: readonly Tier[] = [
       views: true,
       feedback: true,
       chat: '5 messages / month',
+      scripts: '2 of 10',
       editor: '1 / month',
       advanced: false,
       strategy: false,
@@ -69,6 +71,7 @@ export const TIERS: readonly Tier[] = [
     limits: [
       '2 video analyses in total. They do not renew each month.',
       '5 AI coach messages per month.',
+      '2 of 10 full scripts per video.',
       'No Advanced Analytics and no AI posting plan.',
     ],
   },
@@ -88,6 +91,7 @@ export const TIERS: readonly Tier[] = [
       views: true,
       feedback: true,
       chat: '100 messages / month',
+      scripts: '6 of 10',
       editor: '5 / month',
       advanced: false,
       strategy: '3 / month',
@@ -99,19 +103,20 @@ export const TIERS: readonly Tier[] = [
     id: 'pro',
     name: 'Pro',
     tagline: 'For serious creators scaling output',
-    priceMonthly: 19,
-    priceDisplay: '$19',
+    priceMonthly: 19.99,
+    priceDisplay: '$19.99',
     priceSubtext: 'per month',
     checkoutPlan: 'pro',
     isContactSales: false,
     ctaLabel: 'Get Pro',
     highlight: true,
     includes: {
-      analyses: '30 / month',
+      analyses: '40 / month',
       scores: true,
       views: true,
       feedback: true,
       chat: '500 messages / month',
+      scripts: 'All 10',
       editor: '20 / month',
       advanced: true,
       strategy: '10 / month',
@@ -135,6 +140,7 @@ export const TIERS: readonly Tier[] = [
       views: true,
       feedback: true,
       chat: 'Unlimited',
+      scripts: 'All 10',
       editor: '60 / month',
       advanced: true,
       strategy: '30 / month',

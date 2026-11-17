@@ -27,8 +27,8 @@ describe('plan limits', () => {
 
 describe('what is locked on each plan', () => {
   it('Free: Advanced Analytics and the posting plan; Premium: Advanced Analytics; Pro and up: nothing', () => {
-    expect(planLocks('free').map((l) => l.feature)).toEqual(['Advanced Analytics', '2-week AI posting plan']);
-    expect(planLocks('premium').map((l) => l.feature)).toEqual(['Advanced Analytics']);
+    expect(planLocks('free').map((l) => l.feature)).toEqual(['Advanced Analytics', '8 of the 10 full scripts', '2-week AI posting plan']);
+    expect(planLocks('premium').map((l) => l.feature)).toEqual(['Advanced Analytics', '4 of the 10 full scripts']);
     expect(planLocks('pro')).toEqual([]);
     expect(planLocks('enterprise')).toEqual([]);
     expect(planLocks(null)).toEqual([]);
