@@ -105,6 +105,8 @@ interface Video {
             /** score = capped model estimate; followers = follower-based estimate; dataset = similar real results */
             method?: 'score' | 'followers' | 'dataset';
             comparables?: number;
+            /** Real results the learned correction came from (0 = rules only). */
+            learnedFrom?: number;
             followers?: number | null;
             platform?: string | null;
         };

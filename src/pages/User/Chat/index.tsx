@@ -1647,16 +1647,20 @@ function Chat() {
 
     const showScripts = activeTab === 'scripts';
     const PLATFORM_NAMES: Record<string, string> = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook', other: 'your platform' };
+    // "Tuned with N real results": the backend's learning loop adjusted this prediction.
+    const learnedNote = pv?.learnedFrom ? ` Tuned with ${pv.learnedFrom.toLocaleString()} real ${pv.learnedFrom === 1 ? 'result' : 'results'} creators reported.` : '';
     const predictionBasis = (() => {
         const followers = pv?.followers != null ? pv.followers.toLocaleString() : null;
         const where = pv?.platform ? ` on ${PLATFORM_NAMES[pv.platform] ?? pv.platform}` : '';
         if (pv?.method === 'dataset' && followers) {
-            return `Based on ${pv.comparables ?? 0} similar videos with real results, scaled to your ${followers} followers${where}.`;
+            return `Based on ${pv.comparables ?? 0} similar videos with real results, scaled to your ${followers} followers${where}.${learnedNote}`;
         }
         if (pv?.method === 'followers' && followers) {
-            return `Estimate for ${followers} followers${where}. It gets more accurate as creators report real results.`;
+            return learnedNote
+                ? `Estimate for ${followers} followers${where}.${learnedNote}`
+                : `Estimate for ${followers} followers${where}. It gets more accurate as creators report real results.`;
         }
-        return 'Estimate for a typical account. Add your follower count on your next upload for a range that fits you.';
+        return `Estimate for a typical account.${learnedNote} Add your follower count on your next upload for a range that fits you.`;
     })();
     const userInitial = (name || 'You').trim().charAt(0).toUpperCase() || 'U';
     const hasUserMessage = messages.some((m) => m.isUser);
