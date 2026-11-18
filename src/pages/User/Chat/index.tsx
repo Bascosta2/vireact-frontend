@@ -1649,6 +1649,12 @@ function Chat() {
     const PLATFORM_NAMES: Record<string, string> = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook', other: 'your platform' };
     // "Tuned with N real results": the backend's learning loop adjusted this prediction.
     const learnedNote = pv?.learnedFrom ? ` Tuned with ${pv.learnedFrom.toLocaleString()} real ${pv.learnedFrom === 1 ? 'result' : 'results'} creators reported.` : '';
+    const listWords = (items: string[]) =>
+        items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+    const driverNote = [
+        pv?.boosts?.length ? `Lifted by ${listWords(pv.boosts)}.` : '',
+        pv?.drags?.length ? `Held back by ${listWords(pv.drags)}.` : '',
+    ].filter(Boolean).join(' ');
     const predictionBasis = (() => {
         const followers = pv?.followers != null ? pv.followers.toLocaleString() : null;
         const where = pv?.platform ? ` on ${PLATFORM_NAMES[pv.platform] ?? pv.platform}` : '';
@@ -1662,6 +1668,7 @@ function Chat() {
         }
         return `Estimate for a typical account.${learnedNote} Add your follower count on your next upload for a range that fits you.`;
     })();
+    const predictionHint = driverNote ? `${driverNote} ${predictionBasis}` : predictionBasis;
     const userInitial = (name || 'You').trim().charAt(0).toUpperCase() || 'U';
     const hasUserMessage = messages.some((m) => m.isUser);
 
@@ -2073,7 +2080,7 @@ function Chat() {
                             id="report-predictions"
                             index={sectionNumber('report-predictions')}
                             title="Predicted performance"
-                            hint={predictionBasis}
+                            hint={predictionHint}
                         >
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 <div className="min-w-0 rounded-xl border border-line bg-white/[0.02] p-4">

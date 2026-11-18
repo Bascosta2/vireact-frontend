@@ -107,6 +107,9 @@ interface Video {
             comparables?: number;
             /** Real results the learned correction came from (0 = rules only). */
             learnedFrom?: number;
+            /** What in the edit lifted / held back the prediction, e.g. "fast cuts", "slow cuts". */
+            boosts?: string[];
+            drags?: string[];
             followers?: number | null;
             platform?: string | null;
         };
