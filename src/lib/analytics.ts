@@ -55,11 +55,15 @@ export const initAnalytics = (): void => {
     .then(() => import('posthog-js'))
     .then(({ default: posthog }) => {
       posthog.init(key, {
-        api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
+        // Our own subdomain proxies PostHog (fewer events lost to ad blockers); ui_host keeps PostHog's links working.
+        api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://t.vireact.io',
+        ui_host: 'https://us.posthog.com',
         person_profiles: 'identified_only',
         autocapture: false,
         capture_pageview: false,
-        disable_session_recording: true,
+        // Session replay. Everything typed into inputs is masked (emails, chat drafts); passwords always are.
+        disable_session_recording: false,
+        session_recording: { maskAllInputs: true },
       });
       client = posthog;
       queue.splice(0).forEach((fn) => fn(posthog));
