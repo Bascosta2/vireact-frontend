@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
@@ -9,7 +9,7 @@ describe('sidebar', () => {
     expect(APP_NAV_SECTIONS.map((s) => [s.label, s.items.map((i) => i.name)])).toEqual([
       [null, ['Home']],
       ['Your videos', ['Library', 'Feedback Reports', 'Personal Video Coach', 'Scripts']],
-      ['Grow', ['Analytics', 'Editor']],
+      ['Grow', ['Analytics', 'Skills Editor', 'Accounts']],
     ]);
   });
 

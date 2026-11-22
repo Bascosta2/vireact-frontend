@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import Fallback from "@/components/Fallback";
 import { useEditorAccess } from "@/lib/editor-access";
+import { useAccountsAccess } from "@/lib/accounts-access";
 
 // Module-scope lazy() so each render reuses the same component identities;
 // inline declarations would create a new component type per render, causing
@@ -11,6 +12,8 @@ const NewAnalysis = lazy(() => import('@/pages/User/NewAnalysis'));
 const Analytics = lazy(() => import('@/pages/User/Analytics'));
 const Editor = lazy(() => import('@/pages/User/Editor'));
 const EditProject = lazy(() => import('@/pages/User/Editor/ProjectPage'));
+const Accounts = lazy(() => import('@/pages/User/Accounts'));
+const SkillsEditor = lazy(() => import('@/pages/User/Skills'));
 const Videos = lazy(() => import('@/pages/User/Videos'));
 const Chat = lazy(() => import('@/pages/User/Chat'));
 const VideoHub = lazy(() => import('@/pages/User/VideoHub'));
@@ -34,6 +37,14 @@ function EditorGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
+/** Accounts tab private beta: same gate as the editor. */
+function AccountsGate({ children }: { children: ReactNode }) {
+    const access = useAccountsAccess();
+    if (access === 'loading') return <Fallback />;
+    if (access === 'denied') return <Navigate to="/dashboard" replace />;
+    return <>{children}</>;
+}
+
 function UserRoutes() {
     return (
         <Suspense fallback={<Fallback />}>
@@ -46,6 +57,9 @@ function UserRoutes() {
                 <Route path='/analytics' element={<Analytics />} />
                 <Route path='/editor' element={<EditorGate><Editor /></EditorGate>} />
                 <Route path='/editor/:projectId' element={<EditorGate><EditProject /></EditorGate>} />
+                <Route path='/skills' element={<EditorGate><SkillsEditor /></EditorGate>} />
+                <Route path='/skills/:projectId' element={<EditorGate><EditProject /></EditorGate>} />
+                <Route path='/accounts' element={<AccountsGate><Accounts /></AccountsGate>} />
                 <Route path='/videos' element={<Videos />} />
                 {/* One video, three views: Feedback Report (default), /coach and /scripts. */}
                 <Route path='/videos/:videoId/:view?' element={<Chat />} />

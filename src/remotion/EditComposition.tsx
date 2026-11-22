@@ -8,6 +8,7 @@ import { SMOOTH } from './graphics-utils';
 import { FONT } from './fonts';
 import { SFX_SECONDS } from './sfx';
 import type { EditProps, Grade, Graphic, Look } from './types';
+import { ReelCaptions, TextHook } from './skills/remotion-reel/parts';
 
 /**
  * One AI edit: the creator's own footage cut into the planned order and framed for 9:16, with
@@ -162,6 +163,7 @@ export function EditComposition(props: EditProps) {
   const look = props.look ?? DEFAULT_LOOK;
   const graphics = props.graphics ?? legacyGraphics(props);
   const transitions = props.transitions ?? [];
+  const reel = props.skill?.id === 'remotion-reel' ? props.skill : null;
   const effects = props.effects ?? [];
 
   const zoom = zoomAt(frame, props.zooms);
@@ -197,11 +199,17 @@ export function EditComposition(props: EditProps) {
           </Sequence>
         ))}
 
-        {props.captions && props.captions.pages.length > 0 && <Captions pages={props.captions.pages} preset={props.captions.preset} accent={look.accent} />}
+        {props.captions && props.captions.pages.length > 0 &&
+          (reel ? <ReelCaptions pages={props.captions.pages} accent={look.accent} /> : <Captions pages={props.captions.pages} preset={props.captions.preset} accent={look.accent} />)}
 
         {props.hook && (
           <Sequence from={props.hook.startFrame} durationInFrames={props.hook.durationFrames} layout="none">
-            <HookOverlay text={props.hook.text} durationFrames={props.hook.durationFrames} accent={look.accent} />
+            {reel ? (
+              // The skill's hook is a still text sticker above the head, from the first frame.
+              <TextHook lines={reel.hookLines.length ? reel.hookLines : [props.hook.text]} variant={reel.hookVariant} />
+            ) : (
+              <HookOverlay text={props.hook.text} durationFrames={props.hook.durationFrames} accent={look.accent} />
+            )}
           </Sequence>
         )}
       </AbsoluteFill>

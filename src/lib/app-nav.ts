@@ -1,4 +1,4 @@
-import { BarChart3, Clapperboard, FileBarChart, Home, Library, MessageSquare, ScrollText, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, FileBarChart, Home, Library, Link2, MessageSquare, ScrollText, Settings, Wand2, type LucideIcon } from 'lucide-react';
 
 export interface AppNavItem {
   id: string;
@@ -40,7 +40,9 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     label: 'Grow',
     items: [
       { id: 'analytics', name: 'Analytics', icon: BarChart3, href: '/analytics' },
-      { id: 'editor', name: 'Editor', icon: Clapperboard, href: '/editor' },
+      // The Skills Editor stands in for the Editor tab; the classic editor stays at /editor (linked from it).
+      { id: 'skills', name: 'Skills Editor', icon: Wand2, href: '/skills' },
+      { id: 'accounts', name: 'Accounts', icon: Link2, href: '/accounts' },
     ],
   },
 ];
@@ -77,6 +79,7 @@ export function isNavActive(pathname: string, href: string): boolean {
     if (href === VIDEO_HUB_PATH[view]) return pathname === href || onVideo?.view === view;
   }
   if (href === '/editor') return pathname === '/editor' || pathname.startsWith('/editor/');
+  if (href === '/skills') return pathname === '/skills' || pathname.startsWith('/skills/') || pathname === '/editor' || pathname.startsWith('/editor/');
   if (href === '/analytics') return pathname === '/analytics' || pathname.startsWith('/analytics/');
   if (href === '/videos') return pathname === '/videos' || (pathname.startsWith('/videos/') && !onVideo);
   if (href === '/settings') return pathname === '/settings' || pathname === '/profile' || pathname.startsWith('/subscription');

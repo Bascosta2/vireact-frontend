@@ -153,11 +153,15 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
 function CaptionsTab({ props, edits, onEdit, onEditText }: { props: PreviewProps; edits: Edits; onEdit: (e: Edits) => void; onEditText: (i: number, text: string) => void }) {
   const preset = props.captions?.preset ?? edits.captionPreset ?? 'bold_pop';
   const pages = props.captions?.pages ?? [];
+  const skillLook = props.skill?.id === 'remotion-reel';
   return (
     <div className="space-y-5">
       <Toggle checked={!edits.captionsOff} onChange={(v) => onEdit({ captionsOff: !v })} label="Captions" />
       {!edits.captionsOff && (
         <>
+          {skillLook ? (
+            <p className="rounded-lg border border-line p-3 text-xs text-fg-muted">Captions follow the Remotion Reel style: outlined, lowercase, 1 to 3 words, gone the moment you stop speaking.</p>
+          ) : (
           <fieldset>
             <legend className="app-label mb-2">Style</legend>
             <div className="grid gap-2">
@@ -175,6 +179,7 @@ function CaptionsTab({ props, edits, onEdit, onEditText }: { props: PreviewProps
               ))}
             </div>
           </fieldset>
+          )}
           <div>
             <h3 className="app-label mb-2">Fix words</h3>
             <p className="mb-2 text-xs text-fg-muted">Change a word if the transcript got it wrong. Highlighted words are emphasized.</p>
@@ -202,8 +207,16 @@ function CaptionsTab({ props, edits, onEdit, onEditText }: { props: PreviewProps
   );
 }
 
+const HOOK_STYLES: { id: NonNullable<Edits['hookVariant']>; label: string; hint: string }[] = [
+  { id: 'white', label: 'White', hint: 'Black text on a white sticker' },
+  { id: 'black', label: 'Black', hint: 'White text on a black sticker' },
+  { id: 'plain', label: 'Plain', hint: 'White text with an outline, no sticker' },
+];
+
 function HookTab({ project, edits, onEdit }: { project: EditProjectDetail; edits: Edits; onEdit: (e: Edits) => void }) {
   const plan = project.plan!;
+  const skillHook = project.skill === 'remotion-reel';
+  const variant = edits.hookVariant ?? 'white';
   const [text, setText] = useState(edits.hookText ?? plan.hookOverlay.text);
   return (
     <div className="space-y-4">
@@ -224,7 +237,27 @@ function HookTab({ project, edits, onEdit }: { project: EditProjectDetail; edits
                 onBlur={() => text.trim() && text !== (edits.hookText ?? plan.hookOverlay.text) && onEdit({ hookText: text.trim() })}
                 className="app-focus mt-1 h-10 w-full rounded-lg border border-line bg-canvas px-3 text-base text-fg md:text-sm"
               />
+              {skillHook && <span className="mt-1 block text-fg-subtle">Put a slash where the second line starts, like: How to start / if you&rsquo;re shy</span>}
             </label>
+          )}
+          {skillHook && !edits.hookOverlayOff && (
+            <fieldset>
+              <legend className="app-label mb-2">Hook style</legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {HOOK_STYLES.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    aria-pressed={variant === h.id}
+                    onClick={() => onEdit({ hookVariant: h.id })}
+                    className={cn('app-focus rounded-lg border p-3 text-left', variant === h.id ? 'border-accent bg-accent-tint' : 'border-line hover:bg-white/[0.03]')}
+                  >
+                    <span className="block text-sm font-medium text-fg">{h.label}</span>
+                    <span className="block text-xs text-fg-muted">{h.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           )}
         </>
       ) : (

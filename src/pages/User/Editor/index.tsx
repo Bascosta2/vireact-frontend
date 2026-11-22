@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clapperboard, Film, Loader2, Lock, Sparkles } from 'lucide-react';
+import { Clapperboard, Sparkles } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { PageHeader } from '@/components/app/PageHeader';
-import { ButtonLink } from '@/components/app/Button';
 import { Dropzone } from '@/components/app/Dropzone';
 import { Skeleton } from '@/components/app/Skeleton';
 import { track } from '@/lib/analytics';
-import { formatDuration } from '@/lib/video-file';
 import { apiErrorCode, apiErrorMessage } from '@/api/analytics';
 import {
   confirmEditUpload,
@@ -20,91 +18,8 @@ import {
   type EditProjectSummary,
 } from '@/api/editor';
 import { FootageDisclaimer } from './Disclaimer';
-
-const ACCEPT = '.mp4,.mov,.webm,.mkv,.m4v';
-const TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska', 'video/x-m4v']);
-
-const isFreePlan = (usage: EditorUsage) => usage.plan === 'free';
-
-/** Free resets on the 1st of the month in UTC, so show that day in UTC (not the day before in the Americas). */
-const resetDate = (usage: EditorUsage) =>
-  new Date(usage.resetsOn).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(isFreePlan(usage) ? { timeZone: 'UTC' } : {}) });
-
-function UsagePill({ usage }: { usage: EditorUsage }) {
-  const text = isFreePlan(usage)
-    ? usage.canStart
-      ? 'One AI edit per month on the free plan'
-      : `Free AI edit used · next on ${resetDate(usage)}`
-    : `${usage.remaining} of ${usage.limit} AI edits left this period`;
-  return (
-    <span className="tabular inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent-tint px-4 py-2 text-sm font-semibold text-accent">
-      <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
-      {text}
-    </span>
-  );
-}
-
-function LockedCard({ usage }: { usage: EditorUsage }) {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-line bg-surface">
-      <div aria-hidden="true" className="pointer-events-none grid select-none gap-4 p-6 blur-[6px] sm:grid-cols-2">
-        <div className="aspect-[9/16] max-h-80 rounded-lg bg-gradient-to-b from-white/10 to-white/0" />
-        <div className="space-y-3">
-          {['Opened on the result', 'Removed 14 s of pauses and filler', 'Bold word captions', '3 punch-in zooms', 'Upbeat track under the voice'].map((t) => (
-            <div key={t} className="rounded-lg border border-line p-3 text-sm text-fg">{t}</div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-canvas/40 p-4">
-        <div className="max-w-md rounded-xl border border-line bg-surface-raised p-5 text-center shadow-xl">
-          <Lock className="mx-auto h-6 w-6 text-accent" aria-hidden="true" />
-          <h2 className="mt-2 text-base font-semibold text-fg">You&rsquo;ve used this month&rsquo;s free AI edit</h2>
-          <p className="mt-1 text-sm text-fg-muted">
-            Your next free edit unlocks on {resetDate(usage)}. Premium and Pro include more AI edits every month: cuts, captions, zooms, a reworked hook, music and sound effects.
-          </p>
-          <ButtonLink to="/subscription-plans" className="mt-4" onClick={() => track('editor_upgrade_clicked', { from: 'editor_home' })}>
-            See plans
-          </ButtonLink>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProjectCard({ p }: { p: EditProjectSummary }) {
-  const working = IN_PROGRESS.includes(p.status);
-  return (
-    <li>
-      <Link to={`/editor/${p.id}`} className="app-focus group flex gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-surface-raised">
-        {p.thumbnailUrl ? (
-          <img src={p.thumbnailUrl} alt="" loading="lazy" className="h-24 w-[54px] shrink-0 rounded-md bg-canvas object-cover" />
-        ) : (
-          <span className="flex h-24 w-[54px] shrink-0 items-center justify-center rounded-md bg-canvas text-fg-subtle">
-            <Film className="h-4 w-4" aria-hidden="true" />
-          </span>
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-fg group-hover:underline">{p.title}</span>
-          <span className="mt-1 block text-xs text-fg-muted">
-            {working ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="h-3 w-3 motion-safe:animate-spin" aria-hidden="true" />
-                {p.stage === 'uploading' ? 'Waiting for upload' : `${p.stage[0]?.toUpperCase()}${p.stage.slice(1)}`}
-              </span>
-            ) : p.status === 'failed' ? (
-              <span className="text-danger">Didn&rsquo;t finish</span>
-            ) : (
-              <span className="tabular">
-                {formatDuration(p.durationSec)} → {formatDuration(p.editedDurationSec)}
-              </span>
-            )}
-          </span>
-          {p.hasRender && <span className="mt-2 inline-block rounded-full border border-success/30 px-2 py-0.5 text-[11px] text-success">Exported</span>}
-        </span>
-      </Link>
-    </li>
-  );
-}
+import { ACCEPT, TYPES, LockedCard, ProjectCard, UsagePill } from './shared';
+import { isFreePlan, resetDate } from './usage';
 
 /**
  * Editor tab: upload raw footage and get a full AI edit planned by Claude from Vireact's knowledge
@@ -122,7 +37,7 @@ export default function Editor() {
 
   const load = useCallback(async () => {
     try {
-      const [u, list] = await Promise.all([getEditorUsage(), listEditProjects()]);
+      const [u, list] = await Promise.all([getEditorUsage(), listEditProjects('none')]);
       setUsage(u);
       setProjects(list);
       setLoadError(null);
@@ -140,7 +55,7 @@ export default function Editor() {
   // Keep the list fresh while an edit is being made.
   useEffect(() => {
     if (!projects?.some((p) => IN_PROGRESS.includes(p.status))) return;
-    const t = setInterval(() => void listEditProjects().then(setProjects).catch(() => {}), 5000);
+    const t = setInterval(() => void listEditProjects('none').then(setProjects).catch(() => {}), 5000);
     return () => clearInterval(t);
   }, [projects]);
 

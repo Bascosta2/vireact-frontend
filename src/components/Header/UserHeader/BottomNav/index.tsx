@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Clapperboard, FileBarChart, Home, Library, Lock, MessageSquare, MoreHorizontal, Plus, ScrollText, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, FileBarChart, Home, Library, Link2, Lock, MessageSquare, MoreHorizontal, Plus, ScrollText, Settings, Wand2, type LucideIcon } from 'lucide-react';
 import { isNavActive, videoViewHref, type VideoViewId } from '@/lib/app-nav';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { useEditorAccess } from '@/lib/editor-access';
+import { useAccountsAccess } from '@/lib/accounts-access';
 import { useViewBadges } from '@/lib/nav-badges';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +30,8 @@ const MORE: Tab[] = [
   { id: 'report', label: 'Feedback Reports', icon: FileBarChart, href: '/reports', view: 'report' },
   { id: 'scripts', label: 'Scripts', icon: ScrollText, href: '/scripts', view: 'scripts' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
-  { id: 'editor', label: 'Editor', icon: Clapperboard, href: '/editor' },
+  { id: 'skills', label: 'Skills Editor', icon: Wand2, href: '/skills' },
+  { id: 'accounts', label: 'Accounts', icon: Link2, href: '/accounts' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' },
 ];
 
@@ -44,6 +46,7 @@ function BottomNav() {
   const { inProgressCount } = useActiveAnalyses();
   // Private beta: the Editor opens only for accounts the backend grants it to; others see "Soon".
   const editorAccess = useEditorAccess();
+  const accountsAccess = useAccountsAccess();
   const badges = useViewBadges();
   const [moreOpen, setMoreOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -101,7 +104,7 @@ function BottomNav() {
           {MORE.map((tab) => {
             const Icon = tab.icon;
             const badge = tab.view ? badges[tab.view] : null;
-            if (tab.id === 'editor' && editorAccess !== 'granted') {
+            if (((tab.id === 'editor' || tab.id === 'skills') && editorAccess !== 'granted') || (tab.id === 'accounts' && accountsAccess !== 'granted')) {
               return (
                 <li key={tab.id} aria-disabled="true" className="flex h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium text-fg-subtle">
                   <Icon className="h-5 w-5 opacity-60" aria-hidden="true" />

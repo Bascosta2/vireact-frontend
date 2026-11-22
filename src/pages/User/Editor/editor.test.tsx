@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import React from 'react';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,7 +36,7 @@ const props: EditProps = {
 describe('Editor tab navigation', () => {
   it('sits after Analytics in the Grow group of the sidebar', () => {
     const ids = APP_NAV_ITEMS.map((i) => i.id);
-    expect(ids).toEqual(['home', 'library', 'report', 'coach', 'scripts', 'analytics', 'editor', 'settings']);
+    expect(ids).toEqual(['home', 'library', 'report', 'coach', 'scripts', 'analytics', 'skills', 'accounts', 'settings']);
   });
   it('stays active on project pages', () => {
     expect(isNavActive('/editor', '/editor')).toBe(true);

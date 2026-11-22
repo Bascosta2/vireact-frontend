@@ -9,6 +9,7 @@ import { UsageMeter } from '@/components/app/UsageMeter';
 import { APP_NAV_SECTIONS, SETTINGS_NAV_ITEM, isNavActive, videoViewHref, type VideoViewId } from '@/lib/app-nav';
 import { useViewBadges } from '@/lib/nav-badges';
 import { useEditorAccess } from '@/lib/editor-access';
+import { useAccountsAccess } from '@/lib/accounts-access';
 import { cn } from '@/lib/utils';
 
 /** Sidebar items that open a view of a video (they follow the video that is open). */
@@ -31,6 +32,7 @@ export function Sidebar() {
   const { inProgressCount } = useActiveAnalyses();
   // Private beta: the Editor opens only for accounts the backend grants it to; others see "Soon".
   const editorAccess = useEditorAccess();
+  const accountsAccess = useAccountsAccess();
   const viewBadges = useViewBadges();
   const settingsActive = isNavActive(pathname, SETTINGS_NAV_ITEM.href);
 
@@ -98,13 +100,13 @@ export function Sidebar() {
               )}
               {section.items.map((item) => {
                 const Icon = item.icon;
-                if (item.id === 'editor' && editorAccess !== 'granted') {
+                if (((item.id === 'editor' || item.id === 'skills') && editorAccess !== 'granted') || (item.id === 'accounts' && accountsAccess !== 'granted')) {
                   // Private beta: everyone else sees that it is coming, but cannot open it.
                   return (
                     <div
                       key={item.id}
                       aria-disabled="true"
-                      title="Editor: coming soon"
+                      title={`${item.name}: coming soon`}
                       className="relative flex h-11 cursor-default items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium text-fg-subtle"
                     >
                       <Icon className="h-5 w-5 shrink-0 opacity-60" aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { Button, ButtonLink } from '@/components/app/Button';
@@ -180,6 +180,8 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
 export default function EditProjectPage() {
   const { projectId = '' } = useParams();
   const navigate = useNavigate();
+  // The same page serves the Editor (/editor/:id) and the Skills Editor (/skills/:id).
+  const base = useLocation().pathname.startsWith('/skills') ? '/skills' : '/editor';
   const [project, setProject] = useState<EditProjectDetail | null>(null);
   const [props, setProps] = useState<PreviewProps | null>(null);
   const [edits, setEdits] = useState<Edits>({});
@@ -254,7 +256,7 @@ export default function EditProjectPage() {
     if (!window.confirm('Delete this edit and its files? This cannot be undone.')) return;
     try {
       await deleteEditProject(projectId);
-      navigate('/editor');
+      navigate(base);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not delete this edit.'));
     }
@@ -264,7 +266,7 @@ export default function EditProjectPage() {
     <UserPage>
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <Link to="/editor" className="app-focus inline-flex items-center gap-1 rounded text-sm text-fg-muted hover:text-fg">
+          <Link to={base} className="app-focus inline-flex items-center gap-1 rounded text-sm text-fg-muted hover:text-fg">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             All edits
           </Link>
@@ -295,7 +297,7 @@ export default function EditProjectPage() {
           <div className="mx-auto max-w-lg rounded-xl border border-line bg-surface p-6 text-center">
             <h1 className="text-lg font-semibold text-fg">This edit didn&rsquo;t finish</h1>
             <p className="mt-1 text-sm text-fg-muted">{project.error ?? 'Something went wrong. This did not use up an edit.'}</p>
-            <ButtonLink to="/editor" className="mt-4">
+            <ButtonLink to={base} className="mt-4">
               <Wand2 className="h-4 w-4" aria-hidden="true" />
               Start a new edit
             </ButtonLink>

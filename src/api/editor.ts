@@ -22,6 +22,8 @@ export interface EditorUsage {
 export interface EditProjectSummary {
   id: string;
   title: string;
+  /** Editing skill this edit follows (Skills tab), or null for the classic editor. */
+  skill: string | null;
   status: EditStatus;
   stage: string;
   progress: number;
@@ -79,6 +81,8 @@ export interface Edits {
   musicTrackId?: string | null;
   musicVolume?: number;
   framingMode?: 'fill' | 'fit_blur';
+  /** Text hook style of the Remotion Reel skill. */
+  hookVariant?: 'white' | 'black' | 'plain';
 }
 
 export type PreviewProps = Omit<EditProps, 'videoUrl'>;
@@ -109,17 +113,19 @@ export interface EditProjectDetail extends EditProjectSummary {
 
 export const getEditorUsage = async (): Promise<EditorUsage> => (await Axios.get<{ data: EditorUsage }>('/editor/usage')).data.data;
 
-export const listEditProjects = async (): Promise<EditProjectSummary[]> =>
-  (await Axios.get<{ data: { projects: EditProjectSummary[] } }>('/editor/projects')).data.data.projects;
+/** `skill`: 'any' lists Skills tab edits, 'none' the classic editor's, an id that skill's; omitted lists all. */
+export const listEditProjects = async (skill?: string): Promise<EditProjectSummary[]> =>
+  (await Axios.get<{ data: { projects: EditProjectSummary[] } }>('/editor/projects', { params: skill ? { skill } : {} })).data.data.projects;
 
 export const getEditProject = async (id: string): Promise<EditProjectDetail> =>
   (await Axios.get<{ data: EditProjectDetail }>(`/editor/projects/${id}`)).data.data;
 
-export const createEditProject = async (file: File): Promise<{ project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } }> =>
+export const createEditProject = async (file: File, skill: string | null = null): Promise<{ project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } }> =>
   (await Axios.post<{ data: { project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } } }>('/editor/projects', {
     fileName: file.name,
     contentType: file.type,
     sizeBytes: file.size,
+    ...(skill ? { skill } : {}),
   })).data.data;
 
 /**

@@ -67,6 +67,15 @@ export interface Look {
   motion: boolean;
 }
 
+/** An editing skill the edit follows (backend service/editor/skills.js); its components replace the standard look. */
+export interface SkillProps {
+  id: 'remotion-reel';
+  version: number;
+  hookVariant: 'white' | 'black' | 'plain';
+  /** The hook text broken into its lines. */
+  hookLines: string[];
+}
+
 // A type alias (not an interface) so it is assignable to Remotion's Record<string, unknown> props.
 export type EditProps = {
   width: number;
@@ -93,4 +102,6 @@ export type EditProps = {
   musicTitle?: string | null;
   musicAttribution?: string | null;
   sfxUrls: Partial<Record<SfxType, string>>;
+  /** Optional: absent for standard edits and for props built before skills existed. */
+  skill?: SkillProps;
 };
