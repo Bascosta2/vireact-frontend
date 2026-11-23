@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { AbsoluteFill, Internals, OffthreadVideo, Sequence, getRemotionEnvironment, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Internals, OffthreadVideo, Sequence, getRemotionEnvironment, useBufferState, useCurrentFrame } from 'remotion';
 import type { EditProps, TimelinePiece } from './types';
 import { pieceIndexAt } from './timeline-utils';
 
@@ -38,8 +38,20 @@ function RenderFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
   );
 }
 
-/** How far a playing deck may drift from the timeline before it is re-seeked (seconds). */
-const DRIFT_TOLERANCE = 0.25;
+/**
+ * Sync rules while playing. The footage must never jump back (that replays what was just heard):
+ *   - footage AHEAD of the timeline by more than AHEAD_HOLD: pause it until the timeline catches up;
+ *   - footage BEHIND by more than BEHIND_SEEK: seek forward;
+ *   - the timeline stalls (the Player waits for music or a sound effect to load) for longer than
+ *     STALL_MS: pause the footage too, so it does not run on alone.
+ * And while the footage itself is loading, the timeline waits for it (Remotion's buffer state).
+ */
+const AHEAD_HOLD = 0.12;
+const RESUME_WITHIN = 0.04;
+const BEHIND_SEEK = 0.3;
+const STALL_MS = 120;
+/** Further ahead than this, the timeline was moved back on purpose (a scrub), so the footage follows. */
+const JUMPED_BACK = 1;
 
 /**
  * Browser preview: two persistent video "decks" alternate between pieces. While deck A plays the
@@ -53,14 +65,69 @@ function PreviewFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
   const { playbackRate: rate } = Internals.usePlaybackRate();
   const [volume] = Internals.useMediaVolumeState();
   const [playerMuted] = Internals.usePlayerMutedState();
+  const buffer = useBufferState();
   const fg = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)];
   const bg = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)];
   // Bumped when a deck's metadata loads, so a seek requested before then is applied.
   const [loaded, setLoaded] = useState(0);
+  // When the timeline last moved, and whether the active footage is held for it.
+  const lastAdvance = useRef(0);
+  const held = useRef(false);
+  const block = useRef<{ unblock: () => void } | null>(null);
 
   const idx = pieceIndexAt(frame, timeline);
   const activeDeck = idx % 2;
   const pieceFor = (deck: number): TimelinePiece | undefined => (deck === activeDeck ? timeline[idx] : timeline[idx + 1]);
+
+  useEffect(() => {
+    lastAdvance.current = performance.now();
+  }, [frame]);
+
+  // Timeline stalled while the footage plays on: pause the footage (it resumes on the next frame).
+  useEffect(() => {
+    if (!playing) return undefined;
+    const t = setInterval(() => {
+      if (performance.now() - lastAdvance.current < STALL_MS) return;
+      for (const r of [fg[activeDeck], bg[activeDeck]]) if (r.current && !r.current.paused) r.current.pause();
+      held.current = true;
+    }, 40);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, activeDeck]);
+
+  // The active footage is loading: hold the timeline until it can play.
+  useEffect(() => {
+    const v = fg[activeDeck].current;
+    if (!v) return undefined;
+    const release = () => {
+      block.current?.unblock();
+      block.current = null;
+    };
+    let safety: ReturnType<typeof setTimeout> | undefined;
+    const hold = () => {
+      if (block.current) return;
+      block.current = buffer.delayPlayback();
+      // Never hold the timeline for good if the browser does not report the video ready.
+      clearTimeout(safety);
+      safety = setTimeout(release, 4000);
+    };
+    if (playing && v.readyState < 3) hold();
+    v.addEventListener('waiting', hold);
+    v.addEventListener('seeking', hold);
+    v.addEventListener('canplay', release);
+    v.addEventListener('playing', release);
+    v.addEventListener('seeked', release);
+    return () => {
+      v.removeEventListener('waiting', hold);
+      v.removeEventListener('seeking', hold);
+      v.removeEventListener('canplay', release);
+      v.removeEventListener('playing', release);
+      v.removeEventListener('seeked', release);
+      clearTimeout(safety);
+      release();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDeck, playing, buffer, loaded]);
 
   useEffect(() => {
     for (const deck of [0, 1]) {
@@ -76,7 +143,18 @@ function PreviewFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
         for (const v of els) {
           v.playbackRate = rate;
           if (playing) {
-            if (Math.abs(v.currentTime - target) > DRIFT_TOLERANCE) v.currentTime = target;
+            const drift = v.currentTime - target;
+            if (drift > JUMPED_BACK) {
+              // The viewer scrubbed back while playing: follow them.
+              v.currentTime = target;
+            } else if (drift > AHEAD_HOLD || (held.current && drift > RESUME_WITHIN)) {
+              // Ahead of the timeline: wait for it. Seeking back would replay what was just heard.
+              if (!v.paused) v.pause();
+              held.current = true;
+              continue;
+            }
+            held.current = false;
+            if (drift < -BEHIND_SEEK) v.currentTime = target;
             if (v.paused) void v.play().catch(() => {});
           } else {
             if (!v.paused) v.pause();
