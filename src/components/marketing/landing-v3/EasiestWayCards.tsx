@@ -14,7 +14,7 @@ const STEPS: EasyStep[] = [
     id: '01',
     icon: UploadCloud,
     title: 'Upload a video',
-    description: 'Drop in a 5 to 60 second short from TikTok, YouTube Shorts, Instagram or Facebook.',
+    description: 'Drop in a video of up to 3 minutes from TikTok, YouTube Shorts, Instagram or Facebook.',
   },
   {
     id: '02',

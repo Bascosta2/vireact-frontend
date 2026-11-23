@@ -1,21 +1,28 @@
 export const VIDEO_ACCEPT = '.mp4,.mov,.avi,.mkv,.webm';
 export const VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mkv', 'webm'] as const;
-export const VIDEO_MAX_BYTES = 200 * 1024 * 1024;
+/** Same limits as the editor: up to 3 minutes, and 500 MB (a 2-3 minute phone video is often 200-500 MB). */
+export const VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const VIDEO_MIN_SECONDS = 5;
-export const VIDEO_MAX_SECONDS = 60;
+export const VIDEO_MAX_SECONDS = 180;
 
 /** Shown under every dropzone (Home and New analysis). */
-export const VIDEO_RULES_HINT = 'MP4, MOV, AVI, MKV or WEBM. 5 to 60 seconds. Up to 200 MB.';
+export const VIDEO_RULES_HINT = 'MP4, MOV, AVI, MKV or WEBM. 5 seconds to 3 minutes. Up to 500 MB.';
+
+/** 73 -> "73 seconds", 200 -> "3 min 20 s". */
+const formatLength = (seconds: number) => {
+  const s = Math.round(seconds);
+  return s < 120 ? `${s} seconds` : `${Math.floor(s / 60)} min ${s % 60} s`;
+};
 
 export const VIDEO_ERRORS = {
   missing: 'Select a video to analyze',
   type: 'The selected file must be an MP4, MOV, AVI, MKV or WEBM',
-  size: 'The selected file must be smaller than 200 MB',
+  size: 'The selected file must be smaller than 500 MB',
   empty: 'The selected file is empty',
   unreadable: 'The selected file could not be read as a video. Try another file.',
   uploadFailed: 'The video could not be uploaded. Try again.',
   duration: (seconds: number) =>
-    `The selected video must be 5 to 60 seconds long. This one is ${Math.round(seconds)} seconds.`,
+    `The selected video must be between 5 seconds and 3 minutes long. This one is ${formatLength(seconds)}.`,
 } as const;
 
 export const fileExtension = (name: string): string => name.split('.').pop()?.toLowerCase() ?? '';

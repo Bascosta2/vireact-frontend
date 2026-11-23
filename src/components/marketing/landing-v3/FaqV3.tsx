@@ -36,7 +36,7 @@ export const buildFaqItems = (trialOn: boolean = isTrialBillingEnabled()): FaqIt
     {
       id: 'uploads',
       question: 'What videos can I upload?',
-      answer: 'MP4, MOV, WEBM, AVI or MKV files up to 200MB, roughly 5 to 60 seconds long.',
+      answer: 'MP4, MOV, WEBM, AVI or MKV files up to 500 MB, from 5 seconds to 3 minutes long.',
     },
     {
       id: 'privacy',

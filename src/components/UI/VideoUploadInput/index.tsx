@@ -39,7 +39,7 @@ function VideoUploadInput({ onFileSelect, onError, className = '' }: VideoUpload
                     onError(`Video must be at least ${UPLOAD_VALIDATION.VIDEO.MIN_DURATION} seconds long`);
                     resolve(false);
                 } else if (duration > UPLOAD_VALIDATION.VIDEO.MAX_DURATION) {
-                    onError(`Video must be no longer than ${UPLOAD_VALIDATION.VIDEO.MAX_DURATION} seconds`);
+                    onError(`Video must be no longer than ${UPLOAD_VALIDATION.VIDEO.MAX_DURATION / 60} minutes`);
                     resolve(false);
                 } else {
                     resolve(true);
@@ -180,7 +180,7 @@ function VideoUploadInput({ onFileSelect, onError, className = '' }: VideoUpload
                             <span>{UPLOAD_VALIDATION.VIDEO.ALLOWED_FORMATS.join(', ')}</span>
                         </div>
                         <div className="mt-2 text-gray-500 text-xs">
-                            Duration: {UPLOAD_VALIDATION.VIDEO.MIN_DURATION}s - {UPLOAD_VALIDATION.VIDEO.MAX_DURATION}s
+                            Length: {UPLOAD_VALIDATION.VIDEO.MIN_DURATION} seconds to {UPLOAD_VALIDATION.VIDEO.MAX_DURATION / 60} minutes
                         </div>
                     </div>
                 )}

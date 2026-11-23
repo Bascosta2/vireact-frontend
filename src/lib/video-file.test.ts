@@ -18,21 +18,23 @@ describe('validateVideoFile', () => {
     }
   });
 
-  it('rejects other types, empty files and files over 200 MB with the exact copy', () => {
+  it('rejects other types, empty files and files over 500 MB with the exact copy', () => {
     expect(validateVideoFile({ name: 'clip.gif', size: 1000 })).toBe('The selected file must be an MP4, MOV, AVI, MKV or WEBM');
     expect(validateVideoFile({ name: 'clip.mp4', size: 0 })).toBe('The selected file is empty');
-    expect(validateVideoFile({ name: 'clip.mp4', size: VIDEO_MAX_BYTES + 1 })).toBe('The selected file must be smaller than 200 MB');
+    expect(validateVideoFile({ name: 'clip.mp4', size: VIDEO_MAX_BYTES + 1 })).toBe('The selected file must be smaller than 500 MB');
   });
 });
 
 describe('validateVideoDuration', () => {
-  it('allows 5 to 60 seconds', () => {
+  it('allows 5 seconds to 3 minutes (2-minute videos included)', () => {
     expect(validateVideoDuration(5)).toBeNull();
     expect(validateVideoDuration(60)).toBeNull();
+    expect(validateVideoDuration(125)).toBeNull();
+    expect(validateVideoDuration(180)).toBeNull();
   });
 
   it('names the actual length when out of range', () => {
-    expect(validateVideoDuration(73.4)).toBe('The selected video must be 5 to 60 seconds long. This one is 73 seconds.');
+    expect(validateVideoDuration(200.4)).toBe('The selected video must be between 5 seconds and 3 minutes long. This one is 3 min 20 s.');
     expect(validateVideoDuration(2)).toBe(VIDEO_ERRORS.duration(2));
   });
 

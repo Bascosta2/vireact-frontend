@@ -293,8 +293,8 @@ export const uploadVideoFileToTwelveLabs = async (
     }
 };
 
-/** Timeout for video upload/processing (5 min) - backend may wait for Twelve Labs indexing */
-export const VIDEO_UPLOAD_TIMEOUT_MS = 300000;
+/** Timeout for a video upload (15 min): a 500 MB file over a ~10 Mbps phone connection takes about 7 minutes. */
+export const VIDEO_UPLOAD_TIMEOUT_MS = 900000;
 
 export const getVideoStatus = async (
     videoId: string
