@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
 import { isPublishingFlagOn, publishingAvailable, usePublishingAccess } from './publishing-access';
 import { getPostCapabilities } from '@/api/posts';
-import { EMPTY_TIKTOK_FORM, buildAgenda, buildTikTokSettings, dateKeyInZone, matchSlotsToPosts, platformChoices, tiktokDurationWarning, tiktokFieldForMessage, tiktokPrivacyChoices, tiktokPrivacyLabel, validateTikTokForm, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
+import { EMPTY_TIKTOK_FORM, buildAgenda, buildTikTokSettings, dateKeyInZone, matchSlotsToPosts, platformChoices, tiktokDurationWarning, tiktokFieldForServerField, tiktokFormFromSettings, tiktokNeedsDisclosureChoice, tiktokPrivacyChoices, tiktokPrivacyLabel, validateTikTokForm, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
 import type { StrategySlot } from '@/api/analytics';
 import type { PostCapabilities, ScheduledPost, TikTokCreatorInfo } from '@/api/posts';
 import { completedVideos, pickHubVideo } from './video-hub';
@@ -215,10 +215,16 @@ describe('post scheduling logic', () => {
     });
 
     it('routes server messages to a control and warns about long videos', () => {
-      expect(tiktokFieldForMessage('Branded content cannot be private')).toBe('privacy');
-      expect(tiktokFieldForMessage('Select a brand disclosure option')).toBe('commercial');
-      expect(tiktokFieldForMessage('Duets are disabled for this account')).toBe('interactions');
-      expect(tiktokFieldForMessage('Something else')).toBe('general');
+      expect(tiktokFieldForServerField('tiktok.privacyLevel')).toBe('privacy');
+      expect(tiktokFieldForServerField('tiktok.commercialBrand')).toBe('commercial');
+      expect(tiktokFieldForServerField('tiktok.allowDuet')).toBe('interactions');
+      expect(tiktokFieldForServerField('media')).toBe('general');
+      expect(tiktokFieldForServerField(null)).toBe('general');
+      expect(tiktokNeedsDisclosureChoice({ ...EMPTY_TIKTOK_FORM, disclose: true })).toBe(true);
+      expect(tiktokNeedsDisclosureChoice({ ...EMPTY_TIKTOK_FORM, disclose: true, yourBrand: true })).toBe(false);
+      const stored = tiktokFormFromSettings({ privacyLevel: 'SELF_ONLY', allowComment: true, allowDuet: false, allowStitch: false, commercial: { enabled: true, yourBrand: true, brandedContent: false }, musicConfirmed: true });
+      expect(stored).toMatchObject({ privacyLevel: 'SELF_ONLY', allowComment: true, disclose: true, yourBrand: true });
+      expect(tiktokFormFromSettings(undefined)).toEqual(EMPTY_TIKTOK_FORM);
       expect(tiktokDurationWarning(200, 180)).toMatch(/up to 3 minutes/);
       expect(tiktokDurationWarning(60, 180)).toBeNull();
       expect(tiktokDurationWarning(null, 180)).toBeNull();

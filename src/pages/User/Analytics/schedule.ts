@@ -392,7 +392,7 @@ export interface TikTokPrivacyChoice {
 export const tiktokPrivacyChoices = (options: string[], brandedContent: boolean): TikTokPrivacyChoice[] =>
   options.map((value) => {
     const blocked = brandedContent && value === TIKTOK_SELF_ONLY;
-    return { value, label: tiktokPrivacyLabel(value), disabled: blocked, reason: blocked ? 'Branded content visibility cannot be set to private.' : undefined };
+    return { value, label: tiktokPrivacyLabel(value), disabled: blocked, reason: blocked ? TIKTOK_BRANDED_PRIVATE_REASON : undefined };
   });
 
 /** What the creator has chosen on the TikTok section (all off / empty until they act). */
@@ -416,6 +416,26 @@ export const EMPTY_TIKTOK_FORM: TikTokFormValues = {
   brandedContent: false,
 };
 
+/** Form values for a TikTok post that was saved earlier (empty form when nothing was stored). */
+export const tiktokFormFromSettings = (s: TikTokPostSettings | null | undefined): TikTokFormValues =>
+  s
+    ? {
+        privacyLevel: s.privacyLevel ?? '',
+        allowComment: Boolean(s.allowComment),
+        allowDuet: Boolean(s.allowDuet),
+        allowStitch: Boolean(s.allowStitch),
+        disclose: Boolean(s.commercial?.enabled),
+        yourBrand: Boolean(s.commercial?.yourBrand),
+        brandedContent: Boolean(s.commercial?.brandedContent),
+      }
+    : EMPTY_TIKTOK_FORM;
+
+export const TIKTOK_DISCLOSURE_PROMPT = 'You need to indicate if your content promotes yourself, a third party, or both.';
+export const TIKTOK_BRANDED_PRIVATE_REASON = 'Branded content visibility cannot be set to private.';
+
+/** Disclosure is on but neither "Your brand" nor "Branded content" is ticked. */
+export const tiktokNeedsDisclosureChoice = (v: TikTokFormValues): boolean => v.disclose && !v.yourBrand && !v.brandedContent;
+
 export type TikTokField = 'privacy' | 'interactions' | 'commercial' | 'general';
 
 export type TikTokErrors = Partial<Record<TikTokField, string>>;
@@ -429,11 +449,11 @@ export const validateTikTokForm = (v: TikTokFormValues, info: TikTokCreatorInfo 
   }
   if (!v.privacyLevel) errors.privacy = 'Choose who can view this video.';
   else if (!info.privacyLevelOptions.includes(v.privacyLevel)) errors.privacy = 'That visibility is not available for your account.';
-  else if (v.disclose && v.brandedContent && v.privacyLevel === TIKTOK_SELF_ONLY) errors.privacy = 'Branded content visibility cannot be set to private.';
+  else if (v.disclose && v.brandedContent && v.privacyLevel === TIKTOK_SELF_ONLY) errors.privacy = TIKTOK_BRANDED_PRIVATE_REASON;
   if ((v.allowComment && info.commentDisabled) || (v.allowDuet && info.duetDisabled) || (v.allowStitch && info.stitchDisabled)) {
     errors.interactions = 'One of these is turned off in your TikTok settings.';
   }
-  if (v.disclose && !v.yourBrand && !v.brandedContent) errors.commercial = 'Select at least one option to say what you are promoting.';
+  if (tiktokNeedsDisclosureChoice(v)) errors.commercial = TIKTOK_DISCLOSURE_PROMPT;
   return errors;
 };
 
@@ -447,12 +467,12 @@ export const buildTikTokSettings = (v: TikTokFormValues): TikTokPostSettings => 
   musicConfirmed: true,
 });
 
-/** Which control a 400 message from the server belongs to. */
-export const tiktokFieldForMessage = (message: string): TikTokField => {
-  const m = message.toLowerCase();
-  if (/privacy|visib|only me|private/.test(m)) return 'privacy';
-  if (/brand|commercial|promot|partnership/.test(m)) return 'commercial';
-  if (/comment|duet|stitch/.test(m)) return 'interactions';
+/** Which control a 400 belongs to, from the server's `data.field` (e.g. tiktok.privacyLevel). Unknown fields stay general. */
+export const tiktokFieldForServerField = (field: string | null | undefined): TikTokField => {
+  if (!field) return 'general';
+  if (field === 'tiktok.privacyLevel') return 'privacy';
+  if (field === 'tiktok.allowComment' || field === 'tiktok.allowDuet' || field === 'tiktok.allowStitch') return 'interactions';
+  if (field.startsWith('tiktok.commercial')) return 'commercial';
   return 'general';
 };
 

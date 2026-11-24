@@ -32,6 +32,8 @@ export interface PostTarget {
   externalId?: string;
   url?: string;
   error?: string;
+  /** What the creator chose for a TikTok post (kept so it can be edited). */
+  tiktok?: TikTokPostSettings;
 }
 
 export interface ScheduledPost {
@@ -49,14 +51,14 @@ export interface ScheduledPost {
 
 /** Fresh from TikTok each time it is needed (their guidelines require showing the creator's own account and limits). */
 export interface TikTokCreatorInfo {
-  nickname: string;
+  nickname: string | null;
   avatarUrl?: string | null;
   /** Raw TikTok values, e.g. PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY. */
   privacyLevelOptions: string[];
   commentDisabled: boolean;
   duetDisabled: boolean;
   stitchDisabled: boolean;
-  maxVideoPostDurationSec: number;
+  maxVideoPostDurationSec: number | null;
   canPost: boolean;
   reason?: string;
 }

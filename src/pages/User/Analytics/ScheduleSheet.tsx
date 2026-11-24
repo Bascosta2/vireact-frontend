@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
-import { apiErrorMessage } from '@/api/analytics';
+import { apiErrorField, apiErrorMessage } from '@/api/analytics';
 import { getEditProject, listEditProjects, type EditProjectSummary } from '@/api/editor';
 import {
   cancelScheduledPost,
@@ -23,6 +23,7 @@ import {
   EMPTY_TIKTOK_FORM,
   TIKTOK_BRANDED_POLICY_URL,
   TIKTOK_MUSIC_URL,
+  TIKTOK_DISCLOSURE_PROMPT,
   TIKTOK_SELF_ONLY,
   buildTikTokSettings,
   dateKeyInZone,
@@ -32,8 +33,11 @@ import {
   platformChoices,
   resolvedScheduleLabel,
   tiktokDurationWarning,
-  tiktokFieldForMessage,
+  tiktokFieldForServerField,
+  tiktokFormFromSettings,
+  tiktokNeedsDisclosureChoice,
   tiktokPrivacyChoices,
+  tiktokPrivacyLabel,
   timeInZone,
   validateScheduleForm,
   validateTikTokForm,
@@ -87,6 +91,10 @@ interface TikTokSectionProps {
 function TikTokSection({ uid, loading, loadError, info, values, errors, previewUrl, posterUrl, durationWarning, onToggle, onPrivacy, onRetry }: TikTokSectionProps) {
   const privacyChoices = useMemo(() => tiktokPrivacyChoices(info?.privacyLevelOptions ?? [], values.disclose && values.brandedContent), [info, values.disclose, values.brandedContent]);
 
+  const blockedReason = privacyChoices.find((c) => c.disabled)?.reason;
+  const storedInvalid = Boolean(values.privacyLevel) && !privacyChoices.some((c) => c.value === values.privacyLevel);
+  const needsChoice = tiktokNeedsDisclosureChoice(values);
+
   if (loading) {
     return (
       <section aria-label="TikTok settings" aria-busy="true">
@@ -128,7 +136,7 @@ function TikTokSection({ uid, loading, loadError, info, values, errors, previewU
         {info.avatarUrl && <img src={info.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />}
         <p className="min-w-0 truncate text-sm text-fg">
           <span className="text-fg-muted">Posting to TikTok as </span>
-          <span className="font-medium">{info.nickname}</span>
+          <span className="font-medium">{info.nickname || 'your account'}</span>
         </p>
       </div>
 
@@ -153,17 +161,27 @@ function TikTokSection({ uid, loading, loadError, info, values, errors, previewU
           onChange={onPrivacy}
           required
           aria-invalid={Boolean(errors.privacy)}
-          aria-describedby={errors.privacy ? `${uid}-tt-privacy-err` : undefined}
+          aria-describedby={[errors.privacy ? `${uid}-tt-privacy-err` : '', blockedReason ? `${uid}-tt-privacy-why` : ''].filter(Boolean).join(' ') || undefined}
           className={`${INPUT} mt-2`}
         >
           <option value="">Select who can view</option>
+          {storedInvalid && (
+            <option value={values.privacyLevel} disabled>
+              {tiktokPrivacyLabel(values.privacyLevel)} (no longer available, choose another)
+            </option>
+          )}
           {privacyChoices.map((c) => (
-            <option key={c.value} value={c.value} disabled={c.disabled}>
+            <option key={c.value} value={c.value} disabled={c.disabled} title={c.reason}>
               {c.label}
               {c.disabled ? ' (not available for branded content)' : ''}
             </option>
           ))}
         </select>
+        {blockedReason && (
+          <p id={`${uid}-tt-privacy-why`} className="mt-1 text-xs text-fg-muted">
+            &ldquo;Only me&rdquo; is unavailable: {blockedReason}
+          </p>
+        )}
         {errors.privacy && (
           <p id={`${uid}-tt-privacy-err`} role="alert" className="mt-1 text-sm text-danger">
             {errors.privacy}
@@ -203,7 +221,7 @@ function TikTokSection({ uid, loading, loadError, info, values, errors, previewU
         )}
       </fieldset>
 
-      <fieldset aria-describedby={errors.commercial ? `${uid}-tt-com-err` : undefined}>
+      <fieldset aria-describedby={needsChoice || errors.commercial ? `${uid}-tt-com-err` : undefined}>
         <legend className="text-sm font-medium text-fg">Disclose video content</legend>
         <label className="mt-2 flex cursor-pointer items-start gap-3 text-sm text-fg">
           <input type="checkbox" name="disclose" checked={values.disclose} onChange={onToggle} aria-describedby={`${uid}-tt-disclose-hint`} className="app-focus mt-0.5 h-4 w-4 accent-[var(--app-accent)]" />
@@ -233,9 +251,9 @@ function TikTokSection({ uid, loading, loadError, info, values, errors, previewU
             </label>
           </div>
         )}
-        {errors.commercial && (
-          <p id={`${uid}-tt-com-err`} role="alert" className="mt-1 text-sm text-danger">
-            {errors.commercial}
+        {(needsChoice || errors.commercial) && (
+          <p id={`${uid}-tt-com-err`} role={errors.commercial ? 'alert' : undefined} className={`mt-1 text-sm ${errors.commercial ? 'text-danger' : 'text-fg-muted'}`}>
+            {errors.commercial ?? TIKTOK_DISCLOSURE_PROMPT}
           </p>
         )}
       </fieldset>
@@ -279,15 +297,15 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
   const [tiktokReload, setTiktokReload] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const tiktokActive = !editing && mode === 'publish' && platforms.includes('tiktok');
+  const tiktokActive = mode === 'publish' && platforms.includes('tiktok') && !(editing && !isPostEditable(editing, Date.now()));
   const choices = useMemo(
     () =>
       platformChoices(capabilities).map((c) =>
-        c.platform === 'tiktok' && !editing && mode === 'publish' && tiktokInfo && !tiktokInfo.canPost
+        c.platform === 'tiktok' && mode === 'publish' && tiktokInfo && !tiktokInfo.canPost
           ? { ...c, disabled: true, reason: tiktokInfo.reason || 'TikTok cannot post for this account right now.' }
           : c
       ),
-    [capabilities, editing, mode, tiktokInfo]
+    [capabilities, mode, tiktokInfo]
   );
 
   useEffect(() => {
@@ -313,6 +331,7 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
       setDate(dateKeyInZone(editing.scheduledAt, timeZone));
       setTime(timeInZone(editing.scheduledAt, timeZone));
       setMode(editing.mode);
+      setTiktok(tiktokFormFromSettings(editing.targets.find((t) => t.platform === 'tiktok')?.tiktok));
       return;
     }
     setProjectId(draft?.projectId ?? '');
@@ -446,12 +465,12 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
       setError(null);
       try {
         const post = editing
-          ? await updateScheduledPost(editing.id, { caption, scheduledAt, platforms })
+          ? await updateScheduledPost(editing.id, { caption, scheduledAt, platforms, ...(tiktokActive ? { tiktok: buildTikTokSettings(tiktok) } : {}) })
           : await createScheduledPost({ projectId, caption, platforms, scheduledAt, mode, ...(tiktokActive ? { tiktok: buildTikTokSettings(tiktok) } : {}) });
         onSaved(post, `${editing ? 'Rescheduled' : mode === 'draft' ? 'Draft scheduled' : 'Scheduled'} for ${resolvedScheduleLabel(date, time, timeZone) ?? `${dayHeading(date)} at ${time}`}.`);
       } catch (err) {
         const message = apiErrorMessage(err, editing ? 'Could not save your changes. Try again.' : 'Could not schedule this post. Try again.');
-        const field = tiktokActive ? tiktokFieldForMessage(message) : 'general';
+        const field = tiktokActive ? tiktokFieldForServerField(apiErrorField(err)) : 'general';
         if (field === 'general') setError(message);
         else setTiktokErrors({ [field]: message });
       } finally {
@@ -668,22 +687,22 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
           {tiktokActive && !locked && (
             <p className="basis-full text-xs text-fg-muted">
               By posting, you agree to TikTok&rsquo;s{' '}
+              {tiktok.disclose && tiktok.brandedContent && (
+                <>
+                  <a href={TIKTOK_BRANDED_POLICY_URL} target="_blank" rel="noopener noreferrer" className="app-focus rounded font-medium text-accent hover:underline">
+                    Branded Content Policy
+                  </a>{' '}
+                  and{' '}
+                </>
+              )}
               <a href={TIKTOK_MUSIC_URL} target="_blank" rel="noopener noreferrer" className="app-focus rounded font-medium text-accent hover:underline">
                 Music Usage Confirmation
               </a>
-              {tiktok.disclose && tiktok.brandedContent && (
-                <>
-                  {' '}and{' '}
-                  <a href={TIKTOK_BRANDED_POLICY_URL} target="_blank" rel="noopener noreferrer" className="app-focus rounded font-medium text-accent hover:underline">
-                    Branded Content Policy
-                  </a>
-                </>
-              )}
               .
             </p>
           )}
           {!locked && (
-            <Button type="submit" disabled={busy || (!editing && !projects?.length) || (tiktokActive && tiktokLoading)}>
+            <Button type="submit" disabled={busy || (!editing && !projects?.length) || (tiktokActive && (tiktokLoading || tiktokNeedsDisclosureChoice(tiktok)))}>
               {busy && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
               {editing ? 'Save changes' : mode === 'draft' ? 'Schedule draft' : 'Schedule post'}
             </Button>
