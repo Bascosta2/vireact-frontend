@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
-import { splitLayout } from '../timeline-utils';
+import { splitGraphicLayers, splitLayout } from '../timeline-utils';
 import { CAPTION_BAND, CAPTION_BAND_SPLIT, CAPTION_CENTER_SPLIT, calloutLabel } from '../graphics-utils';
 import type { EditProps, Graphic } from '../types';
 import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
@@ -137,5 +137,29 @@ describe('split screen', () => {
     expect(calloutLabel(960, 1920, 90, CAPTION_BAND)).toBeDefined();
     const split = { ...props('comic-art'), framing: { mode: 'split' as const, focusX: 0.5 } };
     expect(frame(EditComposition as never, split, 20, split.durationInFrames)).toContain('top:845px');
+  });
+});
+
+describe('background matte layers', () => {
+  const g = (type: Graphic['type'], layer?: 'behind'): Graphic => ({ type, startFrame: 0, durationFrames: 30, text: 'Big', subtext: '', items: [], focusX: 0.5, focusY: 0.5, ...(layer ? { layer } : {}) });
+  const matte = { url: 'https://example.com/matte.webm', mode: 'alpha-webm' as const };
+
+  it('moves only behind-marked graphics, and only when there is a matte', () => {
+    const list = [g('headline', 'behind'), g('pill')];
+    expect(splitGraphicLayers(list, matte).behind.map((x) => x.type)).toEqual(['headline']);
+    expect(splitGraphicLayers(list, matte).front.map((x) => x.type)).toEqual(['pill']);
+    expect(splitGraphicLayers(list, undefined)).toEqual({ behind: [], front: list });
+  });
+
+  it('draws the matte video only with a matte url and behind graphics', () => {
+    const base = {
+      width: 1080, height: 1920, fps: 30, durationInFrames: 60, timeline: [{ id: 'a', segId: 's', srcStart: 0, srcEnd: 2, outStartFrame: 0, durationFrames: 60 }],
+      captions: null, hook: null, zooms: [], graphics: [g('headline', 'behind')], sfx: [], music: null, framing: { mode: 'fill' as const, focusX: 0.5 },
+      videoUrl: 'https://example.com/v.mp4', musicUrl: null, sfxUrls: {},
+    } as EditProps;
+    const html = (p: EditProps) => renderToStaticMarkup(<Thumbnail component={EditComposition} compositionWidth={1080} compositionHeight={1920} durationInFrames={60} fps={30} frameToDisplay={5} inputProps={p as unknown as Record<string, unknown>} />);
+    expect(html({ ...base, matte })).toContain('matte.webm');
+    expect(html(base)).not.toContain('matte.webm');
+    expect(html({ ...base, graphics: [g('headline')], matte })).not.toContain('matte.webm');
   });
 });

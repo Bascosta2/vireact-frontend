@@ -59,6 +59,8 @@ export interface Graphic {
   visual?: string;
   /** For type "slam": draw it under the captions because the top of the frame is taken. */
   low?: boolean;
+  /** "behind": drawn under the speaker (needs props.matte); otherwise in front as always. */
+  layer?: 'behind';
 }
 
 export interface Look {
@@ -103,6 +105,8 @@ export type EditProps = {
   sfx: { type: SfxType; frame: number; volume?: number }[];
   music: { trackId: string; volume: number; duck: { startFrame: number; endFrame: number }[] } | null;
   framing: { mode: 'fill' | 'fit_blur' | 'split'; focusX: number; /** Split screen (EDITOR_FEATURES_V2): the zoomed detail pane's center, 0 to 1. */ split?: { detailX: number; detailY: number; zoom: number } };
+  /** Background matte (EDITOR_BG_REMOVAL_ENABLED): a WebM with alpha of the speaker, same timing as the source. */
+  matte?: { url: string; mode: 'alpha-webm' };
   /** Preview uses the 720p proxy; the final render uses the original upload. */
   videoUrl: string;
   musicUrl: string | null;
