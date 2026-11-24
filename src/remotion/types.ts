@@ -1,3 +1,4 @@
+import type { Brand } from './brand';
 import type { StyleId } from './styles/ids';
 
 /**
@@ -110,4 +111,6 @@ export type EditProps = {
   sfxUrls: Partial<Record<SfxType, string>>;
   /** Optional: absent for standard edits and for props built before skills existed. */
   skill?: SkillProps;
+  /** The creator's brand sheet (EDITOR_FEATURES_V2); absent for everyone else. */
+  brand?: Brand;
 };
