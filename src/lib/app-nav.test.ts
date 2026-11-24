@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
 import { isPublishingFlagOn, publishingAvailable, usePublishingAccess } from './publishing-access';
 import { getPostCapabilities } from '@/api/posts';
-import { buildAgenda, dateKeyInZone, matchSlotsToPosts, platformChoices, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
+import { EMPTY_TIKTOK_FORM, buildAgenda, buildTikTokSettings, dateKeyInZone, matchSlotsToPosts, platformChoices, tiktokDurationWarning, tiktokFieldForMessage, tiktokPrivacyChoices, tiktokPrivacyLabel, validateTikTokForm, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
 import type { StrategySlot } from '@/api/analytics';
-import type { PostCapabilities, ScheduledPost } from '@/api/posts';
+import type { PostCapabilities, ScheduledPost, TikTokCreatorInfo } from '@/api/posts';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
@@ -171,5 +171,57 @@ describe('post scheduling logic', () => {
     expect(choices.find((c) => c.platform === 'tiktok')?.disabled).toBe(false);
     expect(choices.find((c) => c.platform === 'instagram')?.reason).toMatch(/Accounts page/);
     expect(choices.find((c) => c.platform === 'youtube')?.disabled).toBe(true);
+  });
+
+  describe('TikTok direct post rules', () => {
+    const info: TikTokCreatorInfo = {
+      nickname: 'maker',
+      privacyLevelOptions: ['PUBLIC_TO_EVERYONE', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'],
+      commentDisabled: false,
+      duetDisabled: true,
+      stitchDisabled: false,
+      maxVideoPostDurationSec: 180,
+      canPost: true,
+    };
+
+    it('uses TikTok wording for visibility and blocks Only me for branded content', () => {
+      expect(tiktokPrivacyLabel('MUTUAL_FOLLOW_FRIENDS')).toBe('Mutual follow friends');
+      expect(tiktokPrivacyLabel('FOLLOWER_OF_CREATOR')).toBe('Followers');
+      expect(tiktokPrivacyChoices(info.privacyLevelOptions, false).map((c) => c.label)).toEqual(['Public to everyone', 'Followers', 'Only me']);
+      expect(tiktokPrivacyChoices(info.privacyLevelOptions, true).find((c) => c.value === 'SELF_ONLY')?.disabled).toBe(true);
+    });
+
+    it('requires a visibility choice, a disclosure option, and a posting-capable account', () => {
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, info).privacy).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE' }, info)).toEqual({});
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', disclose: true }, info).commercial).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'SELF_ONLY', disclose: true, brandedContent: true }, info).privacy).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', allowDuet: true }, info).interactions).toBeTruthy();
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, { ...info, canPost: false, reason: 'Too many posts today' }).general).toBe('Too many posts today');
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, null).general).toBeTruthy();
+    });
+
+    it('builds the request body and drops disclosure choices while the toggle is off', () => {
+      const off = buildTikTokSettings({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'FOLLOWER_OF_CREATOR', allowComment: true, yourBrand: true });
+      expect(off).toEqual({
+        privacyLevel: 'FOLLOWER_OF_CREATOR',
+        allowComment: true,
+        allowDuet: false,
+        allowStitch: false,
+        commercial: { enabled: false, yourBrand: false, brandedContent: false },
+        musicConfirmed: true,
+      });
+      expect(buildTikTokSettings({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', disclose: true, brandedContent: true }).commercial).toEqual({ enabled: true, yourBrand: false, brandedContent: true });
+    });
+
+    it('routes server messages to a control and warns about long videos', () => {
+      expect(tiktokFieldForMessage('Branded content cannot be private')).toBe('privacy');
+      expect(tiktokFieldForMessage('Select a brand disclosure option')).toBe('commercial');
+      expect(tiktokFieldForMessage('Duets are disabled for this account')).toBe('interactions');
+      expect(tiktokFieldForMessage('Something else')).toBe('general');
+      expect(tiktokDurationWarning(200, 180)).toMatch(/up to 3 minutes/);
+      expect(tiktokDurationWarning(60, 180)).toBeNull();
+      expect(tiktokDurationWarning(null, 180)).toBeNull();
+    });
   });
 });

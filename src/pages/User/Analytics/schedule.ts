@@ -1,5 +1,5 @@
 import type { StrategySlot } from '@/api/analytics';
-import type { PlatformCapability, PostCapabilities, PostStatus, PublishPlatform, ScheduledPost } from '@/api/posts';
+import type { PlatformCapability, PostCapabilities, PostStatus, PublishPlatform, ScheduledPost, TikTokCreatorInfo, TikTokPostSettings } from '@/api/posts';
 import { PLATFORM_LABELS } from './labels';
 
 /**
@@ -364,4 +364,101 @@ export const validateScheduleForm = (v: ScheduleFormValues, choices: PlatformCho
 export const resolvedScheduleLabel = (date: string, time: string, tz: string): string | null => {
   const iso = zonedToUtcIso(date, time, tz);
   return iso ? `${dayHeading(dateKeyInZone(iso, tz))} at ${timeInZone(iso, tz)}` : null;
+};
+
+// ── TikTok Direct Post (TikTok content sharing guidelines) ───────────────────
+
+export const TIKTOK_MUSIC_URL = 'https://www.tiktok.com/legal/page/global/music-usage-confirmation/en';
+export const TIKTOK_BRANDED_POLICY_URL = 'https://www.tiktok.com/legal/page/global/bc-policy/en';
+export const TIKTOK_SELF_ONLY = 'SELF_ONLY';
+
+const TIKTOK_PRIVACY_LABELS: Record<string, string> = {
+  PUBLIC_TO_EVERYONE: 'Public to everyone',
+  MUTUAL_FOLLOW_FRIENDS: 'Mutual follow friends',
+  FOLLOWER_OF_CREATOR: 'Followers',
+  [TIKTOK_SELF_ONLY]: 'Only me',
+};
+
+export const tiktokPrivacyLabel = (value: string): string => TIKTOK_PRIVACY_LABELS[value] ?? value;
+
+export interface TikTokPrivacyChoice {
+  value: string;
+  label: string;
+  disabled: boolean;
+  reason?: string;
+}
+
+/** Options straight from creator-info (no default is picked); "Only me" is off while the post is branded content. */
+export const tiktokPrivacyChoices = (options: string[], brandedContent: boolean): TikTokPrivacyChoice[] =>
+  options.map((value) => {
+    const blocked = brandedContent && value === TIKTOK_SELF_ONLY;
+    return { value, label: tiktokPrivacyLabel(value), disabled: blocked, reason: blocked ? 'Branded content visibility cannot be set to private.' : undefined };
+  });
+
+/** What the creator has chosen on the TikTok section (all off / empty until they act). */
+export interface TikTokFormValues {
+  privacyLevel: string;
+  allowComment: boolean;
+  allowDuet: boolean;
+  allowStitch: boolean;
+  disclose: boolean;
+  yourBrand: boolean;
+  brandedContent: boolean;
+}
+
+export const EMPTY_TIKTOK_FORM: TikTokFormValues = {
+  privacyLevel: '',
+  allowComment: false,
+  allowDuet: false,
+  allowStitch: false,
+  disclose: false,
+  yourBrand: false,
+  brandedContent: false,
+};
+
+export type TikTokField = 'privacy' | 'interactions' | 'commercial' | 'general';
+
+export type TikTokErrors = Partial<Record<TikTokField, string>>;
+
+/** Rule check before sending; messages sit next to the control they belong to. */
+export const validateTikTokForm = (v: TikTokFormValues, info: TikTokCreatorInfo | null): TikTokErrors => {
+  const errors: TikTokErrors = {};
+  if (!info?.canPost) {
+    errors.general = info?.reason || "TikTok can't be used right now.";
+    return errors;
+  }
+  if (!v.privacyLevel) errors.privacy = 'Choose who can view this video.';
+  else if (!info.privacyLevelOptions.includes(v.privacyLevel)) errors.privacy = 'That visibility is not available for your account.';
+  else if (v.disclose && v.brandedContent && v.privacyLevel === TIKTOK_SELF_ONLY) errors.privacy = 'Branded content visibility cannot be set to private.';
+  if ((v.allowComment && info.commentDisabled) || (v.allowDuet && info.duetDisabled) || (v.allowStitch && info.stitchDisabled)) {
+    errors.interactions = 'One of these is turned off in your TikTok settings.';
+  }
+  if (v.disclose && !v.yourBrand && !v.brandedContent) errors.commercial = 'Select at least one option to say what you are promoting.';
+  return errors;
+};
+
+/** The request body for the backend; disclosure choices are dropped while the toggle is off. */
+export const buildTikTokSettings = (v: TikTokFormValues): TikTokPostSettings => ({
+  privacyLevel: v.privacyLevel,
+  allowComment: v.allowComment,
+  allowDuet: v.allowDuet,
+  allowStitch: v.allowStitch,
+  commercial: { enabled: v.disclose, yourBrand: v.disclose && v.yourBrand, brandedContent: v.disclose && v.brandedContent },
+  musicConfirmed: true,
+});
+
+/** Which control a 400 message from the server belongs to. */
+export const tiktokFieldForMessage = (message: string): TikTokField => {
+  const m = message.toLowerCase();
+  if (/privacy|visib|only me|private/.test(m)) return 'privacy';
+  if (/brand|commercial|promot|partnership/.test(m)) return 'commercial';
+  if (/comment|duet|stitch/.test(m)) return 'interactions';
+  return 'general';
+};
+
+/** Shown when the video is longer than the account may post, else null. */
+export const tiktokDurationWarning = (durationSec: number | null | undefined, maxSec: number | null | undefined): string | null => {
+  if (!durationSec || !maxSec || durationSec <= maxSec) return null;
+  const fmt = (s: number) => (s >= 120 && s % 60 === 0 ? `${s / 60} minutes` : `${Math.round(s)} seconds`);
+  return `This video is ${fmt(durationSec)} long, but your TikTok account can post up to ${fmt(maxSec)}. TikTok may reject it.`;
 };

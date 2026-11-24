@@ -47,6 +47,31 @@ export interface ScheduledPost {
   updatedAt: string;
 }
 
+/** Fresh from TikTok each time it is needed (their guidelines require showing the creator's own account and limits). */
+export interface TikTokCreatorInfo {
+  nickname: string;
+  avatarUrl?: string | null;
+  /** Raw TikTok values, e.g. PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY. */
+  privacyLevelOptions: string[];
+  commentDisabled: boolean;
+  duetDisabled: boolean;
+  stitchDisabled: boolean;
+  maxVideoPostDurationSec: number;
+  canPost: boolean;
+  reason?: string;
+}
+
+/** What the creator chose on the TikTok posting screen. */
+export interface TikTokPostSettings {
+  privacyLevel: string;
+  allowComment: boolean;
+  allowDuet: boolean;
+  allowStitch: boolean;
+  commercial: { enabled: boolean; yourBrand: boolean; brandedContent: boolean };
+  /** Posting counts as agreeing to TikTok's Music Usage Confirmation (and Branded Content Policy when branded). */
+  musicConfirmed: true;
+}
+
 export interface CreatePostInput {
   projectId?: string;
   mediaUrl?: string;
@@ -54,12 +79,14 @@ export interface CreatePostInput {
   platforms: PublishPlatform[];
   scheduledAt: string;
   mode: PostMode;
+  tiktok?: TikTokPostSettings;
 }
 
 export interface UpdatePostInput {
   caption?: string;
   scheduledAt?: string;
   platforms?: PublishPlatform[];
+  tiktok?: TikTokPostSettings;
 }
 
 export const getPostCapabilities = async (): Promise<PostCapabilities> =>
@@ -68,6 +95,12 @@ export const getPostCapabilities = async (): Promise<PostCapabilities> =>
 /** Posts scheduled between two instants (ISO strings, `to` exclusive). */
 export const listScheduledPosts = async (from: string, to: string): Promise<ScheduledPost[]> =>
   (await Axios.get<{ data: { posts: ScheduledPost[] } }>('/posts', { params: { from, to } })).data.data.posts;
+
+/** Tolerates the usual { data } envelope or a bare object. */
+export const getTikTokCreatorInfo = async (): Promise<TikTokCreatorInfo> => {
+  const body = (await Axios.get<{ data?: TikTokCreatorInfo } & Partial<TikTokCreatorInfo>>('/posts/tiktok/creator-info')).data;
+  return (body.data ?? body) as TikTokCreatorInfo;
+};
 
 export const createScheduledPost = async (input: CreatePostInput): Promise<ScheduledPost> =>
   (await Axios.post<{ data: { post: ScheduledPost } }>('/posts', input)).data.data.post;
