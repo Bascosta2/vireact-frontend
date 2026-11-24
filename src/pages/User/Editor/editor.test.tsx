@@ -237,7 +237,7 @@ describe('Storyboard review', () => {
   it('marks a dropped beat, can bring it back, and shows the approved state', () => {
     const html = renderToStaticMarkup(<StoryboardPanel storyboard={storyboard} dropped={['s2']} approved busyBeat={null} onDrop={noop} onSwap={noop} onApprove={noop} />);
     expect(html).toContain('Dropped');
-    expect(html).toContain('Bring back the Payoff beat');
+    expect(html).toContain('Bring back beat 2, Payoff, 0:09 to 0:14');
     expect(html).toContain('Storyboard approved');
     expect(html).toContain('disabled');
   });

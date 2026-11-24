@@ -12,12 +12,18 @@ const word = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : m
 interface BeatCardProps {
   beat: StoryboardBeat;
   dropped: boolean;
+  /** This beat is being swapped. */
   busy: boolean;
+  /** Some beat is being swapped: every control waits. */
+  locked: boolean;
+  /** 1-based position, so each button has a unique name. */
+  number: number;
   onDrop: (id: string, dropped: boolean) => void;
   onSwap: (id: string) => void;
 }
 
-export function BeatCard({ beat, dropped, busy, onDrop, onSwap }: BeatCardProps) {
+export function BeatCard({ beat, dropped, busy, locked, number, onDrop, onSwap }: BeatCardProps) {
+  const name = `beat ${number}, ${ROLE_LABEL[beat.role] ?? 'beat'}, ${mmss(beat.start)} to ${mmss(beat.end)}`;
   const handleDrop = () => onDrop(beat.id, !dropped);
   const handleSwap = () => onSwap(beat.id);
   return (
@@ -33,12 +39,12 @@ export function BeatCard({ beat, dropped, busy, onDrop, onSwap }: BeatCardProps)
         </p>
         <div className="flex gap-1">
           {!dropped && (
-            <Button variant="ghost" size="sm" onClick={handleSwap} disabled={busy} aria-label={`Swap the ${ROLE_LABEL[beat.role] ?? 'beat'} beat`}>
+            <Button variant="ghost" size="sm" onClick={handleSwap} disabled={locked} aria-label={`Swap ${name}`}>
               {busy ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />}
               Swap
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={handleDrop} disabled={busy} aria-label={`${dropped ? 'Bring back' : 'Drop'} the ${ROLE_LABEL[beat.role] ?? 'beat'} beat`}>
+          <Button variant="ghost" size="sm" onClick={handleDrop} disabled={locked} aria-label={`${dropped ? 'Bring back' : 'Drop'} ${name}`}>
             {dropped ? <RotateCcw className="h-4 w-4" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
             {dropped ? 'Bring back' : 'Drop'}
           </Button>
@@ -89,8 +95,8 @@ export function StoryboardPanel({ storyboard, dropped, approved, busyBeat, onDro
       </h2>
       <p className="mt-1 text-sm text-fg-muted">Check each beat before you export. Drop one you do not want, or swap it for another take on its graphics and sounds.</p>
       <ol className="mt-3 space-y-2">
-        {storyboard.beats.map((b) => (
-          <BeatCard key={b.id} beat={b} dropped={dropped.includes(b.id)} busy={busyBeat === b.id} onDrop={onDrop} onSwap={onSwap} />
+        {storyboard.beats.map((b, k) => (
+          <BeatCard key={b.id} beat={b} number={k + 1} dropped={dropped.includes(b.id)} busy={busyBeat === b.id} locked={busyBeat !== null} onDrop={onDrop} onSwap={onSwap} />
         ))}
       </ol>
       <div className="mt-3 flex flex-wrap items-center gap-3">

@@ -256,16 +256,19 @@ export default function EditProjectPage() {
   };
   const onApprove = () => onEdit({ storyboardApproved: true });
   const onSwapBeat = async (beatId: string) => {
+    const seq = ++saveSeq.current;
     setBusyBeat(beatId);
     setError(null);
     try {
       const res = await swapStoryboardBeat(projectId, beatId);
+      // A newer change was made while the planner worked: its result wins.
+      if (seq !== saveSeq.current) return;
       setEdits(res.edits);
       setProps(res.props);
       setStoryboard(res.storyboard);
       track('edit_beat_swapped', { project_id: projectId });
     } catch (err) {
-      setError(apiErrorMessage(err, 'Could not find another option for that beat. Try again.'));
+      if (seq === saveSeq.current) setError(apiErrorMessage(err, 'Could not find another option for that beat. Try again.'));
     } finally {
       setBusyBeat(null);
     }
