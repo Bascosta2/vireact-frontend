@@ -7,6 +7,8 @@ interface UserData {
     email: string;
     avatar?: string;
     preferences?: Record<string, any>;
+    /** Unknown (undefined) until the profile has been fetched or the user just signed in. */
+    isEmailVerified?: boolean;
 }
 
 // Load initial state from localStorage

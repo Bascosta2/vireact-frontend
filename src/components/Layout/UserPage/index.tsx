@@ -6,6 +6,7 @@ import BottomNav from '@/components/Header/UserHeader/BottomNav';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { useSubscription } from '@/redux/hooks/use-subscription';
+import VerifyEmailBanner from '@/components/VerifyEmailBanner';
 import { cn } from '@/lib/utils';
 
 const PAYMENT_FAILED_BANNER_DISMISS_KEY = 'vireact_payment_failed_banner_dismissed';
@@ -117,6 +118,7 @@ function UserPage({
           )}
           style={{ scrollPaddingBottom: 'calc(140px + env(safe-area-inset-bottom))' }}
         >
+          <VerifyEmailBanner />
           {paymentFailed && !bannerDismissed && (
             <div
               className="sticky top-0 z-20 flex flex-col gap-2 border-b border-warning/30 bg-surface-raised px-4 py-3 text-sm text-fg sm:flex-row sm:items-center sm:justify-between"

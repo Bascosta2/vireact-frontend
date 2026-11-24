@@ -6,6 +6,7 @@ import Axios from '@/api';
 import { SuccessNotification, ErrorNotification } from '@/utils/toast';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
 import { Link } from 'react-router-dom';
+import { outcomeNotice, readVerificationOutcome, resendErrorMessage } from '@/lib/verification-email';
 
 interface FormValues {
   email: string;
@@ -13,6 +14,7 @@ interface FormValues {
 
 function ResendVerification() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [sentMessage, setSentMessage] = useState('');
   // The 60 s wait applies only right after an email went out (signup, or a login that resent it).
   const justSent = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('sent') === '1';
   const [timeLeft, setTimeLeft] = useState(justSent ? 60 : 0);
@@ -68,7 +70,17 @@ function ResendVerification() {
       });
 
       if (response.data.success) {
+        const notice = outcomeNotice(readVerificationOutcome(response.data.data), values.email);
+        if (notice.canEditAddress) {
+          setFieldError('email', notice.message);
+          return;
+        }
+        if (notice.tone === 'warning') {
+          ErrorNotification(notice.message);
+          return;
+        }
         SuccessNotification('Verification email sent successfully!');
+        setSentMessage(notice.message);
         setIsSubmitted(true);
         setIsTimerActive(true);
         setTimeLeft(60);
@@ -78,7 +90,9 @@ function ResendVerification() {
 
       const errorMessage = error.response?.data?.message || 'Failed to resend verification email';
 
-      if (error.response?.status === 404) {
+      if (error.response?.status === 429) {
+        ErrorNotification(resendErrorMessage(error, errorMessage));
+      } else if (error.response?.status === 404) {
         setFieldError('email', 'No account found with this email address');
       } else if (error.response?.status === 400 && errorMessage.includes('already verified')) {
         setFieldError('email', 'This email is already verified');
@@ -114,9 +128,9 @@ function ResendVerification() {
                 Email Sent!
               </h1>
               <p className="text-white/80 mb-4">
-                We've sent a verification email to your inbox. Please check your email and click the verification link.
+                {sentMessage || "We sent you a verification link. Check your inbox and spam folder."}
               </p>
-              <p className="text-white/60 text-sm mb-6">
+              <p role="status" className="text-white/60 text-sm mb-6">
                 You need to wait {timeLeft} seconds before you can request another verification email.
               </p>
             </div>

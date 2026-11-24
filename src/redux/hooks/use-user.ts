@@ -4,7 +4,7 @@ import { setUserData as setUserDataReducer, clearUserData as clearUserDataReduce
 
 export const useUser = () => {
     const dispatch = useDispatch();
-    const { id, name, email, avatar, preferences } = useSelector((state: RootState) => state.user);
+    const { id, name, email, avatar, preferences, isEmailVerified } = useSelector((state: RootState) => state.user);
 
     // Action functions
     const setUserData = (data: any) => {
@@ -21,6 +21,7 @@ export const useUser = () => {
         email,
         avatar,
         preferences,
+        isEmailVerified,
         setUserData,
         clearUserData
     };
