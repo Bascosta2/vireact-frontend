@@ -14,6 +14,8 @@ import { VisualStage } from '@/remotion/visuals/VisualStage';
 import { VISUAL_NAMES } from '@/remotion/visuals/registry';
 import { FootageDisclaimer } from './Disclaimer';
 import { Toggle } from './ReviewPanel';
+import { StoryboardPanel } from './Storyboard';
+import type { Storyboard } from '@/api/editor';
 
 const props: EditProps = {
   width: 1080,
@@ -213,3 +215,30 @@ describe('Editor sounds', () => {
 
 // Keep React in scope for JSX under the classic runtime used by some test setups.
 void React;
+
+describe('Storyboard review', () => {
+  const storyboard: Storyboard = {
+    approved: false,
+    beats: [
+      { id: 's1', role: 'hook', start: 0, end: 4, reason: 'Opens on the payoff', dropped: false, swapped: false, swapNote: null, graphics: [{ type: 'slam', text: 'STOP', start: 1 }], sounds: [{ type: 'hit', at: 1 }], effects: [], zooms: 1, framing: 'split' },
+      { id: 's2', role: 'payoff', start: 9, end: 14, reason: 'The answer', dropped: false, swapped: true, swapNote: null, graphics: [], sounds: [], effects: [], zooms: 0, framing: 'fill' },
+    ],
+  };
+  const noop = () => {};
+  it('shows each beat with its graphics, sounds and framing, and locks approval until chosen', () => {
+    const html = renderToStaticMarkup(<StoryboardPanel storyboard={storyboard} dropped={[]} approved={false} busyBeat={null} onDrop={noop} onSwap={noop} onApprove={noop} />);
+    expect(html).toContain('Hook');
+    expect(html).toContain('slam: STOP');
+    expect(html).toContain('Split screen');
+    expect(html).toContain('Swapped');
+    expect(html).toContain('Approve storyboard');
+    expect(html).toContain('Approve to unlock export.');
+  });
+  it('marks a dropped beat, can bring it back, and shows the approved state', () => {
+    const html = renderToStaticMarkup(<StoryboardPanel storyboard={storyboard} dropped={['s2']} approved busyBeat={null} onDrop={noop} onSwap={noop} onApprove={noop} />);
+    expect(html).toContain('Dropped');
+    expect(html).toContain('Bring back the Payoff beat');
+    expect(html).toContain('Storyboard approved');
+    expect(html).toContain('disabled');
+  });
+});
