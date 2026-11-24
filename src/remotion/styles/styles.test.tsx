@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
 import { splitLayout } from '../timeline-utils';
+import { CAPTION_BAND, CAPTION_BAND_SPLIT, CAPTION_CENTER_SPLIT, calloutLabel } from '../graphics-utils';
 import type { EditProps, Graphic } from '../types';
 import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
 import { STYLE_IDS } from './ids';
@@ -120,5 +121,15 @@ describe('split screen', () => {
     for (const p of [{ ...props('comic-art'), framing }, { ...props('comic-art'), skill: undefined, framing }]) {
       expect(frame(EditComposition as never, p, 20, p.durationInFrames).length).toBeGreaterThan(500);
     }
+  });
+
+  it('keeps captions and callout labels off the seam, inside the 4:5 safe area', () => {
+    expect(CAPTION_CENTER_SPLIT).toBeGreaterThan(0.148);
+    expect(CAPTION_BAND_SPLIT[1]).toBeLessThan(0.5);
+    const label = calloutLabel(960, 1920, 90, CAPTION_BAND_SPLIT);
+    expect(label.top + 90 <= 1920 * CAPTION_BAND_SPLIT[0] || label.top >= 1920 * CAPTION_BAND_SPLIT[1]).toBe(true);
+    expect(calloutLabel(960, 1920, 90, CAPTION_BAND)).toBeDefined();
+    const split = { ...props('comic-art'), framing: { mode: 'split' as const, focusX: 0.5 } };
+    expect(frame(EditComposition as never, split, 20, split.durationInFrames)).toContain('top:845px');
   });
 });

@@ -2,7 +2,7 @@ import { Fragment, type CSSProperties } from 'react';
 import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { textOn } from './brand';
 import { DISPLAY, FONT } from './fonts';
-import { CAPTION_CENTER } from './graphics-utils';
+import { useCaptionCenter } from './graphics-utils';
 import type { CaptionPage, CaptionPreset } from './types';
 
 /**
@@ -58,6 +58,7 @@ const LOOKS: Record<CaptionPreset, Look> = {
 
 export function Captions({ pages, preset, accent }: { pages: CaptionPage[]; preset: CaptionPreset; accent: string }) {
   const frame = useCurrentFrame();
+  const captionCenter = useCaptionCenter();
   const { fps, width, height } = useVideoConfig();
   const page = pages.find((p) => frame >= p.startFrame && frame < p.endFrame);
   if (!page) return null;
@@ -75,7 +76,7 @@ export function Captions({ pages, preset, accent }: { pages: CaptionPage[]; pres
         style={{
           position: 'absolute',
           left: '50%',
-          top: Math.round(height * CAPTION_CENTER),
+          top: Math.round(height * captionCenter),
           transform: `translate(-50%, -50%) scale(${0.9 + 0.1 * enter})`,
           whiteSpace: 'nowrap',
           textAlign: 'center',

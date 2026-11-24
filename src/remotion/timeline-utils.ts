@@ -27,11 +27,12 @@ const SPLIT_HALF: CSSProperties = { position: 'absolute', left: 0, right: 0, hei
  * The seam sits at the middle of the frame, inside Instagram's 4:5 crop; a thin line marks it.
  */
 export function splitLayout(framing: EditProps['framing']) {
-  const s = framing.split ?? { detailX: 0.5, detailY: 0.5, zoom: 1.8 };
+  const s = framing.split ?? { detailX: 0.5, detailY: 0.62, zoom: 1.8 };
   const at = `${s.detailX * 100}% ${s.detailY * 100}%`;
   return {
     top: { ...SPLIT_HALF, top: 0 } as CSSProperties,
-    topVideo: { ...SPLIT_COVER, objectPosition: `${framing.focusX * 100}% 30%` } as CSSProperties,
+    topVideo: { ...SPLIT_COVER, // No vertical focus data exists for the speaker (only focusX), so keep the face-height band: 30% down a cover-cropped 9:16 take.
+      objectPosition: `${framing.focusX * 100}% 30%` } as CSSProperties,
     bottom: { ...SPLIT_HALF, bottom: 0 } as CSSProperties,
     bottomVideo: { ...SPLIT_COVER, objectPosition: at, transformOrigin: at, transform: `scale(${s.zoom})` } as CSSProperties,
     seam: { position: 'absolute', left: 0, right: 0, top: 'calc(50% - 3px)', height: 6, background: '#000' } as CSSProperties,
