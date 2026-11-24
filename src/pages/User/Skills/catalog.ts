@@ -1,13 +1,15 @@
 import type { ShowcaseId } from '@/remotion/skills/remotion-reel/Showcase';
 import { editorFeaturesV2 } from '@/api/editor';
-import { STYLE_IDS, type StyleId } from '@/remotion/styles/ids';
+import { PAINTED_STYLE_IDS, STYLE_IDS, type StyleId } from '@/remotion/styles/ids';
 
 /**
  * The Skills library: each editing skill (ported from a Claude skill, see editor-skills/ in the parent
  * project) with what it does and a showcase clip. `id` matches the backend registry
  * (vireact-backend/src/service/editor/skills.js). Two kinds:
  *   - editing skills (Remotion Reel): a way of editing, with its own caption and hook components;
- *   - animation styles: the whole edit drawn in one look, from the "10 Claude Animation Styles" guide.
+ *   - animation styles: the whole edit drawn in one look, from the "10 Claude Animation Styles" guide;
+ *   - painted styles: real painting media (watercolour, ink, oil, gouache, paper) drawn in code, from the
+ *     painting prompts in editor-skills/done/painted-styles in the parent project.
  */
 
 export type FeatureStatus = 'live' | 'coming';
@@ -232,6 +234,126 @@ const STYLE_COPY: Record<StyleId, StyleCopy> = {
     transition: 'A soft bubble grows from the middle and opens onto the next shot.',
     sound: 'Pops, bubbles and chimes.',
   },
+  watercolour: {
+    name: 'Watercolour',
+    tagline: 'Painted in water and light: soft washes, blooms and dried edges over your footage, like a picture book come to life.',
+    bestFor: 'Calm explainers, wellness, food, travel and gentle storytelling',
+    look: 'Soft watercolour washes with blooms and dried edges, pigment settling into cold-press paper.',
+    ambient: 'A koi pond: fish gliding under drifting lily pads, ripples spreading as the sun glints.',
+    captions: 'Soft ink lettering on a painted cream card, 3 words a line.',
+    hook: 'A short painted title, like the first line of a storybook: "Slow mornings, better days".',
+    graphics: 'Headlines and lists with room to breathe; few graphics, painted in washes.',
+    transition: 'Cards bloom like fresh paint and fade like washes in water.',
+    sound: 'Shimmers and soft ticks inside the footage.',
+  },
+  'roman-mosaic': {
+    name: 'Roman Mosaic',
+    tagline: 'Your video in thousands of tiny stone tiles: grout lines, gold flecks and a sea turtle gliding overhead.',
+    bestFor: 'History, travel, food and craft content',
+    look: 'Small stone tiles laid in rows that follow every outline, each with its own colour shift.',
+    ambient: 'A sea turtle drawn in tiles gliding over a mosaic sand floor as light shimmers across it.',
+    captions: 'Carved serif lettering on a white mosaic panel, 3 words a line.',
+    hook: 'Like an inscription carved for a floor: "Strength, built daily".',
+    graphics: 'Inscriptions, tallies and coin numbers; rows of tiles for lists.',
+    transition: 'Stone columns lean like ruins as the frame passes into open sea.',
+    sound: 'Stone taps and clicks.',
+  },
+  'sumi-e': {
+    name: 'Sumi-e',
+    tagline: 'One brush and deep quiet: black ink, mist and empty paper, with a single red sun.',
+    bestFor: 'Mindfulness, craft, philosophy and slow premium brands',
+    look: 'Ink wash from deep black to pale grey, wet edges, dry brush strokes, lots of empty paper.',
+    ambient: 'Two painted cranes standing in a misty valley beneath the red sun, the only colour.',
+    captions: 'Spare ink lettering, one word brushed in red. Lines fade like settling ink.',
+    hook: 'One brush-written line between hairlines: "Less, but deeper".',
+    graphics: 'Very few: one every 12 to 15 seconds, and no slams. Space does the work.',
+    transition: 'A sweeping brush veil of ink crosses the frame.',
+    sound: 'Near silence: no hook sound, rare soft brush strokes.',
+  },
+  'impasto-oil': {
+    name: 'Impasto Oil',
+    tagline: 'Thick paint and big seas: knife strokes you can almost touch, waves rolling like paint.',
+    bestFor: 'Dramatic storytelling, sea and nature, bold opinion pieces',
+    look: 'Thick oil paint with palette-knife strokes that follow every form, canvas weave showing through.',
+    ambient: 'Painted whales breaching through a roiling painted sea beside a small rocking boat.',
+    captions: 'Chunky cream lettering on deep teal paint, 3 words a line.',
+    hook: 'A bold painted statement: "The sea does not care".',
+    graphics: 'Counters in a painted ring; slams land in a splash of strokes with a shake.',
+    transition: 'A sheet of dragged paint wipes the frame clean.',
+    sound: 'Deep sweeps and heavy booms.',
+  },
+  'nocturne-gouache': {
+    name: 'Nocturne Gouache',
+    tagline: 'A meadow after dark: matte night paint, moonlit edges and rising fireflies.',
+    bestFor: 'Night routines, sleep, calm and evening storytelling',
+    look: 'Dark opaque gouache in blues and greens, moonlight as a pale edge on everything.',
+    ambient: 'A deer stepping into a night meadow as fireflies rise, drift and blink.',
+    captions: 'Chalk-warm lettering touched with firelight, gentle fades.',
+    hook: 'A quiet night line: "What the dark teaches you".',
+    graphics: 'Numbers gathered from fireflies; lists like stars coming out.',
+    transition: 'A moon-pale shape drifts across and veils the frame.',
+    sound: 'Soft sparkles and shimmers.',
+  },
+  'botanical-plate': {
+    name: 'Botanical Plate',
+    tagline: 'Like a plate from an old field guide: fine ink, soft washes and a butterfly crossing the frame.',
+    bestFor: 'Education, nature, gardening, wellness and careful explainers',
+    look: 'Fine ink outlines with soft watercolour fills on cream paper, airy and readable.',
+    ambient: 'A blue butterfly fluttering to a daisy while stems bend gently from their bases.',
+    captions: 'Refined serif lettering on the cream plate, 3 words a line.',
+    hook: 'A plate title in fine ink: "Field notes: morning light".',
+    graphics: 'Specimen lists, underline flourishes and label pins that point.',
+    transition: 'A cream blank falls away like turning a herbarium page.',
+    sound: 'Page turns and fine taps.',
+  },
+  'paper-cut': {
+    name: 'Paper Cut',
+    tagline: 'An ocean made of layered paper: soft shadows, knife-cut edges and a glowing jellyfish.',
+    bestFor: 'Playful explainers, family content and layered stories',
+    look: 'Layers of cut paper from pale surface blue to near black, each shadowing the next.',
+    ambient: 'A glowing tissue-paper jellyfish pulsing up through paper seas as fish part around it.',
+    captions: 'Round lettering on a pink paper card with a soft paper shadow.',
+    hook: 'Short and bright, on a pink paper card: "Deep breath, dive in".',
+    graphics: 'Paper scraps peeling in; list items pinned like a school board.',
+    transition: 'A pale paper wave climbs and veils the frame.',
+    sound: 'Paper pops, snaps and soft pats.',
+  },
+  'art-nouveau': {
+    name: 'Art Nouveau',
+    tagline: 'A poster come to life: whiplash vines, a turning halo and a hummingbird in gold and sage.',
+    bestFor: 'Beauty, fashion, food, drink and elegant brands',
+    look: 'Flowing curved lines, dark outlines and flat muted fills on aged lithograph paper.',
+    ambient: 'A hummingbird hovering and darting between trumpet flowers inside a slow-turning halo.',
+    captions: 'Elegant gold capitals around the framed scene.',
+    hook: 'A poster title in flowing letters: "The art of the morning".',
+    graphics: 'Vine underlines, leaf markers and a halo behind the big numbers.',
+    transition: 'Curtains of printed leaves sweep across the frame.',
+    sound: 'Gentle chimes and soft page sounds.',
+  },
+  'golden-hour': {
+    name: 'Golden Hour',
+    tagline: 'The last hour of light: warm paint, long shadows and a swallow over wheat.',
+    bestFor: 'Travel, outdoors, food, gratitude and reflective posts',
+    look: 'Warm opaque gouache in gold, amber and rose with a soft hazy sky.',
+    ambient: 'A swallow swooping and banking over a wheat field bending in waves.',
+    captions: 'Warm serif lettering across the sunlit middle band.',
+    hook: 'A warm reflective line: "The last hour of light".',
+    graphics: 'Numbers cresting like the sun; dashes that wave like wheat.',
+    transition: 'A sheet of full-sun orange climbs to a soft lens flare.',
+    sound: 'Warm sweeps and soft chimes.',
+  },
+  'painted-anime': {
+    name: 'Painted Anime',
+    tagline: 'A meadow you run through: painted skies, big clouds and two kids running on a summer day.',
+    bestFor: 'Wholesome stories, childhood and summer topics, gentle vlogs',
+    look: 'Hand-painted gouache backgrounds, lush greens and big white cumulus clouds.',
+    ambient: 'Two kids running through a summer meadow, drawn on twos, grass and hair in the wind.',
+    captions: 'Soft round lettering on a white card with a gentle bounce.',
+    hook: 'Bright and simple, like the first line of a summer story: "That summer, we ran".',
+    graphics: 'Clouds, sun and paper planes drifting across like a title sequence.',
+    transition: 'A giant painted cloud drifts across and veils the frame.',
+    sound: 'Pops, bubbles and cheerful dings.',
+  },
 };
 
 const styleSkill = (id: StyleId): EditingSkill => {
@@ -242,7 +364,9 @@ const styleSkill = (id: StyleId): EditingSkill => {
     kind: 'animation',
     name: s.name,
     tagline: s.tagline,
-    origin: 'Animation style from "10 Claude Animation Styles"',
+    origin: (PAINTED_STYLE_IDS as readonly string[]).includes(id)
+      ? 'Painted style from the "10 Claude Animation Styles" prompts'
+      : 'Animation style from "10 Claude Animation Styles"',
     bestFor: s.bestFor,
     hero: { kind: 'style', id },
     how: [
