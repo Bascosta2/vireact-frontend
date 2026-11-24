@@ -31,9 +31,10 @@ describe('Skills Editor', () => {
     expect(skillById('nope')).toBeNull();
   });
 
-  it('lists the ten animation styles, each its own skill with a theme the composition can draw', () => {
-    // Same ids as the backend registry (vireact-backend/src/service/editor/skills.js ANIMATION_STYLES).
-    expect([...STYLE_IDS]).toEqual(['glow-sketch', 'comic-art', 'brick-build', 'pixel-art', 'chalkboard', 'retro-3d', 'flat-vector', 'minimal-line', 'cgi-motion', 'explainer-3d']);
+  it('lists the twenty styles, each its own skill with a theme the composition can draw', () => {
+    // Same ids as the backend registry (vireact-backend/src/service/editor/skills.js ANIMATION_STYLES):
+    // the 10 animation styles plus the 10 painted styles.
+    expect([...STYLE_IDS]).toEqual(['glow-sketch', 'comic-art', 'brick-build', 'pixel-art', 'chalkboard', 'retro-3d', 'flat-vector', 'minimal-line', 'cgi-motion', 'explainer-3d', 'watercolour', 'roman-mosaic', 'sumi-e', 'impasto-oil', 'nocturne-gouache', 'botanical-plate', 'paper-cut', 'art-nouveau', 'golden-hour', 'painted-anime']);
     expect(ANIMATION_STYLES.map((s) => s.id)).toEqual([...STYLE_IDS]);
     expect(SKILLS.map((s) => s.id)).toEqual(['remotion-reel', ...STYLE_IDS]);
     const names = new Set<string>();
@@ -48,9 +49,9 @@ describe('Skills Editor', () => {
       expect(theme?.accent).toMatch(/^#[0-9A-F]{6}$/i);
       expect(theme!.transition.before + theme!.transition.after).toBeGreaterThan(4);
     }
-    expect(names.size).toBe(10);
-    // Trademarked names from the guide are renamed.
-    expect(SKILLS.map((s) => `${s.name} ${s.tagline}`).join(' ')).not.toMatch(/lego|ps2|playstation/i);
+    expect(names.size).toBe(20);
+    // Trademarked names from the guides are renamed.
+    expect(SKILLS.map((s) => `${s.name} ${s.tagline}`).join(' ')).not.toMatch(/lego|ps2|playstation|ghibli/i);
     expect(themeFor('remotion-reel')).toBeNull();
   });
 
@@ -58,6 +59,8 @@ describe('Skills Editor', () => {
     const backend: Record<string, string> = {
       'glow-sketch': '#FFC24B', 'comic-art': '#FFD400', 'brick-build': '#FFCD00', 'pixel-art': '#FFD43B', chalkboard: '#FFE66B',
       'retro-3d': '#7CFFB2', 'flat-vector': '#FF6B4A', 'minimal-line': '#FF3B30', 'cgi-motion': '#5CE1E6', 'explainer-3d': '#FFC93C',
+      watercolour: '#E0533A', 'roman-mosaic': '#D9A441', 'sumi-e': '#C8102E', 'impasto-oil': '#E9A13B', 'nocturne-gouache': '#FFC978',
+      'botanical-plate': '#4A7FD4', 'paper-cut': '#9FE8F5', 'art-nouveau': '#C9982F', 'golden-hour': '#FF8C42', 'painted-anime': '#3D9BE9',
     };
     for (const id of STYLE_IDS) expect(STYLE_THEMES[id].accent).toBe(backend[id]);
   });

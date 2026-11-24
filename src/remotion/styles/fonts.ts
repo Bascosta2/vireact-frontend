@@ -14,6 +14,21 @@ import { loadFont as loadSpaceGrotesk } from '@remotion/google-fonts/SpaceGrotes
 import { loadFont as loadOutfit } from '@remotion/google-fonts/Outfit';
 import { loadFont as loadBaloo } from '@remotion/google-fonts/Baloo2';
 import { loadFont as loadNunito } from '@remotion/google-fonts/Nunito';
+import { loadFont as loadKalam } from '@remotion/google-fonts/Kalam';
+import { loadFont as loadCinzel } from '@remotion/google-fonts/Cinzel';
+import { loadFont as loadMarcellus } from '@remotion/google-fonts/Marcellus';
+import { loadFont as loadYujiBoku } from '@remotion/google-fonts/YujiBoku';
+import { loadFont as loadShipporiMincho } from '@remotion/google-fonts/ShipporiMincho';
+import { loadFont as loadAbrilFatface } from '@remotion/google-fonts/AbrilFatface';
+import { loadFont as loadLora } from '@remotion/google-fonts/Lora';
+import { loadFont as loadFraunces } from '@remotion/google-fonts/Fraunces';
+import { loadFont as loadLibreBaskerville } from '@remotion/google-fonts/LibreBaskerville';
+import { loadFont as loadCormorant } from '@remotion/google-fonts/CormorantGaramond';
+import { loadFont as loadSniglet } from '@remotion/google-fonts/Sniglet';
+import { loadFont as loadFedero } from '@remotion/google-fonts/Federo';
+import { loadFont as loadDMSerif } from '@remotion/google-fonts/DMSerifDisplay';
+import { loadFont as loadMPlusRounded } from '@remotion/google-fonts/MPLUSRounded1c';
+import { loadFont as loadZenMaru } from '@remotion/google-fonts/ZenMaruGothic';
 import type { StyleId } from './ids';
 
 /**
@@ -29,6 +44,7 @@ export interface StyleFonts {
 const opts = <const T extends readonly string[]>(weights: T) => ({ weights: [...weights] as T[number][], subsets: ['latin'] as 'latin'[] });
 const stack = (family: string, fallback: string) => `"${family}", ${fallback}`;
 const SANS = '"Helvetica Neue", Arial, sans-serif';
+const SERIF = 'Georgia, "Times New Roman", serif';
 
 const LOADERS: Record<StyleId, () => StyleFonts> = {
   'glow-sketch': () => {
@@ -70,6 +86,48 @@ const LOADERS: Record<StyleId, () => StyleFonts> = {
   'explainer-3d': () => ({
     display: stack(loadBaloo('normal', opts(['800'])).fontFamily, SANS),
     body: stack(loadNunito('normal', opts(['800'])).fontFamily, SANS),
+  }),
+  watercolour: () => {
+    const f = loadKalam('normal', opts(['400', '700']));
+    return { display: stack(f.fontFamily, 'cursive'), body: stack(f.fontFamily, 'cursive') };
+  },
+  'roman-mosaic': () => ({
+    display: stack(loadCinzel('normal', opts(['700', '900'])).fontFamily, SERIF),
+    body: stack(loadMarcellus('normal', opts(['400'])).fontFamily, SERIF),
+  }),
+  'sumi-e': () => ({
+    display: stack(loadYujiBoku('normal', opts(['400'])).fontFamily, SERIF),
+    body: stack(loadShipporiMincho('normal', opts(['600'])).fontFamily, SERIF),
+  }),
+  'impasto-oil': () => ({
+    display: stack(loadAbrilFatface('normal', opts(['400'])).fontFamily, SERIF),
+    body: stack(loadLora('normal', opts(['600'])).fontFamily, SERIF),
+  }),
+  'nocturne-gouache': () => ({
+    display: stack(loadFraunces('normal', opts(['700', '800'])).fontFamily, SERIF),
+    body: stack(loadLora('normal', opts(['500'])).fontFamily, SERIF),
+  }),
+  'botanical-plate': () => {
+    const f = loadLibreBaskerville('normal', opts(['700']));
+    loadLibreBaskerville('italic', opts(['400']));
+    loadCormorant('italic', opts(['600']));
+    return { display: stack(f.fontFamily, SERIF), body: stack('Cormorant Garamond', SERIF) };
+  },
+  'paper-cut': () => {
+    const f = loadSniglet('normal', opts(['400', '800']));
+    return { display: stack(f.fontFamily, SANS), body: stack(f.fontFamily, SANS) };
+  },
+  'art-nouveau': () => ({
+    display: stack(loadFedero('normal', opts(['400'])).fontFamily, SERIF),
+    body: stack(loadCormorant('normal', opts(['600'])).fontFamily, SERIF),
+  }),
+  'golden-hour': () => ({
+    display: stack(loadDMSerif('normal', opts(['400'])).fontFamily, SERIF),
+    body: stack(loadLora('normal', opts(['600'])).fontFamily, SERIF),
+  }),
+  'painted-anime': () => ({
+    display: stack(loadMPlusRounded('normal', opts(['800', '900'])).fontFamily, SANS),
+    body: stack(loadZenMaru('normal', opts(['700'])).fontFamily, SANS),
   }),
 };
 

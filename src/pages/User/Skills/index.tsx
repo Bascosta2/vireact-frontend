@@ -12,6 +12,7 @@ import {
   confirmEditUpload, createEditProject, getEditorUsage, listEditProjects, uploadToStorage, IN_PROGRESS,
   type EditorUsage, type EditProjectSummary,
 } from '@/api/editor';
+import { PAINTED_STYLE_IDS } from '@/remotion/styles/ids';
 import { FootageDisclaimer } from '../Editor/Disclaimer';
 import { ACCEPT, TYPES, LockedCard, ProjectCard, UsagePill } from '../Editor/shared';
 import { isFreePlan, resetDate } from '../Editor/usage';
@@ -23,9 +24,9 @@ import { ShowcasePlayer, ShowcaseThumbnail } from './ShowcasePlayer';
  * clips of what it does. Pick a skill, upload raw footage, and the AI edit follows that skill. Same plan
  * limits, upload flow and review page as the Editor.
  *
- * Two kinds sit in the library: editing skills (Remotion Reel) and the ten animation styles, each its
- * own skill that draws the whole edit in one look. Library cards show still thumbnails; only the
- * selected skill's showcase plays, so the page stays light.
+ * Three kinds sit in the library: editing skills (Remotion Reel), the ten animation styles and the ten
+ * painted styles, each its own skill that draws the whole edit in one look. Library cards show still
+ * thumbnails; only the selected skill's showcase plays, so the page stays light.
  */
 
 function FeatureTile({ f, skill }: { f: EditingSkill['features'][number]; skill: EditingSkill }) {
@@ -196,7 +197,20 @@ export default function SkillsEditor() {
             <p className="text-xs text-fg-subtle">Each one draws your whole edit in its own look. You can switch styles after the edit is made.</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {ANIMATION_STYLES.map((s) => (
+            {ANIMATION_STYLES.filter((s) => !(PAINTED_STYLE_IDS as readonly string[]).includes(s.id)).map((s) => (
+              <StyleTile key={s.id} skill={s} selected={s.id === skill.id} onSelect={() => select(s.id)} />
+            ))}
+          </div>
+
+          <div className="mb-2 mt-8 flex flex-wrap items-end justify-between gap-2">
+            <h3 className="app-label flex items-center gap-2">
+              <Palette className="h-4 w-4 text-accent" aria-hidden="true" />
+              Painted styles
+            </h3>
+            <p className="text-xs text-fg-subtle">Real painting media drawn in code: watercolour, ink, oil, gouache, paper.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {ANIMATION_STYLES.filter((s) => (PAINTED_STYLE_IDS as readonly string[]).includes(s.id)).map((s) => (
               <StyleTile key={s.id} skill={s} selected={s.id === skill.id} onSelect={() => select(s.id)} />
             ))}
           </div>

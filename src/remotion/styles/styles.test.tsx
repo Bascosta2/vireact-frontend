@@ -85,6 +85,12 @@ describe('brand sheet', () => {
     expect(plain).toContain('#00AAFF');
   });
 
+  it('applies the brand sheet to a painted style too', () => {
+    const brand = { accent: '#00AAFF', secondary: '#FF00AA', displayFont: 'Anton', bodyFont: 'Inter' };
+    const painted = { ...props('watercolour'), brand };
+    expect(frame(EditComposition as never, painted, 20, painted.durationInFrames)).toContain('data-hook="watercolour"');
+  });
+
   it('ignores an unknown font or a bad color', () => {
     const p = { ...props('pixel-art'), brand: { accent: 'red', displayFont: 'Comic Sans' } };
     expect(frame(EditComposition as never, p, 20, p.durationInFrames)).toContain('data-hook="pixel-art"');
