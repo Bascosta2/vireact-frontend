@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth 0 gives the lint step the base branch history it needs to diff against.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx vitest run
+
+      - run: npm run build
+        env:
+          VITE_BACKEND_URL: https://api.example.invalid
+
+      # Lint only the .ts/.tsx files this PR adds or changes. The main branch has
+      # pre-existing ESLint problems, so linting the whole repo would fail every PR.
+      # Pushes to main skip this step.
+      - name: Lint changed files
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" -- '*.ts' '*.tsx' > changed.txt
+          if [ -s changed.txt ]; then
+            mapfile -t files < changed.txt
+            npx eslint "${files[@]}"
+          else
+            echo "No changed .ts or .tsx files to lint."
+          fi
