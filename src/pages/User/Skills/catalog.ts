@@ -91,7 +91,7 @@ const REMOTION_REEL: EditingSkill = {
   notYet: [
     'Screen recordings with camera moves',
     'Background removal (graphics behind you, the silhouette layout)',
-    'Split screen from a full-frame take',
+    ...(editorFeaturesV2() ? [] : ['Split screen from a full-frame take']),
     ...(editorFeaturesV2() ? [] : ['Your own brand sheet (colors, fonts)']),
     'Beat-by-beat storyboard review',
   ],
