@@ -207,7 +207,7 @@ export function EditComposition(props: EditProps) {
   const ducked = (f: number) => music?.duck.some((r) => f >= r.startFrame - 3 && f < r.endFrame + 3) ?? false;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden', ...brandVars(brand), ...(isHex(brand?.secondary) ? { '--brand-secondary': brand.secondary } : {}) } as CSSProperties}>
+    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden', ...(brand ? { fontSynthesis: 'none' } : {}), ...brandVars(brand), ...(isHex(brand?.secondary) ? { '--brand-secondary': brand.secondary } : {}) } as CSSProperties}>
       <AbsoluteFill style={shakeStyle}>
         <AbsoluteFill style={footageStyle}>
           <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />

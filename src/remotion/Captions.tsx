@@ -1,5 +1,6 @@
 import { Fragment, type CSSProperties } from 'react';
 import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { textOn } from './brand';
 import { DISPLAY, FONT } from './fonts';
 import { CAPTION_CENTER } from './graphics-utils';
 import type { CaptionPage, CaptionPreset } from './types';
@@ -38,7 +39,7 @@ const LOOKS: Record<CaptionPreset, Look> = {
     // Emphasis words sit in a colored box; the box stays put for as long as the phrase shows.
     word: (emphasis, accent) =>
       emphasis
-        ? { display: 'inline-block', padding: '0.02em 0.2em', borderRadius: 14, background: accent, color: '#0a0a0f' }
+        ? { display: 'inline-block', padding: '0.02em 0.2em', borderRadius: 14, background: accent, color: textOn(accent) }
         : { color: '#fff', ...outline(8) },
   },
   impact: {

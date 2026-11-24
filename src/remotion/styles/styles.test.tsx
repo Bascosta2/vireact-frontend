@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
 import type { EditProps, Graphic } from '../types';
-import { BRAND_FONT_NAMES, brandVars } from '../brand';
+import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
 import { STYLE_IDS } from './ids';
 import { StyleShowcase } from './Showcase';
 
@@ -92,5 +92,15 @@ describe('brand sheet', () => {
     expect(brandVars(undefined)).toEqual({});
     expect(brandVars({ displayFont: 'Nope' })).toEqual({});
     expect(BRAND_FONT_NAMES).toContain('Anton');
+  });
+});
+
+describe('text on an accent', () => {
+  it('picks near-black on light accents and white on dark ones', () => {
+    expect(textOn('#FFD43B')).toBe('#0a0a0f');
+    expect(textOn('#00AAFF')).toBe('#0a0a0f');
+    expect(textOn('#0B1F4B')).toBe('#ffffff');
+    expect(textOn('#6B21A8')).toBe('#ffffff');
+    expect(textOn('nonsense')).toBe('#0a0a0f');
   });
 });

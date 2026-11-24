@@ -28,9 +28,29 @@ export interface Brand {
   bodyFont?: string;
 }
 
+/** WCAG relative luminance of a 6-digit hex color (0 black to 1 white). */
+export function luminance(hex: string): number {
+  const lin = (i: number) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(1) + 0.7152 * lin(3) + 0.0722 * lin(5);
+}
+
+/** Near-black or white text, whichever reads better on a surface filled with `accent` (any other color string gets near-black). */
+export function textOn(accent: string): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(accent)) return '#0a0a0f';
+  const l = luminance(accent);
+  const dark = (l + 0.05) / (luminance('#0A0A0F') + 0.05);
+  const light = 1.05 / (l + 0.05);
+  return dark >= light ? '#0a0a0f' : '#ffffff';
+}
+
 const w = <const T extends readonly string[]>(weights: T) => ({ weights: [...weights] as never[], subsets: ['latin'] as never[] });
 const SINGLE = w(['400']);
 const BOLD = w(['700', '800']);
+// Weights the captions use go up to 900 where the font has them; single-weight fonts are never faux-bolded (EditComposition sets font-synthesis: none).
+const HEAVY = w(['700', '800', '900']);
 
 const LOADERS: Record<string, () => string> = {
   Anton: () => loadAnton('normal', SINGLE).fontFamily,
@@ -39,14 +59,14 @@ const LOADERS: Record<string, () => string> = {
   'Bebas Neue': () => loadBebasNeue('normal', SINGLE).fontFamily,
   'DM Sans': () => loadDmSans('normal', w(['700'])).fontFamily,
   Fredoka: () => loadFredoka('normal', w(['600', '700'])).fontFamily,
-  Inter: () => loadInter('normal', BOLD).fontFamily,
-  Lora: () => loadLora('normal', BOLD).fontFamily,
+  Inter: () => loadInter('normal', HEAVY).fontFamily,
+  Lora: () => loadLora('normal', w(['700'])).fontFamily,
   Manrope: () => loadManrope('normal', BOLD).fontFamily,
-  Montserrat: () => loadMontserrat('normal', BOLD).fontFamily,
+  Montserrat: () => loadMontserrat('normal', HEAVY).fontFamily,
   Oswald: () => loadOswald('normal', w(['500', '700'])).fontFamily,
-  Outfit: () => loadOutfit('normal', BOLD).fontFamily,
-  'Playfair Display': () => loadPlayfair('normal', BOLD).fontFamily,
-  Poppins: () => loadPoppins('normal', BOLD).fontFamily,
+  Outfit: () => loadOutfit('normal', HEAVY).fontFamily,
+  'Playfair Display': () => loadPlayfair('normal', HEAVY).fontFamily,
+  Poppins: () => loadPoppins('normal', HEAVY).fontFamily,
   Roboto: () => loadRoboto('normal', w(['700', '900'])).fontFamily,
   'Space Grotesk': () => loadSpaceGrotesk('normal', w(['500', '700'])).fontFamily,
 };
