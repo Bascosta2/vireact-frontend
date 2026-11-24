@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { SUPPORT_EMAIL } from '@/constants';
 import TrustLegalPage from '../TrustLegalPage';
 
 const linkClass = 'underline hover:no-underline';
@@ -54,7 +55,7 @@ function PrivacyPolicy() {
             <section aria-labelledby="google-data-heading">
                 <h2 id="google-data-heading" className="text-xl sm:text-2xl font-semibold mt-8 mb-4">5. Google User Data and YouTube</h2>
                 <p>
-                    Vireact uses YouTube API Services. By connecting a YouTube account, you agree to be bound by the <a className={linkClass} href="https://www.youtube.com/t/terms" rel="noopener noreferrer">YouTube Terms of Service</a>. Google's handling of your data is described in the <a className={linkClass} href="http://www.google.com/policies/privacy" rel="noopener noreferrer">Google Privacy Policy</a>.
+                    Vireact uses YouTube API Services. By connecting a YouTube account, you agree to be bound by the <a className={linkClass} href="https://www.youtube.com/t/terms" rel="noopener noreferrer">YouTube Terms of Service</a>. Google's handling of your data is described in the <a className={linkClass} href="https://policies.google.com/privacy" rel="noopener noreferrer">Google Privacy Policy</a>.
                 </p>
                 <p>
                     <strong>What we request.</strong> We ask for two read-only permissions: view your YouTube account (<code>youtube.readonly</code>) and view your YouTube Analytics reports (<code>yt-analytics.readonly</code>). We read your channel details, your videos and their public counts, and your analytics numbers. We never change, upload, or delete anything on your channel with these permissions.
@@ -81,10 +82,10 @@ function PrivacyPolicy() {
                 </p>
                 <ul className="list-disc pl-6 space-y-2 mt-4">
                     <li><strong>In the app:</strong> disconnect an account on the Accounts page. This takes effect right away and removes that account's stored tokens and saved post numbers.</li>
-                    <li><strong>By email:</strong> write to <a className={linkClass} href="mailto:support@vireact.com?subject=Data%20deletion%20request">support@vireact.com</a> from the address on your Vireact account and tell us what to delete: your connected accounts only, or your whole Vireact account.</li>
+                    <li><strong>By email:</strong> write to <a className={linkClass} href={`mailto:${SUPPORT_EMAIL}?subject=Data%20deletion%20request`}>{SUPPORT_EMAIL}</a> from the address on your Vireact account and tell us what to delete: your connected accounts only, or your whole Vireact account.</li>
                 </ul>
                 <p className="mt-4">
-                    <strong>What gets deleted:</strong> connected account details, encrypted tokens, saved post numbers, and, if you ask for your whole account to be deleted, your profile and the content you uploaded. <strong>Timeline:</strong> in-app disconnects are immediate; email requests are completed within 30 days. We may keep limited records, such as payment records, where the law requires. For step-by-step instructions and to check the status of a request, visit <Link className={linkClass} to="/data-deletion">our data deletion page</Link>.
+                    <strong>What gets deleted:</strong> connected account details, encrypted tokens, saved post numbers, and, if you ask for your whole account to be deleted by email, your profile and the content you uploaded (handled by us on request). <strong>Timeline:</strong> in-app disconnects are immediate; we complete email requests as soon as reasonably possible. We may keep limited records, such as payment records, where the law requires. For step-by-step instructions and to check the status of a request, visit <Link className={linkClass} to="/data-deletion">our data deletion page</Link>.
                 </p>
             </section>
 
@@ -120,7 +121,7 @@ function PrivacyPolicy() {
 
             <h2 className="text-xl sm:text-2xl font-semibold mt-8 mb-4">14. Contact Us</h2>
             <p>
-                If you have any questions about this Privacy Policy, please contact us through our support channels.
+                If you have any questions about this Privacy Policy, please contact us at <a className={linkClass} href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
             </p>
         </TrustLegalPage>
     );

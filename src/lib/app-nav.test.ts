@@ -1,9 +1,11 @@
-﻿import { describe, expect, it } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
-import { parseDeletionStatus } from './data-deletion';
+import { fetchDeletionStatus, parseDeletionStatus } from './data-deletion';
+
+vi.mock('@/constants', async (importOriginal) => ({ ...(await importOriginal<Record<string, unknown>>()), VITE_BACKEND_URL: 'http://api.test' }));
 
 describe('sidebar', () => {
   it('groups the pages under headings, with the three video views under Your videos', () => {
@@ -98,5 +100,32 @@ describe('data deletion status', () => {
 
   it('treats anything unexpected as an error', () => {
     expect([parseDeletionStatus(null), parseDeletionStatus('x'), parseDeletionStatus({}), parseDeletionStatus({ status: 'weird' })]).toEqual(Array(4).fill({ kind: 'error' }));
+  });
+});
+
+describe('fetchDeletionStatus', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const stub = (impl: () => unknown) => vi.stubGlobal('fetch', vi.fn(impl));
+
+  it('maps 404 to not-found and other failures to error', async () => {
+    stub(() => ({ ok: false, status: 404 }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'not-found' });
+    stub(() => ({ ok: false, status: 500 }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+  });
+
+  it('turns a network failure or bad JSON into error, and skips empty codes', async () => {
+    stub(() => { throw new TypeError('network'); });
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+    stub(() => ({ ok: true, status: 200, json: async () => { throw new Error('bad json'); } }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+    expect(await fetchDeletionStatus('  ')).toEqual({ kind: 'error' });
+  });
+
+  it('reads a completed status from the right URL', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ status: 'pending' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await fetchDeletionStatus('a b')).toEqual({ kind: 'pending' });
+    expect(fetchMock).toHaveBeenCalledWith('http://api.test/api/v1/meta/data-deletion/a%20b', { signal: undefined });
   });
 });

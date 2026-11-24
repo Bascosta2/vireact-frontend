@@ -9,7 +9,7 @@ import Dropdown from "@/components/FormikFields/Dropdown";
 import { IoSparkles, IoMail, IoCall, IoLocation, IoTime, IoGlobe } from "react-icons/io5";
 import { FaFacebook, FaXTwitter, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa6";
 import { SuccessNotification, ErrorNotification } from "@/utils/toast";
-import { EMAIL_REGEX, PHONE_NUMBER_REGEX } from "@/constants";
+import { EMAIL_REGEX, PHONE_NUMBER_REGEX, SUPPORT_EMAIL } from "@/constants";
 
 // Contact form validation schema
 const ContactFormSchema = Yup.object().shape({
@@ -72,7 +72,7 @@ const contactInfo = [
   {
     icon: IoMail,
     title: 'Email Us',
-    details: ['hello@vireact.com', 'support@vireact.com'],
+    details: ['hello@vireact.com', SUPPORT_EMAIL],
     description: 'We\'ll respond within 24 hours'
   },
   {
