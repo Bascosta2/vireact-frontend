@@ -26,6 +26,9 @@ function PrivacyPolicy() {
             <p>
                 We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy. We may share your information in certain limited circumstances.
             </p>
+            <p>
+                <strong>Service providers (processors).</strong> When you use the optional background-removal feature in the editor, we send a 720p copy of your video to fal.ai (Features &amp; Labels, Inc.) for processing, using a signed link that expires after 1 hour. We delete that input copy afterwards, and the result is stored in our own storage. What fal.ai does with the video is subject to fal.ai's terms. We do not send your video to fal.ai unless you use this feature.
+            </p>
 
             <section aria-labelledby="connected-accounts-heading">
                 <h2 id="connected-accounts-heading" className="text-xl sm:text-2xl font-semibold mt-8 mb-4">4. Connected Social Accounts</h2>
