@@ -223,3 +223,22 @@ export function Footage(props: FootageProps) {
   if (props.timeline.length === 0) return null;
   return getRemotionEnvironment().isRendering ? <RenderFootage {...props} /> : <PreviewFootage {...props} />;
 }
+
+/**
+ * The speaker cut out (a WebM with alpha), drawn over the behind-person graphics. Same pieces, same
+ * trim and same crop as the footage, so the outline lines up with the picture underneath.
+ */
+export function PersonLayer({ matteUrl, timeline, framing, fps }: { matteUrl: string } & Pick<FootageProps, 'timeline' | 'framing' | 'fps'>) {
+  const style: CSSProperties = { ...COVER, objectPosition: `${framing.focusX * 100}% 50%` };
+  return (
+    <>
+      {timeline.map((p) => (
+        <Sequence key={p.id} from={p.outStartFrame} durationInFrames={p.durationFrames} layout="none">
+          <AbsoluteFill>
+            <OffthreadVideo src={matteUrl} transparent muted trimBefore={Math.round(p.srcStart * fps)} style={style} />
+          </AbsoluteFill>
+        </Sequence>
+      ))}
+    </>
+  );
+}

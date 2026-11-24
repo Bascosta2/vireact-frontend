@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions } from './Captions';
-import { Footage } from './Footage';
-import { pieceIndexAt } from './timeline-utils';
+import { Footage, PersonLayer } from './Footage';
+import { pieceIndexAt, splitGraphicLayers } from './timeline-utils';
 import { GraphicLayer } from './Graphics';
 import { SMOOTH } from './graphics-utils';
 import { FONT } from './fonts';
@@ -172,7 +172,14 @@ const legacyGraphics = (props: EditProps): Graphic[] =>
 export function EditComposition(props: EditProps) {
   const frame = useCurrentFrame();
   const look = props.look ?? DEFAULT_LOOK;
-  const graphics = props.graphics ?? legacyGraphics(props);
+  // With a background matte, graphics marked "behind" sit under the speaker; without one nothing moves.
+  const { behind: behindGraphics, front: graphics } = splitGraphicLayers(props.graphics ?? legacyGraphics(props), props.matte);
+  const matteUrl = props.matte?.url && behindGraphics.length > 0 ? props.matte.url : null;
+  const drawGraphic = (g: Graphic, k: number, tag: string) => (
+    <Sequence key={`${tag}${k}`} from={g.startFrame} durationInFrames={g.durationFrames} layout="none">
+      {theme && fonts ? <StyledGraphic g={g} theme={theme} accent={accent} fonts={fonts} /> : <GraphicLayer g={g} accent={accent} />}
+    </Sequence>
+  );
   const transitions = props.transitions ?? [];
   const reel = props.skill?.id === 'remotion-reel' ? props.skill : null;
   const theme = themeFor(props.skill?.id);
@@ -214,6 +221,12 @@ export function EditComposition(props: EditProps) {
         <AbsoluteFill style={footageStyle}>
           <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
         </AbsoluteFill>
+        {matteUrl && behindGraphics.map((g, k) => drawGraphic(g, k, 'b'))}
+        {matteUrl && (
+          <AbsoluteFill style={footageStyle}>
+            <PersonLayer matteUrl={matteUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
+          </AbsoluteFill>
+        )}
         {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={accent} />}
       </AbsoluteFill>
 
@@ -221,11 +234,7 @@ export function EditComposition(props: EditProps) {
       {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} />}
 
       <AbsoluteFill style={shakeStyle}>
-        {graphics.map((g, k) => (
-          <Sequence key={`g${k}`} from={g.startFrame} durationInFrames={g.durationFrames} layout="none">
-            {theme && fonts ? <StyledGraphic g={g} theme={theme} accent={accent} fonts={fonts} /> : <GraphicLayer g={g} accent={accent} />}
-          </Sequence>
-        ))}
+        {graphics.map((g, k) => drawGraphic(g, k, 'g'))}
 
         {props.captions && props.captions.pages.length > 0 &&
           (theme && fonts ? (
