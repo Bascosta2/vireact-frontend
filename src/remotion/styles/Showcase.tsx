@@ -1,61 +1,102 @@
-import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion';
+import type { ReactNode } from 'react';
+import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { SampleScreen } from '../showcase/screens';
+import { TwoThirdsPanel } from '../skills/remotion-reel/parts';
 import { SHOWCASE_FRAMES, SHOWCASE_SRC, ShowcaseSource, Take } from '../skills/remotion-reel/Showcase';
 import type { CaptionPage, Graphic } from '../types';
+import { styleCamera } from './camera';
+import { STYLE_COVERS } from './covers';
 import { styleFonts } from './fonts';
 import type { StyleId } from './ids';
 import { STYLE_THEMES } from './registry';
 import { StyledGraphic } from './StyledGraphics';
-import { styleCamera } from './camera';
-import { StyleOverlay, StyleProgress, StyleTransitions } from './StyleLayers';
+import { StyleOverlay, StyleProgress, StyleScene, StyleTransitions } from './StyleLayers';
 import { StyledCaptions, StyledHook } from './StyledText';
 
 /**
- * The Skills library showcase of an animation style: the demo take drawn with the same components an
- * edit uses (styles/), so what the card shows is what the edit gets. The hook opens, the style's
- * transition plays at a cut, then captions run with the style's sample graphic on top.
+ * The Skills library showcase of a style, drawn with the same components an edit uses (styles/), on the
+ * kind of video the style is for (covers.ts): the talking-head take, a sample screen (gameplay, a product,
+ * city b-roll, an app recording), or, for animated storytelling, the style's own painted scene. The hook
+ * opens, the style's transition plays at a cut, then captions run (with the sample graphic, if any).
  */
-
-/** A frame where the captions and the sample graphic are both on screen (for still thumbnails). */
-export const STYLE_THUMBNAIL_FRAME = 104;
 
 const HOOK_FRAMES = 50;
 const CUT = 52;
 const GRAPHIC_FROM = 60;
 
-const word = (text: string, i: number, emphasis = false) => ({ text, i, emphasis, startFrame: 0, endFrame: 0 });
-const PAGES: CaptionPage[] = [
-  { startFrame: 55, endFrame: 70, words: [word('this', 0), word('is', 1), word('how', 2)] },
-  { startFrame: 70, endFrame: 84, words: [word('I', 3), word('edit', 4)] },
-  { startFrame: 84, endFrame: 100, words: [word('every', 5), word('reel', 6, true)] },
-  { startFrame: 100, endFrame: SHOWCASE_FRAMES, words: [word('frame', 7), word('by', 8), word('frame', 9, true)] },
-];
+/** Caption pages from the cover's lines ("every reel*": the starred word is emphasized). */
+const pagesFor = (lines: string[]): CaptionPage[] => {
+  const starts = [55, 70, 84, 100, SHOWCASE_FRAMES];
+  let i = 0;
+  return lines.slice(0, 4).map((line, k) => ({
+    startFrame: starts[k],
+    endFrame: starts[k + 1],
+    words: line.split(' ').map((w) => ({ text: w.replace(/\*$/, ''), emphasis: w.endsWith('*'), i: i++, startFrame: 0, endFrame: 0 })),
+  }));
+};
+
+/** A plain presentation slide above the take, for talking heads with slides. */
+function Slide() {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const bars = [0.4, 0.62, 0.5, 0.85, 1];
+  return (
+    <AbsoluteFill style={{ background: '#F6F3EE' }}>
+      <div style={{ position: 'absolute', left: 90, right: 90, top: 300, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+        <div style={{ fontSize: 40, color: '#8A8F99', fontWeight: 600 }}>Hours saved per week</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 30, height: 420, marginTop: 30 }}>
+          {bars.map((b, k) => {
+            const grow = spring({ frame: frame - 8 - k * 5, fps, config: { damping: 16, stiffness: 140 } });
+            return <div key={k} style={{ flex: 1, height: `${b * 100 * grow}%`, borderRadius: 16, background: k === 4 ? '#2EC4B6' : '#D9DEE6' }} />;
+          })}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+}
 
 export function StyleShowcase({ style, src = SHOWCASE_SRC, still = null }: { style: StyleId; src?: string; still?: string | null }) {
   const frame = useCurrentFrame();
   const theme = STYLE_THEMES[style];
+  const cover = STYLE_COVERS[style];
   const fonts = styleFonts(style);
   const accent = theme.accent;
   const cam = styleCamera(theme, frame, [CUT]);
+  const scene = cover.base === 'scene' && Boolean(theme.Scene);
+  // A slow push-in, as every edit has.
+  const push = 1 + 0.035 * interpolate(frame, [0, SHOWCASE_FRAMES], [0, 1]);
+  const camera = `translate(${cam.x}%, ${cam.y}%) rotate(${cam.rotate}deg) ${cam.rotateY ? `perspective(1800px) rotateY(${cam.rotateY}deg) ` : ''}scale(${cam.scale * push})`;
+  const blur = cam.blur > 0.2 ? ` blur(${cam.blur.toFixed(1)}px)` : '';
+
+  let base: ReactNode;
+  if (scene) base = <StyleScene theme={theme} accent={accent} fonts={fonts} />;
+  else if (cover.base === 'talking') base = <Take />;
+  else if (cover.base === 'talking-panel')
+    base = (
+      <AbsoluteFill>
+        <Slide />
+        <TwoThirdsPanel shiftY={505}>
+          <Take />
+        </TwoThirdsPanel>
+      </AbsoluteFill>
+    );
+  else base = <SampleScreen id={cover.base === 'scene' ? 'app' : cover.base} />;
+
   const sample: Graphic = { type: theme.sample.type, startFrame: GRAPHIC_FROM, durationFrames: SHOWCASE_FRAMES - GRAPHIC_FROM, text: theme.sample.text, subtext: theme.sample.subtext ?? '', items: theme.sample.items ?? [], focusX: 0.5, focusY: 0.5 };
   return (
     <ShowcaseSource src={src} still={still}>
       <AbsoluteFill style={{ background: '#000', overflow: 'hidden' }}>
-        <AbsoluteFill
-          style={{
-            transform: `translate(${cam.x}%, ${cam.y}%) rotate(${cam.rotate}deg) ${cam.rotateY ? `perspective(1800px) rotateY(${cam.rotateY}deg) ` : ''}scale(${cam.scale})`,
-            filter: `${theme.footage}${cam.blur > 0.2 ? ` blur(${cam.blur.toFixed(1)}px)` : ''}`,
-          }}
-        >
-          <Take />
-        </AbsoluteFill>
-        <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} />
+        <AbsoluteFill style={{ transform: camera, filter: scene ? blur.trim() || undefined : `${theme.footage}${blur}` }}>{base}</AbsoluteFill>
+        <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} scene={scene} />
         <Sequence from={0} durationInFrames={HOOK_FRAMES} layout="none">
-          <StyledHook lines={['How I edit reels', 'without an editor']} durationFrames={HOOK_FRAMES} theme={theme} accent={accent} fonts={fonts} />
+          <StyledHook lines={cover.hook} durationFrames={HOOK_FRAMES} theme={theme} accent={accent} fonts={fonts} />
         </Sequence>
-        <Sequence from={GRAPHIC_FROM} durationInFrames={sample.durationFrames} layout="none">
-          <StyledGraphic g={sample} theme={theme} accent={accent} fonts={fonts} />
-        </Sequence>
-        <StyledCaptions pages={PAGES} theme={theme} accent={accent} fonts={fonts} />
+        {cover.graphic && (
+          <Sequence from={GRAPHIC_FROM} durationInFrames={sample.durationFrames} layout="none">
+            <StyledGraphic g={sample} theme={theme} accent={accent} fonts={fonts} />
+          </Sequence>
+        )}
+        <StyledCaptions pages={pagesFor(cover.lines)} theme={theme} accent={accent} fonts={fonts} />
         <StyleTransitions theme={theme} accent={accent} fonts={fonts} frames={[CUT]} />
         <StyleProgress theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} />
       </AbsoluteFill>

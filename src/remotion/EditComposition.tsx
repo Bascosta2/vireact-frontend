@@ -13,7 +13,7 @@ import { styleFonts } from './styles/fonts';
 import { themeFor } from './styles/registry';
 import { StyledGraphic } from './styles/StyledGraphics';
 import { styleCamera } from './styles/camera';
-import { StyleOverlay, StyleProgress, StyleTransitions } from './styles/StyleLayers';
+import { StyleOverlay, StyleProgress, StyleScene, StyleTransitions } from './styles/StyleLayers';
 import { StyledCaptions, StyledHook } from './styles/StyledText';
 
 /**
@@ -179,6 +179,8 @@ export function EditComposition(props: EditProps) {
   const accent = theme ? theme.accent : look.accent;
   const effects = props.effects ?? [];
   const transitionFrames = transitions.map((t) => t.frame);
+  // Animated storytelling: the style's painted world replaces the picture; the footage keeps its sound.
+  const scene = Boolean(theme?.Scene && props.skill?.layout === 'scene');
 
   const zoom = zoomAt(frame, props.zooms);
   const piece = props.timeline.length ? props.timeline[pieceIndexAt(frame, props.timeline)] : null;
@@ -205,14 +207,20 @@ export function EditComposition(props: EditProps) {
   return (
     <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
       <AbsoluteFill style={shakeStyle}>
-        <AbsoluteFill style={footageStyle}>
+        <AbsoluteFill style={scene ? { opacity: 0 } : footageStyle}>
           <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
         </AbsoluteFill>
+        {scene && theme && fonts && (
+          // The scene takes the edit's camera (zooms, push-in, transitions), not the footage grade.
+          <AbsoluteFill style={{ transform: footageStyle.transform, transformOrigin: footageStyle.transformOrigin, filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : undefined }}>
+            <StyleScene theme={theme} accent={accent} fonts={fonts} />
+          </AbsoluteFill>
+        )}
         {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={look.accent} />}
       </AbsoluteFill>
 
       {/* The style's ambient layer sits on the picture, under the text, and holds still when the camera shakes. */}
-      {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} />}
+      {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} scene={scene} />}
 
       <AbsoluteFill style={shakeStyle}>
         {graphics.map((g, k) => (

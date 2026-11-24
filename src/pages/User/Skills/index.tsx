@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Clock, Palette, Sparkles, Wand2 } from 'lucide-react';
+import { BookOpen, Check, Clock, Palette, Sparkles, User, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Dropzone } from '@/components/app/Dropzone';
@@ -12,11 +12,11 @@ import {
   confirmEditUpload, createEditProject, getEditorUsage, listEditProjects, uploadToStorage, IN_PROGRESS,
   type EditorUsage, type EditProjectSummary,
 } from '@/api/editor';
-import { PAINTED_STYLE_IDS } from '@/remotion/styles/ids';
+import type { StyleCategory } from '@/remotion/styles/covers';
 import { FootageDisclaimer } from '../Editor/Disclaimer';
 import { ACCEPT, TYPES, LockedCard, ProjectCard, UsagePill } from '../Editor/shared';
 import { isFreePlan, resetDate } from '../Editor/usage';
-import { ANIMATION_STYLES, SKILLS, skillById, type EditingSkill } from './catalog';
+import { SKILLS, skillById, type EditingSkill } from './catalog';
 import { ShowcasePlayer, ShowcaseThumbnail } from './ShowcasePlayer';
 
 /**
@@ -24,10 +24,23 @@ import { ShowcasePlayer, ShowcaseThumbnail } from './ShowcasePlayer';
  * clips of what it does. Pick a skill, upload raw footage, and the AI edit follows that skill. Same plan
  * limits, upload flow and review page as the Editor.
  *
- * Three kinds sit in the library: editing skills (Remotion Reel), the ten animation styles and the ten
- * painted styles, each its own skill that draws the whole edit in one look. Library cards show still
- * thumbnails; only the selected skill's showcase plays, so the page stays light.
+ * The library is grouped by what each skill is for: talking-head videos, animation styles for any footage
+ * (gameplay, products, b-roll, screen recordings), and animated storytelling (a painted world narrated by
+ * the creator). Each card's cover shows the skill on that kind of video. Covers are stills; only the
+ * selected skill's showcase plays, so the page stays light.
  */
+
+const SECTIONS: { id: StyleCategory; title: string; blurb: string; icon: typeof User }[] = [
+  { id: 'talking-head', title: 'For talking-head videos', blurb: 'Made for you on camera: the hook above your head, captions under your chin, graphics around your face.', icon: User },
+  { id: 'any-footage', title: 'Animation styles for any footage', blurb: 'Restyle whatever you filmed or recorded: gameplay, product shots, b-roll, app and screen recordings.', icon: Palette },
+  { id: 'storytelling', title: 'Animated storytelling', blurb: 'No camera needed: the style paints a whole animated world and your voice tells the story.', icon: BookOpen },
+];
+
+const UPLOAD_HINT: Record<StyleCategory, string> = {
+  'talking-head': 'A talking-head take works best.',
+  'any-footage': 'Any footage works: you on camera, gameplay, a product, b-roll or a screen recording.',
+  storytelling: 'Record yourself telling the story: any video works, only your voice is used and the picture is painted.',
+};
 
 function FeatureTile({ f, skill }: { f: EditingSkill['features'][number]; skill: EditingSkill }) {
   return (
@@ -52,25 +65,7 @@ function FeatureTile({ f, skill }: { f: EditingSkill['features'][number]; skill:
   );
 }
 
-function SkillCard({ skill, selected, onSelect }: { skill: EditingSkill; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-      className={cn('app-focus flex w-full gap-4 rounded-xl border p-4 text-left', selected ? 'border-accent bg-accent-tint' : 'border-line bg-surface hover:bg-surface-raised')}
-    >
-      <ShowcaseThumbnail showcase={skill.hero} className="w-24 shrink-0" />
-      <span className="min-w-0">
-        <span className="block text-base font-semibold text-fg">{skill.name}</span>
-        <span className="mt-1 block text-xs text-fg-subtle">{skill.origin}</span>
-        <span className="mt-2 block text-sm text-fg-muted">{skill.tagline}</span>
-      </span>
-    </button>
-  );
-}
-
-/** An animation style in the library grid: its look as a still, its name and what it suits. */
+/** A skill in the library grid: its cover (the skill on the kind of video it is for), name and what it suits. */
 function StyleTile({ skill, selected, onSelect }: { skill: EditingSkill; selected: boolean; onSelect: () => void }) {
   return (
     <button
@@ -79,7 +74,10 @@ function StyleTile({ skill, selected, onSelect }: { skill: EditingSkill; selecte
       onClick={onSelect}
       className={cn('app-focus flex w-full flex-col gap-2 rounded-xl border p-2 text-left', selected ? 'border-accent bg-accent-tint' : 'border-line bg-surface hover:bg-surface-raised')}
     >
-      <ShowcaseThumbnail showcase={skill.hero} className="w-full" />
+      <span className="relative block">
+        <ShowcaseThumbnail showcase={skill.hero} className="w-full" />
+        <span className="absolute bottom-1.5 left-1.5 right-1.5 truncate rounded-md bg-black/65 px-2 py-0.5 text-[11px] font-medium text-white">{skill.shown}</span>
+      </span>
       <span className="min-w-0 px-1 pb-1">
         <span className="block text-sm font-semibold text-fg">{skill.name}</span>
         <span className="mt-0.5 line-clamp-2 block text-xs text-fg-muted">{skill.bestFor}</span>
@@ -179,41 +177,22 @@ export default function SkillsEditor() {
 
         <section aria-labelledby="library-heading" className="mb-10">
           <h2 id="library-heading" className="mb-4 text-lg font-semibold text-fg">Skill library</h2>
-          <h3 className="app-label mb-2">Editing skills</h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            {SKILLS.filter((s) => s.kind === 'editing').map((s) => (
-              <SkillCard key={s.id} skill={s} selected={s.id === skill.id} onSelect={() => select(s.id)} />
-            ))}
-            <div className="flex items-center justify-center rounded-xl border border-dashed border-line p-6 text-center text-sm text-fg-subtle">
-              More skills are on the way.
+          {SECTIONS.map((sec, k) => (
+            <div key={sec.id} className={k ? 'mt-8' : ''}>
+              <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                <h3 className="app-label flex items-center gap-2">
+                  <sec.icon className="h-4 w-4 text-accent" aria-hidden="true" />
+                  {sec.title}
+                </h3>
+                <p className="text-xs text-fg-subtle">{sec.blurb}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {SKILLS.filter((x) => x.category === sec.id).map((x) => (
+                  <StyleTile key={x.id} skill={x} selected={x.id === skill.id} onSelect={() => select(x.id)} />
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="mb-2 mt-8 flex flex-wrap items-end justify-between gap-2">
-            <h3 className="app-label flex items-center gap-2">
-              <Palette className="h-4 w-4 text-accent" aria-hidden="true" />
-              Animation styles
-            </h3>
-            <p className="text-xs text-fg-subtle">Each one draws your whole edit in its own look. You can switch styles after the edit is made.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {ANIMATION_STYLES.filter((s) => !(PAINTED_STYLE_IDS as readonly string[]).includes(s.id)).map((s) => (
-              <StyleTile key={s.id} skill={s} selected={s.id === skill.id} onSelect={() => select(s.id)} />
-            ))}
-          </div>
-
-          <div className="mb-2 mt-8 flex flex-wrap items-end justify-between gap-2">
-            <h3 className="app-label flex items-center gap-2">
-              <Palette className="h-4 w-4 text-accent" aria-hidden="true" />
-              Painted styles
-            </h3>
-            <p className="text-xs text-fg-subtle">Real painting media drawn in code: watercolour, ink, oil, gouache, paper.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {ANIMATION_STYLES.filter((s) => (PAINTED_STYLE_IDS as readonly string[]).includes(s.id)).map((s) => (
-              <StyleTile key={s.id} skill={s} selected={s.id === skill.id} onSelect={() => select(s.id)} />
-            ))}
-          </div>
+          ))}
         </section>
 
         <section ref={detailRef} aria-labelledby="skill-heading" className="mb-10 grid scroll-mt-6 gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
@@ -292,8 +271,8 @@ export default function SkillsEditor() {
               <Dropzone
                 onFile={(f) => void onFile(f)}
                 error={uploadError}
-                label={isFreePlan(usage) ? `Drop your raw video here for a free ${skill.name} edit` : `Drop your raw video here for a ${skill.name} edit`}
-                hint="A talking-head take works best. MP4, MOV, WebM or MKV. Up to 3 minutes and 500 MB."
+                label={`Drop your ${skill.category === 'storytelling' ? 'narration' : 'raw'} video here for a ${isFreePlan(usage) ? 'free ' : ''}${skill.name} ${skill.category === 'storytelling' ? 'story' : 'edit'}`}
+                hint={`${UPLOAD_HINT[skill.category]} MP4, MOV, WebM or MKV. Up to 3 minutes and 500 MB.`}
                 accept={ACCEPT}
               />
               {inProgressId && (

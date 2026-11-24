@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
+import { focus, grainStyle, loop } from '../painted';
 import { H, W, hexA, noise, type StyleTheme } from '../theme';
 
 /**
@@ -45,7 +45,7 @@ export const nocturneGouache: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => {
+  Overlay: ({ c, scene }) => {
     const cloud = loop(c.frame, 900) * 260 - 130;
     return (
       <AbsoluteFill style={{ pointerEvents: 'none' }}>
@@ -60,7 +60,7 @@ export const nocturneGouache: StyleTheme = {
           {Array.from({ length: 7 }, (_, k) => (
             <path key={k} d={`M${k * 74 - 10} 0 l26 108 l26 -108 Z`} fill={PINE} opacity={0.85} />
           ))}
-          {deer(c.frame)}
+          {!scene && deer(c.frame)}
           {/* Grass along the bottom, swaying. */}
           {Array.from({ length: 26 }, (_, k) => {
             const x = 30 + k * 41;
@@ -81,6 +81,38 @@ export const nocturneGouache: StyleTheme = {
           })}
         </svg>
         <div style={grainStyle({ color: '#0A1420', alpha: 0.5, freq: 0.7, size: 220, seed: 9, stretch: [1.8, 0.8], opacity: 0.4 })} />
+      </AbsoluteFill>
+    );
+  },
+  Scene: ({ c }) => {
+    const pines = (base: number, seed: number) =>
+      `M0 ${H} L0 ${base} ` + Array.from({ length: 17 }, (_, k) => `L${k * 68 + 34} ${base - 90 - noise(k, seed) * 150} L${k * 68 + 68} ${base}`).join(' ') + ` L${W} ${H} Z`;
+    return (
+      <AbsoluteFill style={{ background: `linear-gradient(180deg, #08111F 0%, ${NIGHT} 42%, #1C3346 64%, ${PINE} 100%)` }}>
+        <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+          <circle cx={780} cy={420} r={190} fill={MOON} opacity={0.1} />
+          <circle cx={780} cy={420} r={105} fill={MOON} opacity={0.95} />
+          {[0, 1].map((k) => <ellipse key={k} cx={((c.frame * 0.6 + k * 600) % 1600) - 260} cy={400 + k * 80} rx={260} ry={24} fill={MIST} opacity={0.3} />)}
+          <path d={pines(1040, 3)} fill="#0C1F1C" />
+          <path d={pines(1150, 8)} fill={PINE} />
+          <rect x={0} y={1180} width={W} height={H - 1180} fill="#173A32" />
+          {/* Moonlight pooled on the meadow, so the dark deer reads as a silhouette. */}
+          <ellipse cx={540} cy={1170} rx={480} ry={300} fill={MOON} opacity={0.14} style={{ filter: 'blur(30px)' }} />
+          <ellipse cx={540} cy={1120} rx={330} ry={190} fill={MIST} opacity={0.22} style={{ filter: 'blur(24px)' }} />
+          <g transform={focus(280, 1755, 540, 1170, 2.6)}>{deer(c.frame)}</g>
+          {/* Fireflies rising around the deer, each a warm dab that brightens and fades. */}
+          {Array.from({ length: 18 }, (_, k) => {
+            const x = 120 + noise(k, 21) * 840 + Math.sin(c.frame / 40 + k) * 30;
+            const y = 1500 - ((c.frame * (0.8 + noise(k, 22)) + noise(k, 23) * 900) % 900);
+            const on = 0.25 + 0.75 * Math.max(0, Math.sin(c.frame / (12 + (k % 5) * 3) + k));
+            return (
+              <g key={k} opacity={on}>
+                <circle cx={x} cy={y} r={18} fill={FIREFLY} opacity={0.18} />
+                <circle cx={x} cy={y} r={6} fill={FIREFLY} />
+              </g>
+            );
+          })}
+        </svg>
       </AbsoluteFill>
     );
   },

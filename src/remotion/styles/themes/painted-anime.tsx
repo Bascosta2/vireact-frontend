@@ -1,6 +1,6 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { focus, grainStyle, loop } from '../painted';
+import { H, W, hexA, noise, type StyleTheme } from '../theme';
 
 /**
  * Painted Anime: a hand-painted anime film background in gouache — lush greens, big white cumulus
@@ -65,7 +65,7 @@ export const paintedAnime: StyleTheme = {
   entrance: 'step',
   step: 2,
   textScale: 1,
-  Overlay: ({ c }) => (
+  Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <AbsoluteFill style={{ background: `linear-gradient(180deg, ${hexA(SKY, 0.28)} 0%, transparent 24%, transparent 76%, ${hexA(DEEP_LEAF, 0.35)} 100%)`, mixBlendMode: 'soft-light' }} />
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
@@ -85,10 +85,30 @@ export const paintedAnime: StyleTheme = {
             </g>
           );
         })}
-        {kid(c.frame, 330, ['#F2784B', '#5A3A2A'], 0)}
-        {kid(c.frame, 520, ['#4A7FD4', '#2E2418'], 47, 0.88)}
+        {!scene && kid(c.frame, 330, ['#F2784B', '#5A3A2A'], 0)}
+        {!scene && kid(c.frame, 520, ['#4A7FD4', '#2E2418'], 47, 0.88)}
       </svg>
       <div style={grainStyle({ color: '#2F5D33', alpha: 0.38, freq: 0.62, size: 230, seed: 14, stretch: [1.7, 0.9], opacity: 0.32 })} />
+    </AbsoluteFill>
+  ),
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${SKY} 0%, #6CB6EE 40%, ${SKY_PALE} 62%, ${LEAF} 66%, ${DEEP_LEAF} 100%)` }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        {cloud(300 - loop(c.frame, 2400) * 160, 520, 2.1)}
+        {cloud(860 - loop(c.frame, 3000) * 120, 760, 1.5, 0.92)}
+        {cloud(120 - loop(c.frame, 3600) * 100, 960, 1.1, 0.85)}
+        <ellipse cx={260} cy={1300} rx={520} ry={120} fill="#7CC47A" />
+        <ellipse cx={900} cy={1290} rx={480} ry={110} fill="#6DB86B" />
+        <rect x={0} y={1290} width={W} height={H - 1290} fill={LEAF} />
+        {/* Tiny white and yellow flowers in the grass. */}
+        {Array.from({ length: 30 }, (_, k) => (
+          <circle key={k} cx={noise(k, 41) * W} cy={1320 + noise(k, 42) * 560} r={5 + noise(k, 43) * 4} fill={k % 3 ? '#FFFFFF' : '#FFE066'} opacity={0.9} />
+        ))}
+        <g transform={focus(425, 1700, 540, 1330, 2.2)}>
+          {kid(c.frame, 330, ['#F2784B', '#5A3A2A'], 0)}
+          {kid(c.frame, 520, ['#4A7FD4', '#2E2418'], 47, 0.88)}
+        </g>
+      </svg>
     </AbsoluteFill>
   ),
   caption: {

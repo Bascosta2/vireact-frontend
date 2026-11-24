@@ -13,9 +13,15 @@ const useCtx = (accent: string, fonts: StyleFonts): Ctx => {
   return { frame, fps, accent, fonts, width, height };
 };
 
-export function StyleOverlay({ theme, accent, fonts, total }: { theme: StyleTheme; accent: string; fonts: StyleFonts; total: number }) {
+export function StyleOverlay({ theme, accent, fonts, total, scene = false }: { theme: StyleTheme; accent: string; fonts: StyleFonts; total: number; scene?: boolean }) {
   const c = useCtx(accent, fonts);
-  return <theme.Overlay c={c} total={total} />;
+  return <theme.Overlay c={c} total={total} scene={scene} />;
+}
+
+/** An animated storytelling style's painted world, filling the frame in place of the camera. */
+export function StyleScene({ theme, accent, fonts }: { theme: StyleTheme; accent: string; fonts: StyleFonts }) {
+  const c = useCtx(accent, fonts);
+  return theme.Scene ? <theme.Scene c={c} /> : null;
 }
 
 /** The transition layer for every cut in `frames` that is close enough to the current frame. */
