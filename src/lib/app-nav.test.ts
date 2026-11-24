@@ -3,6 +3,7 @@ import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
+import { parseDeletionStatus } from './data-deletion';
 
 describe('sidebar', () => {
   it('groups the pages under headings, with the three video views under Your videos', () => {
@@ -85,5 +86,17 @@ describe('sidebar plan badges', () => {
 
   it('matches the backend script access', () => {
     expect([scriptAccessForPlan('free'), scriptAccessForPlan('premium'), scriptAccessForPlan('pro'), scriptAccessForPlan('enterprise'), scriptAccessForPlan(null)]).toEqual([2, 6, 10, 10, 2]);
+  });
+});
+
+describe('data deletion status', () => {
+  it('reads pending and completed, plain or wrapped in data', () => {
+    expect(parseDeletionStatus({ status: 'pending' })).toEqual({ kind: 'pending' });
+    expect(parseDeletionStatus({ data: { status: 'completed', completedAt: '2026-11-01T10:00:00Z' } })).toEqual({ kind: 'completed', completedAt: '2026-11-01T10:00:00Z' });
+    expect(parseDeletionStatus({ status: 'completed', completedAt: 'nonsense' })).toEqual({ kind: 'completed', completedAt: null });
+  });
+
+  it('treats anything unexpected as an error', () => {
+    expect([parseDeletionStatus(null), parseDeletionStatus('x'), parseDeletionStatus({}), parseDeletionStatus({ status: 'weird' })]).toEqual(Array(4).fill({ kind: 'error' }));
   });
 });
