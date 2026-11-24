@@ -1,3 +1,4 @@
+import type { StyleId } from '@/remotion/styles/ids';
 import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
 
@@ -83,6 +84,8 @@ export interface Edits {
   framingMode?: 'fill' | 'fit_blur';
   /** Text hook style of the Remotion Reel skill. */
   hookVariant?: 'white' | 'black' | 'plain';
+  /** Another animation style for an edit made with one (Style tab); the backend ignores it for other edits. */
+  animationStyle?: StyleId;
 }
 
 export type PreviewProps = Omit<EditProps, 'videoUrl'>;

@@ -9,6 +9,12 @@ import { FONT } from './fonts';
 import { SFX_SECONDS } from './sfx';
 import type { EditProps, Grade, Graphic, Look } from './types';
 import { ReelCaptions, TextHook } from './skills/remotion-reel/parts';
+import { styleFonts } from './styles/fonts';
+import { themeFor } from './styles/registry';
+import { StyledGraphic } from './styles/StyledGraphics';
+import { styleCamera } from './styles/camera';
+import { StyleOverlay, StyleProgress, StyleTransitions } from './styles/StyleLayers';
+import { StyledCaptions, StyledHook } from './styles/StyledText';
 
 /**
  * One AI edit: the creator's own footage cut into the planned order and framed for 9:16, with
@@ -16,6 +22,9 @@ import { ReelCaptions, TextHook } from './skills/remotion-reel/parts';
  * effects, a color grade, animated graphics, word captions, a hook overlay, a progress bar, music
  * (ducked under speech) and sound effects. The same component plays in the browser preview and the
  * Lambda render, so what the creator sees is what they get.
+ *
+ * An animation style (props.skill is one of styles/ids.ts) redraws all of it in that style: footage
+ * treatment, an ambient layer, captions, hook, graphics, transitions and progress (styles/).
  */
 
 const EASE_FRAMES = 6;
@@ -164,23 +173,31 @@ export function EditComposition(props: EditProps) {
   const graphics = props.graphics ?? legacyGraphics(props);
   const transitions = props.transitions ?? [];
   const reel = props.skill?.id === 'remotion-reel' ? props.skill : null;
+  const theme = themeFor(props.skill?.id);
+  const fonts = theme ? styleFonts(theme.id) : null;
+  // A style brings its own palette; its accent is the one the backend sends too.
+  const accent = theme ? theme.accent : look.accent;
   const effects = props.effects ?? [];
+  const transitionFrames = transitions.map((t) => t.frame);
 
   const zoom = zoomAt(frame, props.zooms);
   const piece = props.timeline.length ? props.timeline[pieceIndexAt(frame, props.timeline)] : null;
   // Slow push-in over each shot, plus the jump-cut zoom for this piece.
   const push = look.motion && piece ? 1 + 0.035 * Math.min(1, Math.max(0, (frame - piece.outStartFrame) / Math.max(1, piece.durationFrames))) : 1;
   const base = piece?.baseScale ?? 1;
-  const cam = cameraAt(frame, transitions, effects);
+  // A style draws its own transitions, so the standard camera moves only follow the effects.
+  const cam = cameraAt(frame, theme ? [] : transitions, effects);
+  const sc = theme ? styleCamera(theme, frame, transitionFrames) : null;
+  const blur = Math.max(cam.blur, sc?.blur ?? 0);
 
   const footageStyle: CSSProperties = {
-    transform: `scale(${zoom.scale * push * base * cam.scale})`,
+    transform: `${sc?.rotateY ? `perspective(1800px) rotateY(${sc.rotateY.toFixed(2)}deg) ` : ''}scale(${zoom.scale * push * base * cam.scale * (sc?.scale ?? 1)})`,
     transformOrigin: zoom.origin,
-    filter: [GRADE_FILTER[look.grade] ?? 'none', cam.blur > 0.2 ? `blur(${cam.blur.toFixed(1)}px)` : '', cam.glitch > 0 ? `hue-rotate(${Math.round(jitter(frame, 9) * 40 * cam.glitch)}deg)` : '']
-      .filter(Boolean)
+    filter: [theme ? theme.footage : GRADE_FILTER[look.grade] ?? 'none', blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : '', cam.glitch > 0 ? `hue-rotate(${Math.round(jitter(frame, 9) * 40 * cam.glitch)}deg)` : '']
+      .filter((x) => x && x !== 'none')
       .join(' ') || 'none',
   };
-  const shakeStyle: CSSProperties = { transform: `translate(${cam.x}%, ${cam.y}%) rotate(${cam.rotate}deg)` };
+  const shakeStyle: CSSProperties = { transform: `translate(${cam.x + (sc?.x ?? 0)}%, ${cam.y + (sc?.y ?? 0)}%) rotate(${cam.rotate + (sc?.rotate ?? 0)}deg)` };
 
   const music = props.music;
   const ducked = (f: number) => music?.duck.some((r) => f >= r.startFrame - 3 && f < r.endFrame + 3) ?? false;
@@ -191,20 +208,33 @@ export function EditComposition(props: EditProps) {
         <AbsoluteFill style={footageStyle}>
           <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
         </AbsoluteFill>
-        <GlitchBars frame={frame} strength={cam.glitch} accent={look.accent} />
+        {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={look.accent} />}
+      </AbsoluteFill>
 
+      {/* The style's ambient layer sits on the picture, under the text, and holds still when the camera shakes. */}
+      {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} />}
+
+      <AbsoluteFill style={shakeStyle}>
         {graphics.map((g, k) => (
           <Sequence key={`g${k}`} from={g.startFrame} durationInFrames={g.durationFrames} layout="none">
-            <GraphicLayer g={g} accent={look.accent} />
+            {theme && fonts ? <StyledGraphic g={g} theme={theme} accent={accent} fonts={fonts} /> : <GraphicLayer g={g} accent={look.accent} />}
           </Sequence>
         ))}
 
         {props.captions && props.captions.pages.length > 0 &&
-          (reel ? <ReelCaptions pages={props.captions.pages} accent={look.accent} /> : <Captions pages={props.captions.pages} preset={props.captions.preset} accent={look.accent} />)}
+          (theme && fonts ? (
+            <StyledCaptions pages={props.captions.pages} theme={theme} accent={accent} fonts={fonts} />
+          ) : reel ? (
+            <ReelCaptions pages={props.captions.pages} accent={look.accent} />
+          ) : (
+            <Captions pages={props.captions.pages} preset={props.captions.preset} accent={look.accent} />
+          ))}
 
         {props.hook && (
           <Sequence from={props.hook.startFrame} durationInFrames={props.hook.durationFrames} layout="none">
-            {reel ? (
+            {theme && fonts ? (
+              <StyledHook lines={props.skill?.hookLines.length ? props.skill.hookLines : [props.hook.text]} durationFrames={props.hook.durationFrames} theme={theme} accent={accent} fonts={fonts} />
+            ) : reel ? (
               // The skill's hook is a still text sticker above the head, from the first frame.
               <TextHook lines={reel.hookLines.length ? reel.hookLines : [props.hook.text]} variant={reel.hookVariant} />
             ) : (
@@ -214,8 +244,10 @@ export function EditComposition(props: EditProps) {
         )}
       </AbsoluteFill>
 
+      {theme && fonts && transitionFrames.length > 0 && <StyleTransitions theme={theme} accent={accent} fonts={fonts} frames={transitionFrames} />}
       {cam.flash > 0 && <AbsoluteFill style={{ background: '#fff', opacity: cam.flash }} />}
-      {look.progressBar && <ProgressBar frame={frame} total={props.durationInFrames} accent={look.accent} />}
+      {look.progressBar &&
+        (theme?.Progress && fonts ? <StyleProgress theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} /> : <ProgressBar frame={frame} total={props.durationInFrames} accent={accent} />)}
 
       {music && props.musicUrl && (
         <Audio

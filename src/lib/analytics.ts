@@ -25,6 +25,8 @@ export type AnalyticsEvent =
   | 'accounts_viewed'
   | 'skills_viewed'
   | 'skill_edit_started'
+  | 'skill_selected'
+  | 'edit_style_switched'
   | 'account_connected'
   | 'account_post_linked'
   | 'account_post_unlinked'

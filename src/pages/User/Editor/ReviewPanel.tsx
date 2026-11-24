@@ -4,10 +4,14 @@ import { Tabs, type TabDef } from '@/components/app/Tabs';
 import { Button } from '@/components/app/Button';
 import { Select } from '@/components/app/Select';
 import { cn } from '@/lib/utils';
+import { track } from '@/lib/analytics';
 import type { CaptionPreset } from '@/remotion/types';
+import { isStyleId, type StyleId } from '@/remotion/styles/ids';
 import type { EditProjectDetail, Edits, Evidence, PreviewProps } from '@/api/editor';
+import { ANIMATION_STYLES, skillById } from '../Skills/catalog';
+import { ShowcaseThumbnail } from '../Skills/ShowcasePlayer';
 
-type PanelTab = 'changes' | 'captions' | 'hook' | 'sound' | 'ask';
+type PanelTab = 'style' | 'changes' | 'captions' | 'hook' | 'sound' | 'ask';
 const TABS: TabDef<PanelTab>[] = [
   { id: 'changes', label: 'Changes' },
   { id: 'captions', label: 'Captions' },
@@ -15,6 +19,12 @@ const TABS: TabDef<PanelTab>[] = [
   { id: 'sound', label: 'Sound' },
   { id: 'ask', label: 'Ask for changes' },
 ];
+/** Edits made with an animation style open on the Style tab, where the style can be switched. */
+const STYLE_TABS: TabDef<PanelTab>[] = [{ id: 'style', label: 'Style' }, ...TABS];
+
+/** The animation style an edit is drawn in now (null for other edits). */
+const activeStyle = (project: Pick<EditProjectDetail, 'skill'>, edits: Edits): StyleId | null =>
+  isStyleId(project.skill) ? (isStyleId(edits.animationStyle) ? edits.animationStyle : project.skill) : null;
 
 const EVIDENCE: Record<Evidence, { label: string; icon: typeof BookOpen }> = {
   knowledge: { label: 'Vireact playbook', icon: BookOpen },
@@ -150,10 +160,47 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
   );
 }
 
+/** Switch an animation-style edit to another style: the cut stays, only the look changes. */
+function StyleTab({ project, edits, onEdit }: { project: EditProjectDetail; edits: Edits; onEdit: (e: Edits) => void }) {
+  const current = activeStyle(project, edits);
+  const info = skillById(current);
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-fg-muted">Pick another animation style and the preview redraws right away. Your cut, captions, hook and graphics stay the same.</p>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {ANIMATION_STYLES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            aria-pressed={current === s.id}
+            onClick={() => {
+              if (current === s.id) return;
+              track('edit_style_switched', { project_id: project.id, from: current, to: s.id });
+              onEdit({ animationStyle: s.id as StyleId });
+            }}
+            className={cn('app-focus flex flex-col gap-1.5 rounded-lg border p-1.5 text-left', current === s.id ? 'border-accent bg-accent-tint' : 'border-line hover:bg-white/[0.03]')}
+          >
+            <ShowcaseThumbnail showcase={s.hero} className="w-full" />
+            <span className="px-0.5 text-xs font-medium text-fg">{s.name}</span>
+          </button>
+        ))}
+      </div>
+      {info && (
+        <div className="rounded-lg border border-line p-3">
+          <p className="text-sm font-medium text-fg">{info.name}</p>
+          <p className="mt-1 text-xs text-fg-muted">{info.tagline}</p>
+        </div>
+      )}
+      <p className="text-xs text-fg-subtle">The AI planned this edit for {skillById(project.skill)?.name ?? 'its first style'}. To plan it again around the new style, use Ask for changes.</p>
+    </div>
+  );
+}
+
 function CaptionsTab({ props, edits, onEdit, onEditText }: { props: PreviewProps; edits: Edits; onEdit: (e: Edits) => void; onEditText: (i: number, text: string) => void }) {
   const preset = props.captions?.preset ?? edits.captionPreset ?? 'bold_pop';
   const pages = props.captions?.pages ?? [];
   const skillLook = props.skill?.id === 'remotion-reel';
+  const styleName = props.skill && isStyleId(props.skill.id) ? skillById(props.skill.id)?.name : null;
   return (
     <div className="space-y-5">
       <Toggle checked={!edits.captionsOff} onChange={(v) => onEdit({ captionsOff: !v })} label="Captions" />
@@ -161,6 +208,8 @@ function CaptionsTab({ props, edits, onEdit, onEditText }: { props: PreviewProps
         <>
           {skillLook ? (
             <p className="rounded-lg border border-line p-3 text-xs text-fg-muted">Captions follow the Remotion Reel style: outlined, lowercase, 1 to 3 words, gone the moment you stop speaking.</p>
+          ) : styleName ? (
+            <p className="rounded-lg border border-line p-3 text-xs text-fg-muted">Captions are drawn in the {styleName} style. Change the style on the Style tab.</p>
           ) : (
           <fieldset>
             <legend className="app-label mb-2">Style</legend>
@@ -216,6 +265,8 @@ const HOOK_STYLES: { id: NonNullable<Edits['hookVariant']>; label: string; hint:
 function HookTab({ project, edits, onEdit }: { project: EditProjectDetail; edits: Edits; onEdit: (e: Edits) => void }) {
   const plan = project.plan!;
   const skillHook = project.skill === 'remotion-reel';
+  // Remotion Reel and the animation styles break the hook into lines where the creator puts a slash.
+  const lineBreaks = skillHook || isStyleId(project.skill);
   const variant = edits.hookVariant ?? 'white';
   const [text, setText] = useState(edits.hookText ?? plan.hookOverlay.text);
   return (
@@ -237,7 +288,7 @@ function HookTab({ project, edits, onEdit }: { project: EditProjectDetail; edits
                 onBlur={() => text.trim() && text !== (edits.hookText ?? plan.hookOverlay.text) && onEdit({ hookText: text.trim() })}
                 className="app-focus mt-1 h-10 w-full rounded-lg border border-line bg-canvas px-3 text-base text-fg md:text-sm"
               />
-              {skillHook && <span className="mt-1 block text-fg-subtle">Put a slash where the second line starts, like: How to start / if you&rsquo;re shy</span>}
+              {lineBreaks && <span className="mt-1 block text-fg-subtle">Put a slash where the second line starts, like: How to start / if you&rsquo;re shy</span>}
             </label>
           )}
           {skillHook && !edits.hookOverlayOff && (
@@ -356,10 +407,12 @@ export default function ReviewPanel({
   onEditText: (i: number, text: string) => void;
   onRegenerate: (note: string) => Promise<void>;
 }) {
-  const [tab, setTab] = useState<PanelTab>('changes');
+  const styled = isStyleId(project.skill);
+  const [tab, setTab] = useState<PanelTab>(styled ? 'style' : 'changes');
   return (
-    <Tabs tabs={TABS} value={tab} onChange={setTab} label="Edit settings">
+    <Tabs tabs={styled ? STYLE_TABS : TABS} value={tab} onChange={setTab} label="Edit settings">
       <div className="pt-2">
+        {tab === 'style' && styled && <StyleTab project={project} edits={edits} onEdit={onEdit} />}
         {tab === 'changes' && <ChangesTab project={project} edits={edits} onEdit={onEdit} />}
         {tab === 'captions' && <CaptionsTab props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} />}
         {tab === 'hook' && <HookTab project={project} edits={edits} onEdit={onEdit} />}

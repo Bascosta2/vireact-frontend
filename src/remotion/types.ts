@@ -1,3 +1,5 @@
+import type { StyleId } from './styles/ids';
+
 /**
  * Props for the edit composition. Built by the backend (service/editor/compose.js) and played
  * unchanged by the in-browser Player (preview) and Remotion Lambda (final render).
@@ -67,10 +69,14 @@ export interface Look {
   motion: boolean;
 }
 
-/** An editing skill the edit follows (backend service/editor/skills.js); its components replace the standard look. */
+/**
+ * An editing skill the edit follows (backend service/editor/skills.js); its components replace the
+ * standard look. Besides Remotion Reel, every animation style (styles/ids.ts) is a skill.
+ */
 export interface SkillProps {
-  id: 'remotion-reel';
+  id: 'remotion-reel' | StyleId;
   version: number;
+  /** Text hook style of Remotion Reel (unused by the animation styles). */
   hookVariant: 'white' | 'black' | 'plain';
   /** The hook text broken into its lines. */
   hookLines: string[];

@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { AbsoluteFill, Sequence, Video, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Img, Sequence, Video, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { INTER, PANEL_CAPTION_Y, ReelCaptionLine, TextHook, TwoThirdsPanel, type HookVariant } from './parts';
 
 /**
@@ -14,6 +14,8 @@ export type ShowcaseId = 'reel' | 'hook' | 'captions' | 'panel';
 export const SHOWCASE_FPS = 30;
 export const SHOWCASE_FRAMES = 125; // the clip from 2.25 s to its end (6.58 s)
 export const SHOWCASE_SRC = '/demo/cedlom-hook.mp4';
+/** One frame of the clip (4.9 s), for still thumbnails that need no video decoding. */
+export const SHOWCASE_STILL = '/demo/cedlom-still.jpg';
 
 const s = (sec: number) => Math.round(sec * SHOWCASE_FPS);
 
@@ -33,13 +35,20 @@ const CROP_SCALE = 1.45;
 /** On the fuzzy top of the mic in this take (the skill's placement for a talking head with a mic). */
 const SHOWCASE_CAPTION_Y = 1460;
 
-const SrcContext = createContext(SHOWCASE_SRC);
+const SrcContext = createContext<{ src: string; still: string | null }>({ src: SHOWCASE_SRC, still: null });
 
-function Take({ style }: { style?: React.CSSProperties }) {
-  const src = useContext(SrcContext);
+/** Which footage the showcase plays: the clip, or a still frame of it (thumbnails). */
+export function ShowcaseSource({ src = SHOWCASE_SRC, still = null, children }: { src?: string; still?: string | null; children: React.ReactNode }) {
+  return <SrcContext.Provider value={{ src, still }}>{children}</SrcContext.Provider>;
+}
+
+/** The demo take, cropped past its own title card and baked-in captions. */
+export function Take({ style }: { style?: React.CSSProperties }) {
+  const { src, still } = useContext(SrcContext);
+  const fill: React.CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', ...style };
   return (
     <AbsoluteFill style={{ transform: `scale(${CROP_SCALE})`, transformOrigin: '50% 0%' }}>
-      <Video src={src} muted trimBefore={s(CLIP_FROM_SEC)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', ...style }} />
+      {still ? <Img src={still} style={fill} /> : <Video src={src} muted trimBefore={s(CLIP_FROM_SEC)} style={fill} />}
     </AbsoluteFill>
   );
 }
@@ -128,13 +137,13 @@ function CaptionsShowcase() {
   );
 }
 
-/** `src` overrides the demo clip (the render check passes a staticFile URL). */
-export function RemotionReelShowcase({ feature, src = SHOWCASE_SRC }: { feature: ShowcaseId; src?: string }) {
+/** `src` overrides the demo clip (the render check passes a staticFile URL); `still` shows one frame instead. */
+export function RemotionReelShowcase({ feature, src = SHOWCASE_SRC, still = null }: { feature: ShowcaseId; src?: string; still?: string | null }) {
   return (
-    <SrcContext.Provider value={src}>
+    <ShowcaseSource src={src} still={still}>
       <AbsoluteFill style={{ background: '#000' }}>
         {feature === 'hook' ? <HookShowcase /> : feature === 'panel' ? <PanelShowcase /> : feature === 'captions' ? <CaptionsShowcase /> : <ReelShowcase />}
       </AbsoluteFill>
-    </SrcContext.Provider>
+    </ShowcaseSource>
   );
 }
