@@ -1,8 +1,18 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+﻿import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
+import { isPublishingFlagOn, publishingAvailable, usePublishingAccess } from './publishing-access';
+import { getPostCapabilities } from '@/api/posts';
+import { buildAgenda, dateKeyInZone, matchSlotsToPosts, platformChoices, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
+import type { StrategySlot } from '@/api/analytics';
+import type { PostCapabilities, ScheduledPost } from '@/api/posts';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
+
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: 'user-1' }) }));
+vi.mock('@/api/posts', () => ({ getPostCapabilities: vi.fn(() => Promise.resolve({ enabled: true, platforms: [] })) }));
 
 describe('sidebar', () => {
   it('groups the pages under headings, with the three video views under Your videos', () => {
@@ -90,11 +100,6 @@ describe('sidebar plan badges', () => {
 
 vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: '' }) }));
 
-// ── Post scheduling (pages/User/Analytics/schedule.ts, lib/publishing-access.ts) ──
-import { isPublishingFlagOn, publishingAvailable } from './publishing-access';
-import { buildAgenda, dateKeyInZone, matchSlotsToPosts, platformChoices, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
-import type { StrategySlot } from '@/api/analytics';
-import type { PostCapabilities, ScheduledPost } from '@/api/posts';
 
 const mkSlot = (id: string, date: string, timeLocal: string, platform = 'tiktok'): StrategySlot =>
   ({ id, date, timeLocal, platform, title: id, status: 'planned' }) as StrategySlot;
@@ -111,6 +116,16 @@ const mkPost = (id: string, scheduledAt: string, platform = 'tiktok', status: Sc
 });
 
 describe('post scheduling logic', () => {
+  it('makes no request and stays denied when VITE_PUBLISHING is not true', () => {
+    vi.stubEnv('VITE_PUBLISHING', '');
+    function Probe() {
+      return createElement('span', null, usePublishingAccess().access);
+    }
+    expect(renderToString(createElement(Probe))).toContain('denied');
+    expect(getPostCapabilities).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   const tz = 'America/New_York';
 
   it('converts wall-clock time in a zone to UTC and back to the same day', () => {

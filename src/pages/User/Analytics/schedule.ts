@@ -359,3 +359,9 @@ export const validateScheduleForm = (v: ScheduleFormValues, choices: PlatformCho
   if (new Date(at).getTime() < now + MIN_LEAD_MS) return 'Pick a time at least 5 minutes from now.';
   return null;
 };
+
+/** 'Tue, Nov 24 at 09:30' for the instant a form's date and time resolve to in `tz` (shows a daylight-saving shift), or null if malformed. */
+export const resolvedScheduleLabel = (date: string, time: string, tz: string): string | null => {
+  const iso = zonedToUtcIso(date, time, tz);
+  return iso ? `${dayHeading(dateKeyInZone(iso, tz))} at ${timeInZone(iso, tz)}` : null;
+};

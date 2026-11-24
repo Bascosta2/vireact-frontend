@@ -16,7 +16,7 @@ import { Button, IconButton } from '@/components/app/Button';
 import { Select } from '@/components/app/Select';
 import { Skeleton } from '@/components/app/Skeleton';
 import { cleanVideoTitle } from '@/lib/video-file';
-import { CAPTION_MAX, dateKeyInZone, dayHeading, defaultScheduleTime, isPostEditable, platformChoices, timeInZone, validateScheduleForm, zonedToUtcIso } from './schedule';
+import { CAPTION_MAX, dateKeyInZone, dayHeading, defaultScheduleTime, isPostEditable, platformChoices, resolvedScheduleLabel, timeInZone, validateScheduleForm, zonedToUtcIso } from './schedule';
 
 /** What the sheet opens with: an existing post to edit, or values for a new one (platforms already filtered to usable ones). */
 export interface ScheduleDraft {
@@ -116,8 +116,12 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
   }, [open, editing]);
 
   const projectOptions = useMemo(
-    () => [{ value: '', label: 'Pick an exported edit' }, ...(projects ?? []).map((p) => ({ value: p.id, label: cleanVideoTitle(p.title) }))],
-    [projects]
+    () => {
+      const list = (projects ?? []).map((p) => ({ value: p.id, label: cleanVideoTitle(p.title) }));
+      if (projectId && !list.some((o) => o.value === projectId)) list.unshift({ value: projectId, label: 'Selected edit' });
+      return [{ value: '', label: 'Pick an exported edit' }, ...list];
+    },
+    [projects, projectId]
   );
 
   const handleBackdropClick = useCallback(
@@ -153,7 +157,7 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
         const post = editing
           ? await updateScheduledPost(editing.id, { caption, scheduledAt, platforms })
           : await createScheduledPost({ projectId, caption, platforms, scheduledAt, mode });
-        onSaved(post, `${editing ? 'Rescheduled' : mode === 'draft' ? 'Draft scheduled' : 'Scheduled'} for ${dayHeading(date)} at ${time}.`);
+        onSaved(post, `${editing ? 'Rescheduled' : mode === 'draft' ? 'Draft scheduled' : 'Scheduled'} for ${resolvedScheduleLabel(date, time, timeZone) ?? `${dayHeading(date)} at ${time}`}.`);
       } catch (err) {
         setError(apiErrorMessage(err, editing ? 'Could not save your changes. Try again.' : 'Could not schedule this post. Try again.'));
       } finally {
@@ -184,6 +188,8 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
   const handleCancelPostClick = useCallback(() => void handleCancelPost(), [handleCancelPost]);
 
   const locked = Boolean(editing && !isPostEditable(editing, Date.now()));
+  const resolved = resolvedScheduleLabel(date, time, timeZone);
+  const typed = date && time ? `${dayHeading(date)} at ${time.padStart(5, '0')}` : null;
   const noUsablePlatform = choices.every((c) => c.disabled);
 
   return (
@@ -216,9 +222,9 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
 
           {!editing && (
             <div>
-              <p id={`${uid}-project-label`} className="text-sm font-medium text-fg">
+              <label htmlFor={`${uid}-project`} className="block text-sm font-medium text-fg">
                 Video
-              </p>
+              </label>
               {projects == null ? (
                 <Skeleton className="mt-2 h-11" />
               ) : projects.length === 0 ? (
@@ -308,7 +314,10 @@ export function ScheduleSheet({ open, draft, timeZone, capabilities, onClose, on
                 <input type="time" value={time} onChange={handleTime} required step={60} className={`${INPUT} mt-1`} />
               </label>
             </div>
-            <p className="mt-1 text-xs text-fg-subtle">Times are in {timeZone}.</p>
+            <p className="mt-1 text-xs text-fg-subtle">
+              Times are in {timeZone}.
+              {resolved && resolved !== typed && <span className="block text-fg-muted"> That time doesn’t exist that day (clocks change), so it will go out at {resolved}.</span>}
+            </p>
           </fieldset>
 
           <fieldset disabled={Boolean(editing)}>

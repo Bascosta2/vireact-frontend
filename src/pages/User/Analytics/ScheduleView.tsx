@@ -53,6 +53,7 @@ interface PostBlockProps {
 function PostBlock({ post, time, onOpen }: PostBlockProps) {
   const handleOpen = useCallback(() => onOpen(post), [onOpen, post]);
   const meta = POST_STATUS_META[post.status];
+  const editable = isPostEditable(post, Date.now());
   const failed = post.targets.filter((t) => t.status === 'failed' || t.error);
   return (
     <div className="mt-2 rounded-lg border border-line bg-canvas p-2 text-sm">
@@ -76,8 +77,8 @@ function PostBlock({ post, time, onOpen }: PostBlockProps) {
           {targetErrorMessage(t.platform, t.error)}
         </p>
       ))}
-      <Button size="sm" variant="ghost" className="mt-1.5" onClick={handleOpen}>
-        {isPostEditable(post, Date.now()) ? 'Reschedule or cancel' : 'Details'}
+      <Button size="sm" variant="ghost" className="mt-1.5" onClick={handleOpen} aria-label={`${editable ? 'Reschedule or cancel' : 'Details for'} post at ${time}${post.caption ? `: ${post.caption.slice(0, 40)}` : ''}`}>
+        {editable ? 'Reschedule or cancel' : 'Details'}
       </Button>
     </div>
   );
@@ -115,7 +116,7 @@ function AgendaCard({ item, canSchedule, onSchedule, onOpen }: AgendaCardProps) 
       ) : (
         canSchedule &&
         s.status === 'planned' && (
-          <Button size="sm" variant="secondary" className="mt-2" onClick={handleSchedule}>
+          <Button size="sm" variant="secondary" className="mt-2" onClick={handleSchedule} aria-label={`Schedule ${s.title} for ${s.timeLocal} on ${platformName(s.platform)}`}>
             <CalendarClock className="h-4 w-4" aria-hidden="true" />
             Schedule this
           </Button>
