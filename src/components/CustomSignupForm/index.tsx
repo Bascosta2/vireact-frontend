@@ -126,7 +126,11 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         if (response.data.success) {
           const { accessToken, user } = response.data.data;
           track('login_completed', { method: 'email' }, { beforeUnload: true });
-          SuccessNotification('Login successful!');
+          if (response.data.data?.verificationEmail === 'unavailable') {
+            SuccessNotification("You're signed in, but we couldn't send your verification email right now. You can resend it from the banner.");
+          } else {
+            SuccessNotification('Login successful!');
+          }
           await completeSignIn(accessToken, user);
         }
       } else {

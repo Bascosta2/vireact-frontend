@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import Axios from '@/api';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
@@ -15,6 +15,17 @@ const ERROR_MESSAGES = {
   failed: "We couldn't verify your email right now. Try the link again in a moment, or request a new one.",
 } as const;
 
+// The link is single-use: keep the first request per token at module level so remounts reuse it.
+const verifyRequests = new Map<string, Promise<{ data: unknown }>>();
+
+function postVerifyOnce(token: string): Promise<{ data: unknown }> {
+  const existing = verifyRequests.get(token);
+  if (existing) return existing;
+  const request = Axios.post('/auth/verify-email', { token });
+  verifyRequests.set(token, request);
+  return request;
+}
+
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -23,13 +34,8 @@ function VerifyEmail() {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('verifying');
   const [alreadyVerified, setAlreadyVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  // The link is single-use: StrictMode and remounts must not post the token a second time.
-  const hasPosted = useRef(false);
 
   useEffect(() => {
-    if (hasPosted.current) return;
-    hasPosted.current = true;
-
     const verifyEmail = async () => {
       const token = searchParams.get('token');
 
@@ -40,7 +46,7 @@ function VerifyEmail() {
       }
 
       try {
-        const response = await Axios.post('/auth/verify-email', { token });
+        const response = await postVerifyOnce(token);
         setAlreadyVerified(readVerifyResponse(response.data) === 'already_verified');
         setVerificationStatus('success');
         // Signed-in users keep their session; just update what the app knows about them.
@@ -54,7 +60,7 @@ function VerifyEmail() {
     };
 
     verifyEmail();
-    // Runs once per mount by design (see hasPosted).
+    // Runs once per mount by design (see postVerifyOnce).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

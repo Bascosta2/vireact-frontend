@@ -3,6 +3,7 @@ import Axios from '@/api';
 import { useResendCooldown } from '@/hooks/useResendCooldown';
 import {
   outcomeNotice,
+  readVerificationOutcome,
   resendErrorMessage,
   type VerificationOutcome,
 } from '@/lib/verification-email';
@@ -26,9 +27,14 @@ function VerificationNotice({ outcome, email, onEditAddress }: VerificationNotic
     setIsSending(true);
     setFeedback(null);
     try {
-      await Axios.post('/auth/resend-verification', { email });
-      setFeedback({ kind: 'success', text: `A new link is on its way to ${email}.` });
-      start();
+      const response = await Axios.post('/auth/resend-verification', { email });
+      const result = outcomeNotice(readVerificationOutcome(response.data?.data), email);
+      if (result.tone === 'warning') {
+        setFeedback({ kind: 'error', text: result.message });
+      } else {
+        setFeedback({ kind: 'success', text: result.message });
+        start();
+      }
     } catch (error: unknown) {
       setFeedback({ kind: 'error', text: resendErrorMessage(error, "We couldn't send the email. Try again soon.") });
     } finally {
