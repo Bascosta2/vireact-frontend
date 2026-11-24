@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { getAdminUsers } from '@/api/admin';
-import { useAdminData } from './useAdminData';
+import { useAdminData, useDebounced } from './useAdminData';
 
 function UsersTab() {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const { data, error, loading } = useAdminData(() => getAdminUsers(query, page), [query, page]);
+  const search = useDebounced(query);
+  const { data, error, loading } = useAdminData(() => getAdminUsers(search, page), [search, page]);
 
   const onSearch = useCallback((e: ChangeEvent<HTMLInputElement>) => { setQuery(e.target.value); setPage(1); }, []);
   const onPrev = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
