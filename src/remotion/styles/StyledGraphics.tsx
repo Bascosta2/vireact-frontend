@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
-import { BELOW_CAPTIONS, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, clamp, formatCount, parseCount } from '../graphics-utils';
+import { BELOW_CAPTIONS, useCaptionBand, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, clamp, formatCount, parseCount } from '../graphics-utils';
 import type { Graphic } from '../types';
 import { VISUALS } from '../visuals/registry';
 import type { StyleFonts } from './fonts';
@@ -146,11 +146,12 @@ const LABEL_HEIGHT = 90;
 
 function Callout(p: P) {
   const { g, c, theme } = p;
+  const band = useCaptionBand();
   const x = g.focusX * c.width;
   const y = g.focusY * c.height;
   const ring = Math.min(1, enterProgress(theme.entrance === 'step' ? 'step' : 'pop', p.f, c.fps));
   const out = exitProgress(c.frame, g.durationFrames);
-  const { top: labelTop, above } = calloutLabel(y, c.height, LABEL_HEIGHT);
+  const { top: labelTop, above } = calloutLabel(y, c.height, LABEL_HEIGHT, band);
   const stemFrom = above ? y - 100 : y + 100;
   const stemTo = above ? labelTop + LABEL_HEIGHT : labelTop;
   const line = interpolate(p.f, [4, 12], [0, 1], clamp);

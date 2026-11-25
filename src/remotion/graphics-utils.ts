@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { createContext, useContext, type CSSProperties } from 'react';
 import { interpolate } from 'remotion';
 
 /** Must match COUNTER_SEC / LIST_FIRST_SEC / LIST_STEP_SEC in the backend (service/editor/compose.js). */
@@ -20,6 +20,16 @@ export const SHADOW = '0 18px 48px rgba(0,0,0,0.5)';
 export const CAPTION_CENTER = 0.56;
 /** The strip the caption line can fill, as shares of the frame height. Other graphics stay out of it. */
 export const CAPTION_BAND = [0.5, 0.62] as const;
+/**
+ * Split screen puts the seam at 50% of the frame, so the caption line moves to just above it (inside the
+ * 4:5 safe area, which spans 15% to 85%) and callout labels keep out of that band. The composition provides it.
+ */
+export const SplitContext = createContext(false);
+export const CAPTION_CENTER_SPLIT = 0.44;
+export const CAPTION_BAND_SPLIT = [0.38, 0.49] as const;
+export const useCaptionCenter = () => (useContext(SplitContext) ? CAPTION_CENTER_SPLIT : CAPTION_CENTER);
+export const useCaptionBand = () => (useContext(SplitContext) ? CAPTION_BAND_SPLIT : CAPTION_BAND);
+
 /** Top of the lower third and the call to action: under the captions, above the apps' own buttons. */
 export const BELOW_CAPTIONS = 0.655;
 
@@ -27,9 +37,9 @@ export const BELOW_CAPTIONS = 0.655;
  * Where a callout's label goes: the top edge of its box, and whether it sits above the ring.
  * It prefers the side with more room, and moves (or pulls in closer) rather than cover the captions.
  */
-export function calloutLabel(y: number, height: number, boxHeight = 90): { top: number; above: boolean } {
+export function calloutLabel(y: number, height: number, boxHeight = 90, band: readonly [number, number] = CAPTION_BAND): { top: number; above: boolean } {
   const preferAbove = y > height * 0.45;
-  const clearOfCaptions = (top: number) => top + boxHeight <= height * CAPTION_BAND[0] || top >= height * CAPTION_BAND[1];
+  const clearOfCaptions = (top: number) => top + boxHeight <= height * band[0] || top >= height * band[1];
   // First try to stay inside the area the apps leave free, then anywhere on screen.
   for (const [min, max] of [[0.06, 0.8], [0.03, 0.97]]) {
     for (const gap of [260, 150]) {

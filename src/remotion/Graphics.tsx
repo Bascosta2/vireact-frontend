@@ -3,7 +3,7 @@ import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } fr
 import { textOn } from './brand';
 import { DISPLAY, FONT } from './fonts';
 import type { Graphic } from './types';
-import { BELOW_CAPTIONS, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
+import { BELOW_CAPTIONS, useCaptionBand, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
 import { VisualStage } from './visuals/VisualStage';
 
 /** Height of a callout's label box, so its position can be worked out before it is drawn. */
@@ -182,12 +182,13 @@ function List({ g, frame, fps, accent }: GraphicProps) {
 }
 
 function Callout({ g, frame, fps, accent, width, height }: GraphicProps) {
+  const band = useCaptionBand();
   const x = g.focusX * width;
   const y = g.focusY * height;
   const ring = spring({ frame, fps, config: SNAP });
   const pulse = (frame % 30) / 30;
   const out = exitAt(frame, g.durationFrames);
-  const { top: labelTop, above: labelAbove } = calloutLabel(y, height, LABEL_HEIGHT);
+  const { top: labelTop, above: labelAbove } = calloutLabel(y, height, LABEL_HEIGHT, band);
   // The stem runs from the ring to the near edge of the label.
   const stemFrom = labelAbove ? y - 95 : y + 95;
   const stemTo = labelAbove ? labelTop + LABEL_HEIGHT : labelTop;

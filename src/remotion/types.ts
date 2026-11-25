@@ -107,7 +107,7 @@ export type EditProps = {
   overlays?: { startFrame: number; durationFrames: number; text: string; position: 'top' | 'center' | 'bottom' }[];
   sfx: { type: SfxType; frame: number; volume?: number }[];
   music: { trackId: string; volume: number; duck: { startFrame: number; endFrame: number }[] } | null;
-  framing: { mode: 'fill' | 'fit_blur'; focusX: number };
+  framing: { mode: 'fill' | 'fit_blur' | 'split'; focusX: number; /** Split screen (EDITOR_FEATURES_V2): the zoomed detail pane's center, 0 to 1. */ split?: { detailX: number; detailY: number; zoom: number } };
   /** Preview uses the 720p proxy; the final render uses the original upload. */
   videoUrl: string;
   musicUrl: string | null;

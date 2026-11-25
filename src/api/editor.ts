@@ -55,7 +55,7 @@ export interface EditPlanView {
   hookOverlay: { enabled: boolean; text: string; durationSec: number };
   zooms: { index: number; at: number; scale: number; reason: string }[];
   music: { trackId: string | null; volume: number; reason: string };
-  framing: { mode: 'fill' | 'fit_blur'; focusX: number };
+  framing: { mode: 'fill' | 'fit_blur' | 'split'; focusX: number };
   /** Counts with every layer on (sounds include the automatic sound design). */
   sfxCount: number;
   overlayCount: number;
@@ -82,7 +82,7 @@ export interface Edits {
   captionText?: Record<string, string>;
   musicTrackId?: string | null;
   musicVolume?: number;
-  framingMode?: 'fill' | 'fit_blur';
+  framingMode?: 'fill' | 'fit_blur' | 'split';
   /** Text hook style of the Remotion Reel skill. */
   hookVariant?: 'white' | 'black' | 'plain';
   /** Another animation style for an edit made with one (Style tab); the backend ignores it for other edits. */

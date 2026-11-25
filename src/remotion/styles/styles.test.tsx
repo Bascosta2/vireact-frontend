@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
+import { splitLayout } from '../timeline-utils';
+import { CAPTION_BAND, CAPTION_BAND_SPLIT, CAPTION_CENTER_SPLIT, calloutLabel } from '../graphics-utils';
 import type { EditProps, Graphic } from '../types';
 import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
 import { STYLE_IDS } from './ids';
@@ -108,5 +110,32 @@ describe('text on an accent', () => {
     expect(textOn('#0B1F4B')).toBe('#ffffff');
     expect(textOn('#6B21A8')).toBe('#ffffff');
     expect(textOn('nonsense')).toBe('#0a0a0f');
+  });
+});
+
+describe('split screen', () => {
+  it('stacks the speaker over a zoomed detail pane inside the frame', () => {
+    const l = splitLayout({ mode: 'split', focusX: 0.4, split: { detailX: 0.7, detailY: 0.3, zoom: 1.8 } });
+    expect(l.top).toMatchObject({ top: 0, height: '50%' });
+    expect(l.bottom).toMatchObject({ bottom: 0, height: '50%' });
+    expect(l.bottomVideo).toMatchObject({ transform: 'scale(1.8)', transformOrigin: '70% 30%' });
+    expect(l.topVideo.objectPosition).toBe('40% 30%');
+  });
+
+  it('draws an edit in split mode, styled or standard', () => {
+    const framing = { mode: 'split' as const, focusX: 0.5, split: { detailX: 0.5, detailY: 0.6, zoom: 1.8 } };
+    for (const p of [{ ...props('comic-art'), framing }, { ...props('comic-art'), skill: undefined, framing }]) {
+      expect(frame(EditComposition as never, p, 20, p.durationInFrames).length).toBeGreaterThan(500);
+    }
+  });
+
+  it('keeps captions and callout labels off the seam, inside the 4:5 safe area', () => {
+    expect(CAPTION_CENTER_SPLIT).toBeGreaterThan(0.148);
+    expect(CAPTION_BAND_SPLIT[1]).toBeLessThan(0.5);
+    const label = calloutLabel(960, 1920, 90, CAPTION_BAND_SPLIT);
+    expect(label.top + 90 <= 1920 * CAPTION_BAND_SPLIT[0] || label.top >= 1920 * CAPTION_BAND_SPLIT[1]).toBe(true);
+    expect(calloutLabel(960, 1920, 90, CAPTION_BAND)).toBeDefined();
+    const split = { ...props('comic-art'), framing: { mode: 'split' as const, focusX: 0.5 } };
+    expect(frame(EditComposition as never, split, 20, split.durationInFrames)).toContain('top:845px');
   });
 });
