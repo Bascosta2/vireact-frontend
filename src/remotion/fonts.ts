@@ -9,5 +9,6 @@ import { loadFont as loadAnton } from '@remotion/google-fonts/Anton';
 const montserrat = loadMontserrat('normal', { weights: ['700', '800', '900'], subsets: ['latin'] });
 const anton = loadAnton('normal', { weights: ['400'], subsets: ['latin'] });
 
-export const FONT = `${montserrat.fontFamily}, "Helvetica Neue", Arial, sans-serif`;
-export const DISPLAY = `${anton.fontFamily}, Impact, "Arial Black", sans-serif`;
+// A creator's brand sheet sets --brand-body / --brand-display on the composition root (brand.ts).
+export const FONT = `var(--brand-body, ${montserrat.fontFamily}), "Helvetica Neue", Arial, sans-serif`;
+export const DISPLAY = `var(--brand-display, ${anton.fontFamily}), Impact, "Arial Black", sans-serif`;

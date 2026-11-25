@@ -1,5 +1,6 @@
 import type { ShowcaseId } from '@/remotion/skills/remotion-reel/Showcase';
 import { STYLE_COVERS, type StyleCategory } from '@/remotion/styles/covers';
+import { editorFeaturesV2 } from '@/api/editor';
 import { PAINTED_STYLE_IDS, STYLE_IDS, type StyleId } from '@/remotion/styles/ids';
 
 /**
@@ -96,11 +97,12 @@ const REMOTION_REEL: EditingSkill = {
     { title: 'Sound under the voice', what: 'Music sits well below your voice; a short list of pops and whooshes, never two within a second.' },
     { title: 'Inside the crop', what: 'Anything that matters stays inside the area Instagram shows in the 4:5 grid.' },
   ],
+  // Each item that shipped behind VITE_EDITOR_FEATURES_V2 drops off this list once the flag is on.
   notYet: [
     'Screen recordings with camera moves',
     'Background removal (graphics behind you, the silhouette layout)',
     'Split screen from a full-frame take',
-    'Your own brand sheet (colors, fonts)',
+    ...(editorFeaturesV2() ? [] : ['Your own brand sheet (colors, fonts)']),
     'Beat-by-beat storyboard review',
   ],
 };

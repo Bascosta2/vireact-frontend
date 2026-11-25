@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
 import type { EditProps, Graphic } from '../types';
+import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
 import { STYLE_IDS } from './ids';
 import { StyleShowcase } from './Showcase';
 
@@ -67,5 +68,45 @@ describe('animation styles', () => {
       const html = frame(StyleShowcase as never, { style: id, still: '/demo/cedlom-still.jpg' }, at, 125);
       expect(html.length).toBeGreaterThan(500);
     }
+  });
+});
+
+describe('brand sheet', () => {
+  it('draws a styled and a standard edit with brand colors and fonts', () => {
+    const brand = { accent: '#00AAFF', secondary: '#FF00AA', displayFont: 'Anton', bodyFont: 'Inter' };
+    const styled = { ...props('comic-art'), brand };
+    const html = frame(EditComposition as never, styled, 20, styled.durationInFrames);
+    expect(html).toContain('data-hook="comic-art"');
+    const standard: EditProps = { ...props('comic-art'), skill: undefined };
+    const plain = frame(EditComposition as never, { ...standard, brand }, 20, standard.durationInFrames);
+    expect(plain).toContain('--brand-secondary:#FF00AA');
+    expect(plain).toContain('#00AAFF');
+  });
+
+  it('applies the brand sheet to a painted style too', () => {
+    const brand = { accent: '#00AAFF', secondary: '#FF00AA', displayFont: 'Anton', bodyFont: 'Inter' };
+    const painted = { ...props('watercolour'), brand };
+    expect(frame(EditComposition as never, painted, 20, painted.durationInFrames)).toContain('data-hook="watercolour"');
+  });
+
+  it('ignores an unknown font or a bad color', () => {
+    const p = { ...props('pixel-art'), brand: { accent: 'red', displayFont: 'Comic Sans' } };
+    expect(frame(EditComposition as never, p, 20, p.durationInFrames)).toContain('data-hook="pixel-art"');
+  });
+
+  it('brandVars is empty without a brand and only knows listed fonts', () => {
+    expect(brandVars(undefined)).toEqual({});
+    expect(brandVars({ displayFont: 'Nope' })).toEqual({});
+    expect(BRAND_FONT_NAMES).toContain('Anton');
+  });
+});
+
+describe('text on an accent', () => {
+  it('picks near-black on light accents and white on dark ones', () => {
+    expect(textOn('#FFD43B')).toBe('#0a0a0f');
+    expect(textOn('#00AAFF')).toBe('#0a0a0f');
+    expect(textOn('#0B1F4B')).toBe('#ffffff');
+    expect(textOn('#6B21A8')).toBe('#ffffff');
+    expect(textOn('nonsense')).toBe('#0a0a0f');
   });
 });

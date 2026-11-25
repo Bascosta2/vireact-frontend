@@ -1,6 +1,7 @@
 import type { StyleId } from '@/remotion/styles/ids';
 import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
+import type { Brand } from '@/remotion/brand';
 
 export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'ready' | 'failed';
 export type ChangeKind = 'cut' | 'reorder' | 'captions' | 'zoom' | 'hook' | 'overlay' | 'graphics' | 'transition' | 'effects' | 'music' | 'sfx' | 'framing' | 'look';
@@ -174,5 +175,14 @@ export const scoreEdit = async (id: string): Promise<string> =>
 export const deleteEditProject = async (id: string): Promise<void> => {
   await Axios.delete(`/editor/projects/${id}`);
 };
+
+/** Editor extras (brand sheet, split screen, storyboard, screen recordings): off unless VITE_EDITOR_FEATURES_V2=true. */
+export const editorFeaturesV2 = () => String(import.meta.env.VITE_EDITOR_FEATURES_V2 ?? '').toLowerCase() === 'true';
+
+export const getBrand = async (): Promise<{ brand: Brand | null; fonts: string[] }> =>
+  (await Axios.get<{ data: { brand: Brand | null; fonts: string[] } }>('/editor/brand')).data.data;
+
+export const saveBrand = async (brand: Brand | null): Promise<Brand | null> =>
+  (await Axios.put<{ data: { brand: Brand | null } }>('/editor/brand', { brand })).data.data.brand;
 
 export const IN_PROGRESS: EditStatus[] = ['awaiting_upload', 'queued', 'preprocessing', 'planning'];
