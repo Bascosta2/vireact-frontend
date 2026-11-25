@@ -2,7 +2,8 @@ import type { StyleId } from '@/remotion/styles/ids';
 import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
 
-export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'ready' | 'failed';
+/** `choosing`: story mode's storyboards are written and wait for the creator to pick one. */
+export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'choosing' | 'ready' | 'failed';
 export type ChangeKind = 'cut' | 'reorder' | 'captions' | 'zoom' | 'hook' | 'overlay' | 'graphics' | 'transition' | 'effects' | 'music' | 'sfx' | 'framing' | 'look';
 export type Evidence = 'knowledge' | 'viral_example' | 'footage';
 
@@ -25,6 +26,8 @@ export interface EditProjectSummary {
   title: string;
   /** Editing skill this edit follows (Skills tab), or null for the classic editor. */
   skill: string | null;
+  /** 'storyboard': animated from a typed idea (story mode); 'upload': an edit of the creator's video. */
+  kind?: 'upload' | 'storyboard';
   status: EditStatus;
   stage: string;
   progress: number;
@@ -114,6 +117,44 @@ export interface EditProjectDetail extends EditProjectSummary {
   candidates: { id: string; kind: string; start: number; end: number; text: string | null }[];
   words: { i: number; w: string; start: number }[];
   tracks?: { slug: string; title: string; mood: string | null; energy: number | null }[];
+  /** Story mode only. */
+  storyboard?: StoryboardView | null;
+}
+
+/** One graphic in a storyboard scene. */
+export interface StoryboardGraphic {
+  type: 'headline' | 'list' | 'counter' | 'chart' | 'visual' | 'slam' | 'pill' | 'cta';
+  text: string;
+  subtext: string;
+  items: string[];
+  visual?: string;
+}
+
+export interface StoryboardScene {
+  /** The words shown on screen for this scene. */
+  narration: string;
+  /** What is behind the words (a backdrop id), or 'scene' when the style paints its own world. */
+  backdrop: string;
+  emphasis: string[];
+  graphic: StoryboardGraphic | null;
+}
+
+export interface StoryboardOption {
+  title: string;
+  logline: string;
+  angle: string;
+  mood: string;
+  musicTrackId: string;
+  scenes: StoryboardScene[];
+}
+
+export interface StoryboardView {
+  prompt: string;
+  lengthSec: number;
+  options: StoryboardOption[];
+  chosen: number | null;
+  final: { title: string; scenes: StoryboardScene[] } | null;
+  roundsLeft: number;
 }
 
 export const getEditorUsage = async (): Promise<EditorUsage> => (await Axios.get<{ data: EditorUsage }>('/editor/usage')).data.data;
@@ -176,3 +217,18 @@ export const deleteEditProject = async (id: string): Promise<void> => {
 };
 
 export const IN_PROGRESS: EditStatus[] = ['awaiting_upload', 'queued', 'preprocessing', 'planning'];
+
+/** Story mode: start a video from a typed idea; three storyboards get written, then the creator picks one. */
+export const createStoryboard = async (prompt: string, style: string, lengthSec: number): Promise<EditProjectSummary> =>
+  (await Axios.post<{ data: EditProjectSummary }>('/editor/storyboards', { prompt, style, lengthSec })).data.data;
+
+/** Confirm a storyboard (with the creator's own words per scene, if they changed any) and build the video. */
+export const chooseStoryboard = async (id: string, option: number, title: string, narrations: string[]): Promise<EditProjectDetail> =>
+  (await Axios.post<{ data: EditProjectDetail }>(`/editor/projects/${id}/storyboard/choose`, { option, title, narrations })).data.data;
+
+/** Three new storyboards, following the creator's note. */
+export const regenerateStoryboards = async (id: string, note: string): Promise<void> => {
+  await Axios.post(`/editor/projects/${id}/storyboard/regenerate`, { note });
+};
+
+export const STORY_LENGTHS = [15, 30, 45, 60] as const;

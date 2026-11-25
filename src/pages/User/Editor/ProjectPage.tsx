@@ -25,8 +25,11 @@ import {
 import { FootageDisclaimer } from './Disclaimer';
 import Preview from './Preview';
 import ReviewPanel from './ReviewPanel';
+import StoryboardChooser from './StoryboardChooser';
 
 const STEPS = ['Uploading', 'Preparing your footage', 'Transcribing every word', 'Studying viral patterns', 'Planning your edit'];
+/** Story mode: the storyboards for a typed idea. */
+const STORY_STEPS = ['Reading your idea', 'Writing 3 storyboards'];
 
 const stepFor = (stage: string): number => {
   if (stage === 'uploading') return 0;
@@ -37,13 +40,17 @@ const stepFor = (stage: string): number => {
 };
 
 function ProcessingSteps({ project }: { project: EditProjectDetail }) {
-  const current = stepFor(project.stage);
+  const story = project.kind === 'storyboard';
+  const steps = story ? STORY_STEPS : STEPS;
+  const current = story ? (project.stage === 'writing storyboards' ? 1 : 0) : stepFor(project.stage);
   return (
     <div className="mx-auto max-w-lg rounded-xl border border-line bg-surface p-6" aria-live="polite">
-      <h1 className="text-lg font-semibold text-fg">Editing “{project.title}”</h1>
-      <p className="mt-1 text-sm text-fg-muted">This takes about a minute or two. You can leave this page; your edit keeps going.</p>
+      <h1 className="text-lg font-semibold text-fg">{story ? 'Writing storyboards for your idea' : `Editing “${project.title}”`}</h1>
+      <p className="mt-1 text-sm text-fg-muted">
+        {story ? 'This takes about half a minute. You will pick one of three storyboards next.' : 'This takes about a minute or two. You can leave this page; your edit keeps going.'}
+      </p>
       <ol className="mt-5 space-y-3">
-        {STEPS.map((label, i) => (
+        {steps.map((label, i) => (
           <li key={label} className="flex items-center gap-3 text-sm">
             <span
               className={cn(
@@ -61,9 +68,11 @@ function ProcessingSteps({ project }: { project: EditProjectDetail }) {
       <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-canvas">
         <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${Math.max(5, project.progress)}%` }} />
       </div>
-      <div className="mt-5">
-        <FootageDisclaimer compact />
-      </div>
+      {!story && (
+        <div className="mt-5">
+          <FootageDisclaimer compact />
+        </div>
+      )}
     </div>
   );
 }
@@ -293,6 +302,16 @@ export default function EditProjectPage() {
           )
         ) : working ? (
           <ProcessingSteps project={project} />
+        ) : project.status === 'choosing' && project.storyboard ? (
+          <StoryboardChooser
+            project={project}
+            onDone={(done) => {
+              setProject(done);
+              setProps(done.props);
+              setEdits(done.edits ?? {});
+            }}
+            onRegenerated={load}
+          />
         ) : project.status === 'failed' ? (
           <div className="mx-auto max-w-lg rounded-xl border border-line bg-surface p-6 text-center">
             <h1 className="text-lg font-semibold text-fg">This edit didn&rsquo;t finish</h1>
@@ -302,7 +321,7 @@ export default function EditProjectPage() {
               Start a new edit
             </ButtonLink>
           </div>
-        ) : project.plan && props && project.proxyUrl ? (
+        ) : project.plan && props && (project.proxyUrl || project.kind === 'storyboard') ? (
           <>
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
               <h1 className="truncate text-xl font-semibold text-fg">{project.title}</h1>
@@ -315,7 +334,7 @@ export default function EditProjectPage() {
               <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
                 <Preview props={props} proxyUrl={project.proxyUrl} originalSec={project.source?.durationSec ?? null} />
                 <ExportCard project={project} renderAvailable={renderAvailable} />
-                <FootageDisclaimer compact />
+                {project.kind !== 'storyboard' && <FootageDisclaimer compact />}
               </div>
               <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
                 <ReviewPanel project={project} props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} onRegenerate={onRegenerate} />

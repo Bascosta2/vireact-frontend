@@ -87,6 +87,14 @@ export interface SkillProps {
   layout?: 'scene' | 'footage';
 }
 
+/** Story mode: one scene of a video animated from a storyboard, and what it shows behind its words. */
+export interface StoryboardScene {
+  startFrame: number;
+  durationFrames: number;
+  /** A backdrop id (showcase/backdrops.tsx), or 'scene' when the style paints its own world. */
+  backdrop: string;
+}
+
 // A type alias (not an interface) so it is assignable to Remotion's Record<string, unknown> props.
 export type EditProps = {
   width: number;
@@ -115,4 +123,9 @@ export type EditProps = {
   sfxUrls: Partial<Record<SfxType, string>>;
   /** Optional: absent for standard edits and for props built before skills existed. */
   skill?: SkillProps;
+  /**
+   * Story mode (a video animated from a typed idea): there is no footage; each scene's backdrop is drawn
+   * in its place (or the style's own scene), so `videoUrl` is empty and `timeline` is unused.
+   */
+  storyboard?: { scenes: StoryboardScene[] };
 };

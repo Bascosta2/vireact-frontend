@@ -30,6 +30,7 @@ export function StyleStage({
   footage,
   camera,
   extraFilter = '',
+  noPip = false,
 }: {
   theme: StyleTheme;
   accent: string;
@@ -39,6 +40,8 @@ export function StyleStage({
   footage: ReactNode;
   camera: StageCamera;
   extraFilter?: string;
+  /** Story mode: there is no creator to show in an explainer's bubble. */
+  noPip?: boolean;
 }) {
   const blur = camera.blur > 0.2 ? `blur(${camera.blur.toFixed(1)}px)` : '';
   const graded = [theme.footage, blur, extraFilter].filter((x) => x && x !== 'none').join(' ') || undefined;
@@ -46,7 +49,7 @@ export function StyleStage({
 
   let picture: ReactNode;
   if (scene) {
-    const pip = theme.pip;
+    const pip = noPip ? undefined : theme.pip;
     picture = (
       <>
         {!pip && <AbsoluteFill style={{ opacity: 0 }}>{footage}</AbsoluteFill>}

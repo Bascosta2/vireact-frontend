@@ -2,6 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions } from './Captions';
 import { Footage } from './Footage';
+import { StoryboardBackdrop } from './StoryboardBackdrop';
 import { pieceIndexAt } from './timeline-utils';
 import { GraphicLayer } from './Graphics';
 import { SMOOTH } from './graphics-utils';
@@ -203,7 +204,12 @@ export function EditComposition(props: EditProps) {
   };
   const shakeStyle: CSSProperties = { transform: `translate(${cam.x + (sc?.x ?? 0)}%, ${cam.y + (sc?.y ?? 0)}%) rotate(${cam.rotate + (sc?.rotate ?? 0)}deg)` };
 
-  const footage = <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />;
+  // Story mode draws each scene's backdrop where the footage would be.
+  const footage = props.storyboard ? (
+    <StoryboardBackdrop scenes={props.storyboard.scenes} accent={accent} />
+  ) : (
+    <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
+  );
   // The talk's rhythm (from the timed caption words), for styles that move with the voice.
   const pulse = useMemo(() => pulseFrom(props.captions?.pages), [props.captions]);
 
@@ -223,6 +229,7 @@ export function EditComposition(props: EditProps) {
             total={props.durationInFrames}
             scene={scene}
             footage={footage}
+            noPip={Boolean(props.storyboard)}
             camera={{ transform: String(footageStyle.transform), transformOrigin: String(footageStyle.transformOrigin), blur }}
           />
         ) : (

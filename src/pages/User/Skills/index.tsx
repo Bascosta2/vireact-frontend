@@ -18,6 +18,7 @@ import { ACCEPT, TYPES, LockedCard, ProjectCard, UsagePill } from '../Editor/sha
 import { isFreePlan, resetDate } from '../Editor/usage';
 import { SKILLS, skillById, type EditingSkill } from './catalog';
 import { ShowcasePlayer, ShowcaseThumbnail } from './ShowcasePlayer';
+import { StoryForm } from './StoryForm';
 
 /**
  * Skills Editor: a library of editing skills (each ported from a Claude skill), every one with showcase
@@ -126,6 +127,8 @@ export default function SkillsEditor() {
     // On a phone the details are far below the grid: bring them into view.
     detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
   };
+  // Two ways to use a skill: edit an uploaded video, or animate a typed idea (?mode=story).
+  const [mode, setMode] = useState<'upload' | 'story'>(() => (params.get('mode') === 'story' ? 'story' : 'upload'));
   const [filter, setFilter] = useState<StyleCategory | 'all'>('all');
   const [query, setQuery] = useState('');
   // A search or a chip shows one flat grid; otherwise the library shows every section.
@@ -318,11 +321,34 @@ export default function SkillsEditor() {
         </section>
 
         <section aria-labelledby="use-heading" className="mb-10 space-y-4">
-          <h2 id="use-heading" className="flex items-center gap-2 text-lg font-semibold text-fg">
-            <Wand2 className="h-5 w-5 text-accent" aria-hidden="true" />
-            Edit a video with {skill.name}
-          </h2>
-          <FootageDisclaimer />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="use-heading" className="flex items-center gap-2 text-lg font-semibold text-fg">
+              <Wand2 className="h-5 w-5 text-accent" aria-hidden="true" />
+              {mode === 'story' ? `Animate a story with ${skill.name}` : `Edit a video with ${skill.name}`}
+            </h2>
+            <div className="inline-flex rounded-lg border border-line p-0.5" role="group" aria-label="How to use this skill">
+              {(
+                [
+                  ['upload', 'Upload a video'],
+                  ['story', 'Type an idea'],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-pressed={mode === m}
+                  onClick={() => {
+                    setMode(m);
+                    track('skills_mode_switched', { mode: m });
+                  }}
+                  className={cn('app-focus rounded-md px-3 py-1.5 text-sm', mode === m ? 'bg-accent-tint text-fg' : 'text-fg-muted hover:text-fg')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {mode === 'upload' && <FootageDisclaimer />}
           {!usage ? (
             <Skeleton className="h-48" />
           ) : !usage.available ? (
@@ -335,6 +361,8 @@ export default function SkillsEditor() {
                 You&rsquo;ve used all {usage.limit} edits for this period. More unlock on {resetDate(usage)}.
               </div>
             )
+          ) : mode === 'story' ? (
+            <StoryForm skill={skill} />
           ) : upload ? (
             <div className="rounded-xl border border-line bg-surface p-6" aria-live="polite">
               <p className="truncate text-sm font-medium text-fg">Uploading {upload.name}</p>
