@@ -28,17 +28,12 @@ jobs:
         env:
           VITE_BACKEND_URL: https://api.example.invalid
 
-      # Lint only the .ts/.tsx files this PR adds or changes. The main branch has
-      # pre-existing ESLint problems, so linting the whole repo would fail every PR.
+      # Lint only the lines this PR adds or changes. The main branch has pre-existing
+      # ESLint problems, so linting whole repo (or whole touched files) would fail PRs
+      # that never introduced them. Warnings are reported but do not fail the step.
       # Pushes to main skip this step.
-      - name: Lint changed files
+      - name: Lint changed lines
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags origin "${{ github.base_ref }}"
-          git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" -- '*.ts' '*.tsx' > changed.txt
-          if [ -s changed.txt ]; then
-            mapfile -t files < changed.txt
-            npx eslint "${files[@]}"
-          else
-            echo "No changed .ts or .tsx files to lint."
-          fi
+          node .github/scripts/lint-changed-lines.mjs "${{ github.base_ref }}"
