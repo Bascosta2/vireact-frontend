@@ -143,9 +143,18 @@ export function needsPasswordForEmailChange(newEmail: string, currentEmail: stri
   return provider === 'local' && newEmail.trim().toLowerCase() !== currentEmail.trim().toLowerCase();
 }
 
+export const SET_PASSWORD_FIRST_MESSAGE = 'Set a password first';
+
+/** 403 with code SET_PASSWORD_FIRST: the account has no password yet, so it cannot change its email. */
+export function isSetPasswordFirstError(error: unknown): boolean {
+  const response = (error as { response?: { status?: number; data?: { code?: string; data?: { code?: string } } } } | undefined)?.response;
+  return response?.status === 403 && (response.data?.data?.code === 'SET_PASSWORD_FIRST' || response.data?.code === 'SET_PASSWORD_FIRST');
+}
+
 /** Plain-language message for each way saving the profile can fail. */
 export function profileUpdateErrorMessage(error: unknown): string {
   const response = (error as { response?: { status?: number; data?: { message?: string } } } | undefined)?.response;
+  if (isSetPasswordFirstError(error)) return SET_PASSWORD_FIRST_MESSAGE;
   switch (response?.status) {
     case 400:
       return response.data?.message || 'Please check the details you entered and try again.';

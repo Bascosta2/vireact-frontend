@@ -23,6 +23,8 @@ interface UpdateProfileRequest {
     email: string;
     /** Only needed when the email changes on an account that has a password. */
     currentPassword?: string;
+    /** Cancels an email change that is waiting for confirmation. */
+    cancelEmailChange?: true;
 }
 
 interface UpdateProfileResponse {

@@ -151,10 +151,14 @@ describe('changing the account email', () => {
   });
 
   it('gives a plain message for each profile error', async () => {
-    const { profileUpdateErrorMessage } = await import('@/lib/verification-email');
+    const { profileUpdateErrorMessage, isSetPasswordFirstError } = await import('@/lib/verification-email');
     const err = (status: number) => ({ response: { status } });
     expect(profileUpdateErrorMessage(err(401))).toContain('not correct');
     expect(profileUpdateErrorMessage(err(403))).toContain('Google');
+    const needsPassword = { response: { status: 403, data: { data: { code: 'SET_PASSWORD_FIRST' } } } };
+    expect(profileUpdateErrorMessage(needsPassword)).toBe('Set a password first');
+    expect(isSetPasswordFirstError(needsPassword)).toBe(true);
+    expect(isSetPasswordFirstError(err(403))).toBe(false);
     expect(profileUpdateErrorMessage(err(409))).toBe('That email is already used by another account.');
     expect(profileUpdateErrorMessage(err(429))).toContain('Too many attempts');
     expect(profileUpdateErrorMessage(err(503))).toContain('Nothing was changed');

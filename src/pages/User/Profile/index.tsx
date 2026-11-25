@@ -29,6 +29,8 @@ import {
   emailChangeSentMessage,
   needsPasswordForEmailChange,
   pendingEmailNotice,
+  isSetPasswordFirstError,
+  forgotPasswordPath,
   profileUpdateErrorMessage,
 } from '@/lib/verification-email';
 
@@ -64,6 +66,7 @@ function Profile() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   // True right after a change was requested, so the notice says "Check <inbox>" instead of "Waiting for".
   const [emailChangeJustSent, setEmailChangeJustSent] = useState(false);
+  const [needsPasswordFirst, setNeedsPasswordFirst] = useState(false);
   const [isCancellingEmailChange, setIsCancellingEmailChange] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
@@ -237,6 +240,7 @@ function Profile() {
 
     try {
       setIsUpdatingProfile(true);
+      setNeedsPasswordFirst(false);
       const emailChanging = email.toLowerCase() !== user.email.toLowerCase();
       const { user: updatedUser, emailChange } = await updateProfile({
         name: values.name,
@@ -247,6 +251,7 @@ function Profile() {
       setEmailChangeJustSent(Boolean(emailChange));
       SuccessNotification(emailChange ? 'Confirmation email sent' : 'Profile updated successfully');
     } catch (error: unknown) {
+      setNeedsPasswordFirst(isSetPasswordFirstError(error));
       ErrorNotification(profileUpdateErrorMessage(error));
     } finally {
       setIsUpdatingProfile(false);
@@ -259,7 +264,7 @@ function Profile() {
     if (!user) return;
     try {
       setIsCancellingEmailChange(true);
-      const { user: updatedUser } = await updateProfile({ name: user.name, email: user.email });
+      const { user: updatedUser } = await updateProfile({ name: user.name, email: user.email, cancelEmailChange: true });
       setUser({ ...updatedUser, pendingEmail: null });
       setEmailChangeJustSent(false);
       SuccessNotification('Email change cancelled');
@@ -372,6 +377,12 @@ function Profile() {
                     {isCancellingEmailChange ? 'Cancelling' : 'Cancel change'}
                   </Button>
                 </div>
+              )}
+              {needsPasswordFirst && (
+                <p role="alert" className="mb-4 text-sm text-white/90">
+                  Set a password first, then change your email.{' '}
+                  <Link to={forgotPasswordPath(user.email)} className="underline">Set a password</Link>
+                </p>
               )}
               <Formik
                 initialValues={profileInitialValues}
