@@ -183,46 +183,56 @@ function PostRow({ post, onLink }: { post: ConnectedPost; onLink: (post: Connect
 
 interface DisconnectDialogProps {
   account: ConnectedAccount | null;
+  busy: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: (deleteData: boolean) => void;
 }
 
-/** Disconnect confirmation with the optional "delete the numbers this account added to my videos" choice. */
-function DisconnectDialog({ account, onCancel, onConfirm }: DisconnectDialogProps) {
+/** Disconnect confirmation with the optional "delete the numbers this account added to my videos" choice. Native modal <dialog>: focus is trapped and returned to the Disconnect button on close. */
+function DisconnectDialog({ account, busy, error, onCancel, onConfirm }: DisconnectDialogProps) {
   const [deleteData, setDeleteData] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const open = account !== null;
 
   useEffect(() => {
-    setDeleteData(false);
-    if (!account) return undefined;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [account, onCancel]);
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+    if (!open) setDeleteData(false);
+  }, [open]);
 
   const toggle = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setDeleteData(e.target.checked), []);
   const confirm = useCallback(() => onConfirm(deleteData), [onConfirm, deleteData]);
+  const cancel = useCallback((e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (!busy) onCancel();
+  }, [busy, onCancel]);
 
-  if (!account) return null;
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-      <div role="dialog" aria-modal="true" aria-labelledby="disconnect-title" aria-describedby="disconnect-desc" className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
-        <h2 id="disconnect-title" className="text-lg font-semibold">Disconnect this account?</h2>
-        <p id="disconnect-desc" className="mt-2 text-sm text-text-secondary">
-          Vireact stops syncing it, and its posts and sign-in access are removed from this tab. Results already saved on your videos stay unless you tick the box below.
-        </p>
-        <label className="mt-4 flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-0.5" checked={deleteData} onChange={toggle} />
-          <span>
-            Also delete the numbers this account added to my videos
-            <span className="mt-1 block text-xs text-text-secondary">Your uploads, analyses and anything you typed stay.</span>
-          </span>
-        </label>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button onClick={confirm}>Disconnect</Button>
-        </div>
-      </div>
-    </div>
+    <dialog ref={dialogRef} onCancel={cancel} aria-labelledby="disconnect-title" aria-describedby="disconnect-desc" className="w-full max-w-md rounded-xl border border-border bg-surface p-6 text-text-primary shadow-xl backdrop:bg-black/60">
+      {account && (
+        <>
+          <h2 id="disconnect-title" className="text-lg font-semibold">Disconnect this account?</h2>
+          <p id="disconnect-desc" className="mt-2 text-sm text-text-secondary">
+            Vireact stops syncing it, and its posts and sign-in access are removed from this tab. Results already saved on your videos stay unless you tick the box below.
+          </p>
+          <label className="mt-4 flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5" checked={deleteData} onChange={toggle} disabled={busy} />
+            <span>
+              Also delete the numbers this account added to my videos
+              <span className="mt-1 block text-xs text-text-secondary">Your uploads, analyses and anything you typed stay.</span>
+            </span>
+          </label>
+          {error && <p className="mt-4 text-sm text-danger" role="alert">{error}</p>}
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="ghost" onClick={onCancel} disabled={busy} autoFocus>Cancel</Button>
+            <Button onClick={confirm} disabled={busy}>{busy ? 'Disconnecting…' : 'Disconnect'}</Button>
+          </div>
+        </>
+      )}
+    </dialog>
   );
 }
 
@@ -239,6 +249,8 @@ export default function Accounts() {
   const [error, setError] = useState<string | null>(null);
   const [returnError, setReturnError] = useState<string | null>(null);
   const [toDisconnect, setToDisconnect] = useState<ConnectedAccount | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const loadId = useRef(0);
@@ -267,6 +279,7 @@ export default function Accounts() {
     const err = params.get('error');
     if (!connected && !err) return;
     if (connected) {
+      setReturnError(null);
       toast.show({ message: 'Connected. Your posts are loading; this can take a minute.' });
       track('account_connected', { platform: connected });
       // The first sync runs in the background: look again shortly.
@@ -280,6 +293,7 @@ export default function Accounts() {
   }, [params, setParams, toast, load]);
 
   const connect = async (platform: AccountPlatform) => {
+    setReturnError(null);
     setBusy(platform);
     try {
       window.location.assign(await startConnect(platform));
@@ -303,24 +317,27 @@ export default function Accounts() {
     }
   };
 
-  const disconnect = async (a: ConnectedAccount, deleteData: boolean) => {
-    setToDisconnect(null);
-    setBusy(a.platform);
-    try {
-      await disconnectAccount(a.id, deleteData);
-      await load();
-    } catch (err) {
-      toast.show({ message: apiErrorMessage(err, 'Could not disconnect. Try again.') });
-    } finally {
-      setBusy(null);
-    }
-  };
+  const openDisconnect = useCallback((a: ConnectedAccount) => {
+    setDisconnectError(null);
+    setToDisconnect(a);
+  }, []);
 
   const closeDisconnect = useCallback(() => setToDisconnect(null), []);
-  const confirmDisconnect = useCallback((deleteData: boolean) => {
-    if (toDisconnect) void disconnect(toDisconnect, deleteData);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toDisconnect]);
+
+  const confirmDisconnect = useCallback(async (deleteData: boolean) => {
+    if (!toDisconnect) return;
+    setDisconnecting(true);
+    setDisconnectError(null);
+    try {
+      await disconnectAccount(toDisconnect.id, deleteData);
+      setToDisconnect(null);
+      await load();
+    } catch (err) {
+      setDisconnectError(apiErrorMessage(err, 'Could not disconnect. Try again.'));
+    } finally {
+      setDisconnecting(false);
+    }
+  }, [toDisconnect, load]);
 
   const onLink = async (post: ConnectedPost, videoId: string | null) => {
     try {
@@ -358,7 +375,7 @@ export default function Accounts() {
                 busy={busy === p.id}
                 onConnect={() => void connect(p.id)}
                 onSync={(a) => void sync(a)}
-                onDisconnect={setToDisconnect}
+                onDisconnect={openDisconnect}
               />
             ))
             : [0, 1, 2].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
@@ -400,7 +417,7 @@ export default function Accounts() {
           )}
         </section>
       </div>
-    <DisconnectDialog account={toDisconnect} onCancel={closeDisconnect} onConfirm={confirmDisconnect} />
+      <DisconnectDialog account={toDisconnect} busy={disconnecting} error={disconnectError} onCancel={closeDisconnect} onConfirm={confirmDisconnect} />
     </UserPage>
   );
 }
