@@ -22,6 +22,8 @@ const TABS: TabDef<PanelTab>[] = [
 ];
 /** Edits made with an animation style open on the Style tab, where the style can be switched. */
 const STYLE_TABS: TabDef<PanelTab>[] = [{ id: 'style', label: 'Style' }, ...TABS];
+/** A video animated from a storyboard has no cuts to review and is rewritten by picking a new storyboard. */
+const STORY_TABS: TabDef<PanelTab>[] = STYLE_TABS.filter((t) => t.id !== 'changes' && t.id !== 'ask');
 
 /** The animation style an edit is drawn in now (null for other edits). */
 const activeStyle = (project: Pick<EditProjectDetail, 'skill'>, edits: Edits): StyleId | null =>
@@ -197,8 +199,12 @@ function StyleTab({ project, edits, onEdit }: { project: EditProjectDetail; edit
   const scene = info?.layout === 'story' || info?.layout === 'explainer';
   return (
     <div className="space-y-4">
-      <p className="text-sm text-fg-muted">Pick another animation style and the preview redraws right away. Your cut, captions, hook and graphics stay the same.</p>
-      {scene && (
+      <p className="text-sm text-fg-muted">
+        {project.kind === 'storyboard'
+          ? 'Pick another animation style and the preview redraws right away. Your story, captions, hook and graphics stay the same.'
+          : 'Pick another animation style and the preview redraws right away. Your cut, captions, hook and graphics stay the same.'}
+      </p>
+      {scene && project.kind !== 'storyboard' && (
         <Toggle
           checked={!edits.sceneOff}
           onChange={(v) => onEdit({ sceneOff: !v })}
@@ -473,7 +479,7 @@ export default function ReviewPanel({
   const styled = isStyleId(project.skill);
   const [tab, setTab] = useState<PanelTab>(styled ? 'style' : 'changes');
   return (
-    <Tabs tabs={styled ? STYLE_TABS : TABS} value={tab} onChange={setTab} label="Edit settings">
+    <Tabs tabs={project.kind === 'storyboard' ? STORY_TABS : styled ? STYLE_TABS : TABS} value={tab} onChange={setTab} label="Edit settings">
       <div className="pt-2">
         {tab === 'style' && styled && <StyleTab project={project} edits={edits} onEdit={onEdit} />}
         {tab === 'changes' && <ChangesTab project={project} edits={edits} onEdit={onEdit} />}

@@ -10,14 +10,22 @@ import { cn } from '@/lib/utils';
  * Live preview of the edit: the same Remotion composition the export renders, played on the 720p
  * proxy, so every toggle shows up immediately. "Original" plays the raw upload for comparison.
  */
-export default function Preview({ props, proxyUrl, originalSec }: { props: PreviewProps; proxyUrl: string; originalSec: number | null }) {
+export default function Preview({ props, proxyUrl, originalSec }: { props: PreviewProps; proxyUrl: string | null; originalSec: number | null }) {
   const [view, setView] = useState<'edit' | 'original'>('edit');
-  const inputProps = useMemo<EditProps>(() => ({ ...props, videoUrl: proxyUrl }), [props, proxyUrl]);
+  const inputProps = useMemo<EditProps>(() => ({ ...props, videoUrl: proxyUrl ?? '' }), [props, proxyUrl]);
+  // A video animated from a storyboard has no original to compare with.
+  const story = Boolean(props.storyboard);
   const editedSec = props.durationInFrames / props.fps;
 
   return (
     <div className="w-full">
       <div className="mb-3 flex items-center justify-between gap-3">
+        {story ? (
+          <p className="tabular text-xs text-fg-muted">
+            Animated story · <span className="font-semibold text-fg">{formatDuration(editedSec)}</span>
+          </p>
+        ) : (
+        <>
         <div className="inline-flex rounded-lg border border-line p-0.5" role="group" aria-label="Preview">
           {(['edit', 'original'] as const).map((v) => (
             <button
@@ -34,9 +42,11 @@ export default function Preview({ props, proxyUrl, originalSec }: { props: Previ
         <p className="tabular text-xs text-fg-muted">
           {formatDuration(originalSec)} → <span className="font-semibold text-fg">{formatDuration(editedSec)}</span>
         </p>
+        </>
+        )}
       </div>
       <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-xl border border-line bg-black">
-        {view === 'edit' ? (
+        {view === 'edit' || !proxyUrl ? (
           <Player
             component={EditComposition}
             inputProps={inputProps}

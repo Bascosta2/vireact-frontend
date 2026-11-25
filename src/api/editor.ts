@@ -3,7 +3,8 @@ import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
 import type { Brand } from '@/remotion/brand';
 
-export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'ready' | 'failed';
+/** `choosing`: story mode's storyboards are written and wait for the creator to pick one. */
+export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'choosing' | 'ready' | 'failed';
 export type ChangeKind = 'cut' | 'reorder' | 'captions' | 'zoom' | 'hook' | 'overlay' | 'graphics' | 'transition' | 'effects' | 'music' | 'sfx' | 'framing' | 'look';
 export type Evidence = 'knowledge' | 'viral_example' | 'footage';
 
@@ -26,6 +27,8 @@ export interface EditProjectSummary {
   title: string;
   /** Editing skill this edit follows (Skills tab), or null for the classic editor. */
   skill: string | null;
+  /** 'storyboard': animated from a typed idea (story mode); 'upload': an edit of the creator's video. */
+  kind?: 'upload' | 'storyboard';
   status: EditStatus;
   stage: string;
   progress: number;
@@ -139,13 +142,56 @@ export interface EditProjectDetail extends EditProjectSummary {
   linkedVideoId: string | null;
   plan: EditPlanView | null;
   edits: Edits;
-  /** Present only while the editor extras are on. */
-  storyboard?: Storyboard;
   props: PreviewProps | null;
   proxyUrl: string | null;
   candidates: { id: string; kind: string; start: number; end: number; text: string | null }[];
   words: { i: number; w: string; start: number }[];
   tracks?: { slug: string; title: string; mood: string | null; energy: number | null }[];
+  /**
+   * The server uses one `storyboard` key for two things: the editor extras' beat review (Storyboard, upload edits,
+   * EditorFeaturesV2 only) and story mode's written storyboards (StoryboardView, kind 'storyboard'). Narrow with
+   * isBeatStoryboard / isStoryView.
+   */
+  storyboard?: Storyboard | StoryboardView | null;
+}
+
+export const isBeatStoryboard = (s: Storyboard | StoryboardView | null | undefined): s is Storyboard => Boolean(s && 'beats' in s);
+export const isStoryView = (s: Storyboard | StoryboardView | null | undefined): s is StoryboardView => Boolean(s && 'options' in s);
+
+/** One graphic in a storyboard scene. */
+export interface StoryboardGraphic {
+  type: 'headline' | 'list' | 'counter' | 'chart' | 'visual' | 'slam' | 'pill' | 'cta';
+  text: string;
+  subtext: string;
+  items: string[];
+  visual?: string;
+}
+
+export interface StoryboardScene {
+  /** The words shown on screen for this scene. */
+  narration: string;
+  /** What is behind the words (a backdrop id), or 'scene' when the style paints its own world. */
+  backdrop: string;
+  emphasis: string[];
+  graphic: StoryboardGraphic | null;
+}
+
+export interface StoryboardOption {
+  title: string;
+  logline: string;
+  angle: string;
+  mood: string;
+  musicTrackId: string;
+  scenes: StoryboardScene[];
+}
+
+export interface StoryboardView {
+  prompt: string;
+  lengthSec: number;
+  options: StoryboardOption[];
+  chosen: number | null;
+  final: { title: string; scenes: StoryboardScene[] } | null;
+  roundsLeft: number;
 }
 
 export const getEditorUsage = async (): Promise<EditorUsage> => (await Axios.get<{ data: EditorUsage }>('/editor/usage')).data.data;
@@ -237,3 +283,18 @@ export const saveBrand = async (brand: Brand | null): Promise<Brand | null> =>
   (await Axios.put<{ data: { brand: Brand | null } }>('/editor/brand', { brand })).data.data.brand;
 
 export const IN_PROGRESS: EditStatus[] = ['awaiting_upload', 'queued', 'preprocessing', 'planning'];
+
+/** Story mode: start a video from a typed idea; three storyboards get written, then the creator picks one. */
+export const createStoryboard = async (prompt: string, style: string, lengthSec: number): Promise<EditProjectSummary> =>
+  (await Axios.post<{ data: EditProjectSummary }>('/editor/storyboards', { prompt, style, lengthSec })).data.data;
+
+/** Confirm a storyboard (with the creator's own words per scene, if they changed any) and build the video. */
+export const chooseStoryboard = async (id: string, option: number, title: string, narrations: string[]): Promise<EditProjectDetail> =>
+  (await Axios.post<{ data: EditProjectDetail }>(`/editor/projects/${id}/storyboard/choose`, { option, title, narrations })).data.data;
+
+/** Three new storyboards, following the creator's note. */
+export const regenerateStoryboards = async (id: string, note: string): Promise<void> => {
+  await Axios.post(`/editor/projects/${id}/storyboard/regenerate`, { note });
+};
+
+export const STORY_LENGTHS = [15, 30, 45, 60] as const;

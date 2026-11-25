@@ -70,6 +70,25 @@ describe('animation styles', () => {
     expect(frame(EditComposition as never, scene, 130, p.durationInFrames)).toContain(`data-captions="${id}"`);
   });
 
+  it.each(['glow-sketch', 'microscope', 'watercolour', 'blueprint'] as const)('%s animates a storyboard with no footage', (id) => {
+    const base = props(id);
+    const story: EditProps = {
+      ...base,
+      videoUrl: '',
+      transitions: [{ type: 'flash', frame: 140 }, { type: 'flash', frame: 280 }],
+      storyboard: { scenes: [{ startFrame: 0, durationFrames: 140, backdrop: 'nature' }, { startFrame: 140, durationFrames: 140, backdrop: 'space' }, { startFrame: 280, durationFrames: 140, backdrop: 'scene' }] },
+      skill: { ...base.skill!, layout: id === 'watercolour' || id === 'blueprint' ? 'scene' : 'footage' },
+    };
+    for (const at of [2, 60, 138, 142, 300, 390]) {
+      const html = frame(EditComposition as never, story, at, story.durationInFrames);
+      expect(html).toContain(`data-captions="${id}"`);
+      // No video element: the scenes are drawn.
+      expect(html).not.toContain('<video');
+    }
+    // The last frames, after the captions end, still draw the scene.
+    expect(frame(EditComposition as never, story, 415, story.durationInFrames)).not.toContain('<video');
+  });
+
   it.each(STYLE_IDS)('%s has a library showcase', (id) => {
     for (const at of [3, 53, 104]) {
       const html = frame(StyleShowcase as never, { style: id, still: '/demo/cedlom-still.jpg' }, at, 125);

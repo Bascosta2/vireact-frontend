@@ -56,11 +56,14 @@ export function LockedCard({ usage }: { usage: EditorUsage }) {
 
 export function ProjectCard({ p, base = '/editor' }: { p: EditProjectSummary; base?: string }) {
   const working = IN_PROGRESS.includes(p.status);
+  const story = p.kind === 'storyboard';
+  // A story has no upload to show: its style's cover stands in.
+  const thumb = p.thumbnailUrl ?? (story && p.skill ? `/skill-covers/${p.skill}.jpg` : null);
   return (
     <li>
       <Link to={`${base}/${p.id}`} className="app-focus group flex gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-surface-raised">
-        {p.thumbnailUrl ? (
-          <img src={p.thumbnailUrl} alt="" loading="lazy" className="h-24 w-[54px] shrink-0 rounded-md bg-canvas object-cover" />
+        {thumb ? (
+          <img src={thumb} alt="" loading="lazy" className="h-24 w-[54px] shrink-0 rounded-md bg-canvas object-cover" />
         ) : (
           <span className="flex h-24 w-[54px] shrink-0 items-center justify-center rounded-md bg-canvas text-fg-subtle">
             <Film className="h-4 w-4" aria-hidden="true" />
@@ -76,6 +79,10 @@ export function ProjectCard({ p, base = '/editor' }: { p: EditProjectSummary; ba
               </span>
             ) : p.status === 'failed' ? (
               <span className="text-danger">Didn&rsquo;t finish</span>
+            ) : p.status === 'choosing' ? (
+              <span className="font-medium text-accent">Pick your storyboard</span>
+            ) : story ? (
+              <span className="tabular">Animated story · {formatDuration(p.editedDurationSec)}</span>
             ) : (
               <span className="tabular">
                 {formatDuration(p.durationSec)} → {formatDuration(p.editedDurationSec)}
