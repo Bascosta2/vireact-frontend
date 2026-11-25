@@ -1,15 +1,18 @@
 import { useMemo, type CSSProperties } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions } from './Captions';
-import { Footage } from './Footage';
+import { Footage, PersonLayer } from './Footage';
+import { ScreenRecording } from './ScreenRecording';
 import { StoryboardBackdrop } from './StoryboardBackdrop';
-import { pieceIndexAt } from './timeline-utils';
+import { pieceIndexAt, splitGraphicLayers } from './timeline-utils';
 import { GraphicLayer } from './Graphics';
 import { SMOOTH } from './graphics-utils';
 import { FONT } from './fonts';
 import { SFX_SECONDS } from './sfx';
 import type { EditProps, Grade, Graphic, Look } from './types';
 import { ReelCaptions, TextHook } from './skills/remotion-reel/parts';
+import { SplitContext } from './graphics-utils';
+import { brandFont, brandVars, isHex } from './brand';
 import { styleFonts } from './styles/fonts';
 import { themeFor } from './styles/registry';
 import { StyledGraphic } from './styles/StyledGraphics';
@@ -144,7 +147,7 @@ function HookOverlay({ text, durationFrames, accent }: { text: string; durationF
           textAlign: 'center',
           padding: '20px 34px',
           borderRadius: 20,
-          borderBottom: `10px solid ${accent}`,
+          borderBottom: `10px solid var(--brand-secondary, ${accent})`,
           // Upright and settled: it drops in and stops, with no tilt or bounce.
           transform: `translateY(${interpolate(enter, [0, 1], [-50, 0])}px) scale(${0.9 + 0.1 * enter})`,
           opacity: Math.min(1, enter * 1.6, exit),
@@ -173,13 +176,23 @@ const legacyGraphics = (props: EditProps): Graphic[] =>
 export function EditComposition(props: EditProps) {
   const frame = useCurrentFrame();
   const look = props.look ?? DEFAULT_LOOK;
-  const graphics = props.graphics ?? legacyGraphics(props);
+  // With a background matte, graphics marked "behind" sit under the speaker; without one nothing moves.
+  const { behind: behindGraphics, front: graphics } = splitGraphicLayers(props.graphics ?? legacyGraphics(props), props.matte);
+  const matteUrl = props.matte?.url && behindGraphics.length > 0 ? props.matte.url : null;
+  const drawGraphic = (g: Graphic, k: number, tag: string) => (
+    <Sequence key={`${tag}${k}`} from={g.startFrame} durationInFrames={g.durationFrames} layout="none">
+      {theme && fonts ? <StyledGraphic g={g} theme={theme} accent={accent} fonts={fonts} /> : <GraphicLayer g={g} accent={accent} />}
+    </Sequence>
+  );
   const transitions = props.transitions ?? [];
   const reel = props.skill?.id === 'remotion-reel' ? props.skill : null;
   const theme = themeFor(props.skill?.id);
-  const fonts = theme ? styleFonts(theme.id) : null;
-  // A style brings its own palette; its accent is the one the backend sends too.
-  const accent = theme ? theme.accent : look.accent;
+  const baseFonts = theme ? styleFonts(theme.id) : null;
+  const brand = props.brand;
+  // The brand sheet's fonts replace a style's own; with none, nothing changes.
+  const fonts = baseFonts && { display: brandFont(brand?.displayFont, 'sans-serif') ?? baseFonts.display, body: brandFont(brand?.bodyFont, 'sans-serif') ?? baseFonts.body };
+  // A style brings its own palette; its accent is the one the backend sends too. A brand accent beats both.
+  const accent = isHex(brand?.accent) ? brand.accent : theme ? theme.accent : look.accent;
   const effects = props.effects ?? [];
   const transitionFrames = transitions.map((t) => t.frame);
   // Animated storytelling: the style's painted world replaces the picture; the footage keeps its sound.
@@ -218,7 +231,8 @@ export function EditComposition(props: EditProps) {
 
   return (
     <PulseProvider value={pulse}>
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
+    <SplitContext.Provider value={props.framing.mode === 'split'}>
+    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden', ...(brand ? { fontSynthesis: 'none' } : {}), ...brandVars(brand), ...(isHex(brand?.secondary) ? { '--brand-secondary': brand.secondary } : {}) } as CSSProperties}>
       <AbsoluteFill style={shakeStyle}>
         {theme && fonts ? (
           // The style lays out the picture: full frame, a window, or its scene (with the creator in a bubble).
@@ -235,26 +249,31 @@ export function EditComposition(props: EditProps) {
         ) : (
           <AbsoluteFill style={footageStyle}>{footage}</AbsoluteFill>
         )}
-        {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={look.accent} />}
+        {matteUrl && behindGraphics.map((g, k) => drawGraphic(g, k, 'b'))}
+        {matteUrl && (
+          <AbsoluteFill style={footageStyle}>
+            <PersonLayer matteUrl={matteUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
+          </AbsoluteFill>
+        )}
+        {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={accent} />}
       </AbsoluteFill>
 
       {/* The style's ambient layer sits on the picture, under the text, and holds still when the camera shakes. */}
       {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} scene={scene} />}
 
+      {/* A screen recording shot sits over the footage and under the graphics and captions. */}
+      <ScreenRecording shots={props.screens ?? []} videoUrl={props.screenUrl} accent={accent} />
+
       <AbsoluteFill style={shakeStyle}>
-        {graphics.map((g, k) => (
-          <Sequence key={`g${k}`} from={g.startFrame} durationInFrames={g.durationFrames} layout="none">
-            {theme && fonts ? <StyledGraphic g={g} theme={theme} accent={accent} fonts={fonts} /> : <GraphicLayer g={g} accent={look.accent} />}
-          </Sequence>
-        ))}
+        {graphics.map((g, k) => drawGraphic(g, k, 'g'))}
 
         {props.captions && props.captions.pages.length > 0 &&
           (theme && fonts ? (
             <StyledCaptions pages={props.captions.pages} theme={theme} accent={accent} fonts={fonts} />
           ) : reel ? (
-            <ReelCaptions pages={props.captions.pages} accent={look.accent} />
+            <ReelCaptions pages={props.captions.pages} accent={accent} />
           ) : (
-            <Captions pages={props.captions.pages} preset={props.captions.preset} accent={look.accent} />
+            <Captions pages={props.captions.pages} preset={props.captions.preset} accent={accent} />
           ))}
 
         {props.hook && (
@@ -265,7 +284,7 @@ export function EditComposition(props: EditProps) {
               // The skill's hook is a still text sticker above the head, from the first frame.
               <TextHook lines={reel.hookLines.length ? reel.hookLines : [props.hook.text]} variant={reel.hookVariant} />
             ) : (
-              <HookOverlay text={props.hook.text} durationFrames={props.hook.durationFrames} accent={look.accent} />
+              <HookOverlay text={props.hook.text} durationFrames={props.hook.durationFrames} accent={accent} />
             )}
           </Sequence>
         )}
@@ -295,6 +314,7 @@ export function EditComposition(props: EditProps) {
         ) : null
       )}
     </AbsoluteFill>
+    </SplitContext.Provider>
     </PulseProvider>
   );
 }

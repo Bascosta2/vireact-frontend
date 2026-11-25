@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { AbsoluteFill, Internals, OffthreadVideo, Sequence, getRemotionEnvironment, useBufferState, useCurrentFrame } from 'remotion';
 import type { EditProps, TimelinePiece } from './types';
-import { pieceIndexAt } from './timeline-utils';
+import { pieceIndexAt, splitLayout } from './timeline-utils';
 
 type FootageProps = Pick<EditProps, 'videoUrl' | 'timeline' | 'framing' | 'fps'>;
 
@@ -18,7 +18,17 @@ function RenderFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
     <>
       {timeline.map((p) => (
         <Sequence key={p.id} from={p.outStartFrame} durationInFrames={p.durationFrames} layout="none">
-          {framing.mode === 'fit_blur' ? (
+          {framing.mode === 'split' ? (
+            <AbsoluteFill>
+              <div style={splitLayout(framing).top}>
+                <OffthreadVideo src={videoUrl} trimBefore={Math.round(p.srcStart * fps)} style={splitLayout(framing).topVideo} />
+              </div>
+              <div style={splitLayout(framing).bottom}>
+                <OffthreadVideo src={videoUrl} trimBefore={Math.round(p.srcStart * fps)} muted style={splitLayout(framing).bottomVideo} />
+              </div>
+              <div style={splitLayout(framing).seam} />
+            </AbsoluteFill>
+          ) : framing.mode === 'fit_blur' ? (
             <AbsoluteFill>
               <AbsoluteFill style={BLUR_BG}>
                 <OffthreadVideo src={videoUrl} trimBefore={Math.round(p.srcStart * fps)} muted style={COVER} />
@@ -187,7 +197,14 @@ function PreviewFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
     <AbsoluteFill>
       {[0, 1].map((deck) => (
         <AbsoluteFill key={deck} style={{ opacity: deck === activeDeck ? 1 : 0 }}>
-          {framing.mode === 'fit_blur' ? (
+          {framing.mode === 'split' ? (
+            <>
+              {/* Both panes play the same take in step (bg is the muted detail pane). */}
+              <div style={splitLayout(framing).top}>{video(fg[deck], splitLayout(framing).topVideo, true)}</div>
+              <div style={splitLayout(framing).bottom}>{video(bg[deck], splitLayout(framing).bottomVideo, true)}</div>
+              <div style={splitLayout(framing).seam} />
+            </>
+          ) : framing.mode === 'fit_blur' ? (
             <>
               <AbsoluteFill style={BLUR_BG}>{video(bg[deck], COVER, true)}</AbsoluteFill>
               <AbsoluteFill>{video(fg[deck], { width: '100%', height: '100%', objectFit: 'contain' }, true)}</AbsoluteFill>
@@ -205,4 +222,23 @@ function PreviewFootage({ videoUrl, timeline, framing, fps }: FootageProps) {
 export function Footage(props: FootageProps) {
   if (props.timeline.length === 0) return null;
   return getRemotionEnvironment().isRendering ? <RenderFootage {...props} /> : <PreviewFootage {...props} />;
+}
+
+/**
+ * The speaker cut out (a WebM with alpha), drawn over the behind-person graphics. Same pieces, same
+ * trim and same crop as the footage, so the outline lines up with the picture underneath.
+ */
+export function PersonLayer({ matteUrl, timeline, framing, fps }: { matteUrl: string } & Pick<FootageProps, 'timeline' | 'framing' | 'fps'>) {
+  const style: CSSProperties = { ...COVER, objectPosition: `${framing.focusX * 100}% 50%` };
+  return (
+    <>
+      {timeline.map((p) => (
+        <Sequence key={p.id} from={p.outStartFrame} durationInFrames={p.durationFrames} layout="none">
+          <AbsoluteFill>
+            <OffthreadVideo src={matteUrl} transparent muted trimBefore={Math.round(p.srcStart * fps)} style={style} />
+          </AbsoluteFill>
+        </Sequence>
+      ))}
+    </>
+  );
 }

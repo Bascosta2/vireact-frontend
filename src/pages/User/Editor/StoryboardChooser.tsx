@@ -4,7 +4,7 @@ import { Button } from '@/components/app/Button';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/api/analytics';
-import { chooseStoryboard, regenerateStoryboards, type EditProjectDetail, type StoryboardGraphic, type StoryboardOption } from '@/api/editor';
+import { chooseStoryboard, regenerateStoryboards, type EditProjectDetail, type StoryboardGraphic, type StoryboardOption, type StoryboardView } from '@/api/editor';
 import { skillById } from '../Skills/catalog';
 
 const BACKDROP_LABEL: Record<string, string> = {
@@ -82,7 +82,7 @@ function OptionCard({ o, k, selected, onSelect }: { o: StoryboardOption; k: numb
  * then confirm before the video is made (that is when it uses an edit). Or they ask for three new ones.
  */
 export default function StoryboardChooser({ project, onDone, onRegenerated }: { project: EditProjectDetail; onDone: (p: EditProjectDetail) => void; onRegenerated: () => Promise<void> }) {
-  const sb = project.storyboard!;
+  const sb = project.storyboard as StoryboardView;
   const style = skillById(project.skill);
   const [selected, setSelected] = useState<number | null>(null);
   const [title, setTitle] = useState('');

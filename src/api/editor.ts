@@ -1,6 +1,7 @@
 import type { StyleId } from '@/remotion/styles/ids';
 import Axios from './index';
 import type { CaptionPreset, EditProps } from '@/remotion/types';
+import type { Brand } from '@/remotion/brand';
 
 /** `choosing`: story mode's storyboards are written and wait for the creator to pick one. */
 export type EditStatus = 'awaiting_upload' | 'queued' | 'preprocessing' | 'planning' | 'choosing' | 'ready' | 'failed';
@@ -57,7 +58,7 @@ export interface EditPlanView {
   hookOverlay: { enabled: boolean; text: string; durationSec: number };
   zooms: { index: number; at: number; scale: number; reason: string }[];
   music: { trackId: string | null; volume: number; reason: string };
-  framing: { mode: 'fill' | 'fit_blur'; focusX: number };
+  framing: { mode: 'fill' | 'fit_blur' | 'split'; focusX: number };
   /** Counts with every layer on (sounds include the automatic sound design). */
   sfxCount: number;
   overlayCount: number;
@@ -67,7 +68,34 @@ export interface EditPlanView {
   look?: { grade: string; accent: string; progressBar: boolean; motion: boolean };
 }
 
+/** One planned beat (a segment of the edit) with what plays in it. Storyboard review: EditorFeaturesV2 only. */
+export interface StoryboardBeat {
+  id: string;
+  role: string;
+  start: number;
+  end: number;
+  reason: string;
+  dropped: boolean;
+  swapped: boolean;
+  swapNote: string | null;
+  graphics: { type: string; text: string; start: number }[];
+  sounds: { type: string; at: number }[];
+  effects: { type: string; at: number }[];
+  zooms: number;
+  framing: 'fill' | 'fit_blur' | 'split';
+  /** Screen recording shots that start in this beat (absent when none are attached). */
+  screens?: { start: number; end: number; zoom: number }[];
+}
+
+export interface Storyboard {
+  approved: boolean;
+  beats: StoryboardBeat[];
+}
+
 export interface Edits {
+  /** Storyboard review: the creator approved the beats as shown, and the beats they swapped (kept by the server). */
+  storyboardApproved?: boolean;
+  beatSwaps?: Record<string, unknown>;
   disabledSegments?: string[];
   restoredCandidates?: string[];
   disabledZooms?: number[];
@@ -84,7 +112,7 @@ export interface Edits {
   captionText?: Record<string, string>;
   musicTrackId?: string | null;
   musicVolume?: number;
-  framingMode?: 'fill' | 'fit_blur';
+  framingMode?: 'fill' | 'fit_blur' | 'split';
   /** Text hook style of the Remotion Reel skill. */
   hookVariant?: 'white' | 'black' | 'plain';
   /** Another animation style for an edit made with one (Style tab); the backend ignores it for other edits. */
@@ -105,6 +133,8 @@ export interface RenderInfo {
 }
 
 export interface EditProjectDetail extends EditProjectSummary {
+  /** The attached screen recording (EditorFeaturesV2 only); ready once it is prepared. */
+  screenRecording?: { name: string | null; durationSec: number | null; ready: boolean } | null;
   source: { durationSec: number; width: number; height: number; hasAudio: boolean } | null;
   regenerationsLeft: number;
   billing: 'trial' | 'plan' | null;
@@ -117,9 +147,16 @@ export interface EditProjectDetail extends EditProjectSummary {
   candidates: { id: string; kind: string; start: number; end: number; text: string | null }[];
   words: { i: number; w: string; start: number }[];
   tracks?: { slug: string; title: string; mood: string | null; energy: number | null }[];
-  /** Story mode only. */
-  storyboard?: StoryboardView | null;
+  /**
+   * The server uses one `storyboard` key for two things: the editor extras' beat review (Storyboard, upload edits,
+   * EditorFeaturesV2 only) and story mode's written storyboards (StoryboardView, kind 'storyboard'). Narrow with
+   * isBeatStoryboard / isStoryView.
+   */
+  storyboard?: Storyboard | StoryboardView | null;
 }
+
+export const isBeatStoryboard = (s: Storyboard | StoryboardView | null | undefined): s is Storyboard => Boolean(s && 'beats' in s);
+export const isStoryView = (s: Storyboard | StoryboardView | null | undefined): s is StoryboardView => Boolean(s && 'options' in s);
 
 /** One graphic in a storyboard scene. */
 export interface StoryboardGraphic {
@@ -196,8 +233,28 @@ export const uploadToStorage = (url: string, file: File, headers: Record<string,
 export const confirmEditUpload = async (id: string): Promise<EditProjectSummary> =>
   (await Axios.post<{ data: EditProjectSummary }>(`/editor/projects/${id}/uploaded`)).data.data;
 
-export const saveEdits = async (id: string, edits: Edits): Promise<{ edits: Edits; props: PreviewProps }> =>
-  (await Axios.patch<{ data: { edits: Edits; props: PreviewProps } }>(`/editor/projects/${id}/edits`, edits)).data.data;
+/** Screen recording: ask for an upload URL, upload, then confirm (the server prepares it and re-plans; this does not use a regeneration). */
+export const attachScreenRecording = async (id: string, file: File): Promise<{ url: string; method: 'PUT'; headers: Record<string, string> }> =>
+  (await Axios.post<{ data: { upload: { url: string; method: 'PUT'; headers: Record<string, string> } } }>(`/editor/projects/${id}/screen-recording`, {
+    fileName: file.name,
+    contentType: file.type,
+    sizeBytes: file.size,
+  })).data.data.upload;
+
+export const confirmScreenRecording = async (id: string): Promise<void> => {
+  await Axios.post(`/editor/projects/${id}/screen-recording/uploaded`);
+};
+
+export const removeScreenRecording = async (id: string): Promise<void> => {
+  await Axios.delete(`/editor/projects/${id}/screen-recording`);
+};
+
+export const saveEdits = async (id: string, edits: Edits): Promise<{ edits: Edits; props: PreviewProps; storyboard?: Storyboard }> =>
+  (await Axios.patch<{ data: { edits: Edits; props: PreviewProps; storyboard?: Storyboard } }>(`/editor/projects/${id}/edits`, edits)).data.data;
+
+/** Ask the planner for another treatment of one beat. */
+export const swapStoryboardBeat = async (id: string, beatId: string): Promise<{ edits: Edits; props: PreviewProps; storyboard: Storyboard }> =>
+  (await Axios.post<{ data: { edits: Edits; props: PreviewProps; storyboard: Storyboard } }>(`/editor/projects/${id}/storyboard/swap`, { beatId })).data.data;
 
 export const regenerateEdit = async (id: string, note: string): Promise<void> => {
   await Axios.post(`/editor/projects/${id}/regenerate`, { note });
@@ -215,6 +272,15 @@ export const scoreEdit = async (id: string): Promise<string> =>
 export const deleteEditProject = async (id: string): Promise<void> => {
   await Axios.delete(`/editor/projects/${id}`);
 };
+
+/** Editor extras (brand sheet, split screen, storyboard, screen recordings): off unless VITE_EDITOR_FEATURES_V2=true. */
+export const editorFeaturesV2 = () => String(import.meta.env.VITE_EDITOR_FEATURES_V2 ?? '').toLowerCase() === 'true';
+
+export const getBrand = async (): Promise<{ brand: Brand | null; fonts: string[] }> =>
+  (await Axios.get<{ data: { brand: Brand | null; fonts: string[] } }>('/editor/brand')).data.data;
+
+export const saveBrand = async (brand: Brand | null): Promise<Brand | null> =>
+  (await Axios.put<{ data: { brand: Brand | null } }>('/editor/brand', { brand })).data.data.brand;
 
 export const IN_PROGRESS: EditStatus[] = ['awaiting_upload', 'queued', 'preprocessing', 'planning'];
 

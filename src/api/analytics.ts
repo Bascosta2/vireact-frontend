@@ -236,6 +236,10 @@ export const updateStrategySlot = async (
 export const apiErrorMessage = (err: unknown, fallback: string): string =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 
+/** Name of the request field a 400 is about (e.g. tiktok.privacyLevel), if the server said. */
+export const apiErrorField = (err: unknown): string | null =>
+  (err as { response?: { data?: { data?: { field?: string } } } })?.response?.data?.data?.field ?? null;
+
 /** Machine-readable code the server attached (e.g. UPGRADE_REQUIRED). */
 export const apiErrorCode = (err: unknown): string | null =>
   (err as { response?: { data?: { data?: { code?: string } } } })?.response?.data?.data?.code ?? null;

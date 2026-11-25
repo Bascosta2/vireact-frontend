@@ -1,8 +1,21 @@
-﻿import { describe, expect, it } from 'vitest';
+﻿import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
+import { isPublishingFlagOn, publishingAvailable, usePublishingAccess } from './publishing-access';
+import { getPostCapabilities } from '@/api/posts';
+import { EMPTY_TIKTOK_FORM, buildAgenda, buildTikTokSettings, dateKeyInZone, matchSlotsToPosts, platformChoices, tiktokDurationWarning, tiktokFieldForServerField, tiktokFormFromSettings, tiktokNeedsDisclosureChoice, tiktokPrivacyChoices, tiktokPrivacyLabel, validateTikTokForm, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
+import type { StrategySlot } from '@/api/analytics';
+import type { PostCapabilities, ScheduledPost, TikTokCreatorInfo } from '@/api/posts';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
+import { fetchDeletionStatus, parseDeletionStatus } from './data-deletion';
+
+vi.mock('@/constants', async (importOriginal) => ({ ...(await importOriginal<Record<string, unknown>>()), VITE_BACKEND_URL: 'http://api.test' }));
+
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: 'user-1' }) }));
+vi.mock('@/api/posts', () => ({ getPostCapabilities: vi.fn(() => Promise.resolve({ enabled: true, platforms: [] })) }));
 
 describe('sidebar', () => {
   it('groups the pages by what the creator is doing: create, review, grow', () => {
@@ -86,5 +99,178 @@ describe('sidebar plan badges', () => {
 
   it('matches the backend script access', () => {
     expect([scriptAccessForPlan('free'), scriptAccessForPlan('premium'), scriptAccessForPlan('pro'), scriptAccessForPlan('enterprise'), scriptAccessForPlan(null)]).toEqual([2, 6, 10, 10, 2]);
+  });
+});
+
+describe('data deletion status', () => {
+  it('reads pending and completed, plain or wrapped in data', () => {
+    expect(parseDeletionStatus({ status: 'pending' })).toEqual({ kind: 'pending' });
+    expect(parseDeletionStatus({ data: { status: 'completed', completedAt: '2026-11-01T10:00:00Z' } })).toEqual({ kind: 'completed', completedAt: '2026-11-01T10:00:00Z' });
+    expect(parseDeletionStatus({ status: 'completed', completedAt: 'nonsense' })).toEqual({ kind: 'completed', completedAt: null });
+  });
+
+  it('treats anything unexpected as an error', () => {
+    expect([parseDeletionStatus(null), parseDeletionStatus('x'), parseDeletionStatus({}), parseDeletionStatus({ status: 'weird' })]).toEqual(Array(4).fill({ kind: 'error' }));
+  });
+});
+
+describe('fetchDeletionStatus', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const stub = (impl: () => unknown) => vi.stubGlobal('fetch', vi.fn(impl));
+
+  it('maps 404 to not-found and other failures to error', async () => {
+    stub(() => ({ ok: false, status: 404 }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'not-found' });
+    stub(() => ({ ok: false, status: 500 }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+  });
+
+  it('turns a network failure or bad JSON into error, and skips empty codes', async () => {
+    stub(() => { throw new TypeError('network'); });
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+    stub(() => ({ ok: true, status: 200, json: async () => { throw new Error('bad json'); } }));
+    expect(await fetchDeletionStatus('abc')).toEqual({ kind: 'error' });
+    expect(await fetchDeletionStatus('  ')).toEqual({ kind: 'error' });
+  });
+
+  it('reads a completed status from the right URL', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ status: 'pending' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await fetchDeletionStatus('a b')).toEqual({ kind: 'pending' });
+    expect(fetchMock).toHaveBeenCalledWith('http://api.test/api/v1/meta/data-deletion/a%20b', { signal: undefined });
+  });
+});
+
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: '' }) }));
+
+
+const mkSlot = (id: string, date: string, timeLocal: string, platform = 'tiktok'): StrategySlot =>
+  ({ id, date, timeLocal, platform, title: id, status: 'planned' }) as StrategySlot;
+const mkPost = (id: string, scheduledAt: string, platform = 'tiktok', status: ScheduledPost['status'] = 'scheduled'): ScheduledPost => ({
+  id,
+  mediaUrl: 'u',
+  caption: '',
+  scheduledAt,
+  status,
+  mode: 'publish',
+  targets: [{ platform: platform as 'tiktok', status: 'scheduled' }],
+  createdAt: scheduledAt,
+  updatedAt: scheduledAt,
+});
+
+describe('post scheduling logic', () => {
+  it('makes no request and stays denied when VITE_PUBLISHING is not true', () => {
+    vi.stubEnv('VITE_PUBLISHING', '');
+    function Probe() {
+      return createElement('span', null, usePublishingAccess().access);
+    }
+    expect(renderToString(createElement(Probe))).toContain('denied');
+    expect(getPostCapabilities).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  const tz = 'America/New_York';
+
+  it('converts wall-clock time in a zone to UTC and back to the same day', () => {
+    expect(zonedToUtcIso('2026-11-24', '09:00', tz)).toBe('2026-11-24T14:00:00.000Z');
+    expect(dateKeyInZone('2026-11-25T03:30:00Z', tz)).toBe('2026-11-24');
+    expect(zonedToUtcIso('bad', '09:00', tz)).toBeNull();
+  });
+
+  it('builds week ranges and day keys', () => {
+    expect(weekDays('2026-11-22')[6]).toBe('2026-11-28');
+    expect(weekRange('2026-11-22', 'UTC')).toEqual({ from: '2026-11-22T00:00:00.000Z', to: '2026-11-29T00:00:00.000Z' });
+  });
+
+  it('matches a post to the nearest same-day slot on its platform, one post per slot', () => {
+    const slots = [mkSlot('a', '2026-11-24', '09:00'), mkSlot('b', '2026-11-24', '09:30'), mkSlot('c', '2026-11-24', '09:00', 'instagram')];
+    const posts = [mkPost('p1', '2026-11-24T14:25:00Z')];
+    expect([...matchSlotsToPosts(slots, posts, tz)]).toEqual([['b', 'p1']]);
+  });
+
+  it('merges slots and posts per day, skipping cancelled posts and not duplicating matched ones', () => {
+    const slots = [mkSlot('a', '2026-11-24', '09:00')];
+    const posts = [mkPost('p1', '2026-11-24T14:00:00Z'), mkPost('p2', '2026-11-25T20:00:00Z'), mkPost('p3', '2026-11-25T21:00:00Z', 'tiktok', 'cancelled')];
+    const days = buildAgenda(['2026-11-24', '2026-11-25'], slots, posts, tz);
+    expect(days[0].items.map((i) => i.kind)).toEqual(['slot']);
+    expect(days[0].items[0].kind === 'slot' && days[0].items[0].post?.id).toBe('p1');
+    expect(days[1].items.map((i) => i.key)).toEqual(['post-p2']);
+  });
+
+  it('gates on the build flag and the server switch, and explains disabled platforms', () => {
+    const caps: PostCapabilities = {
+      enabled: true,
+      platforms: [
+        { platform: 'tiktok', connected: true, canPublish: true },
+        { platform: 'instagram', connected: false, canPublish: false, reason: 'not_connected' },
+      ],
+    };
+    expect(isPublishingFlagOn(undefined)).toBe(false);
+    expect(isPublishingFlagOn('true')).toBe(true);
+    expect(publishingAvailable(false, caps)).toBe(false);
+    expect(publishingAvailable(true, { ...caps, enabled: false })).toBe(false);
+    expect(publishingAvailable(true, caps)).toBe(true);
+    const choices = platformChoices(caps);
+    expect(choices.find((c) => c.platform === 'tiktok')?.disabled).toBe(false);
+    expect(choices.find((c) => c.platform === 'instagram')?.reason).toMatch(/Accounts page/);
+    expect(choices.find((c) => c.platform === 'youtube')?.disabled).toBe(true);
+  });
+
+  describe('TikTok direct post rules', () => {
+    const info: TikTokCreatorInfo = {
+      nickname: 'maker',
+      privacyLevelOptions: ['PUBLIC_TO_EVERYONE', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'],
+      commentDisabled: false,
+      duetDisabled: true,
+      stitchDisabled: false,
+      maxVideoPostDurationSec: 180,
+      canPost: true,
+    };
+
+    it('uses TikTok wording for visibility and blocks Only me for branded content', () => {
+      expect(tiktokPrivacyLabel('MUTUAL_FOLLOW_FRIENDS')).toBe('Mutual follow friends');
+      expect(tiktokPrivacyLabel('FOLLOWER_OF_CREATOR')).toBe('Followers');
+      expect(tiktokPrivacyChoices(info.privacyLevelOptions, false).map((c) => c.label)).toEqual(['Public to everyone', 'Followers', 'Only me']);
+      expect(tiktokPrivacyChoices(info.privacyLevelOptions, true).find((c) => c.value === 'SELF_ONLY')?.disabled).toBe(true);
+    });
+
+    it('requires a visibility choice, a disclosure option, and a posting-capable account', () => {
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, info).privacy).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE' }, info)).toEqual({});
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', disclose: true }, info).commercial).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'SELF_ONLY', disclose: true, brandedContent: true }, info).privacy).toBeTruthy();
+      expect(validateTikTokForm({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', allowDuet: true }, info).interactions).toBeTruthy();
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, { ...info, canPost: false, reason: 'Too many posts today' }).general).toBe('Too many posts today');
+      expect(validateTikTokForm(EMPTY_TIKTOK_FORM, null).general).toBeTruthy();
+    });
+
+    it('builds the request body and drops disclosure choices while the toggle is off', () => {
+      const off = buildTikTokSettings({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'FOLLOWER_OF_CREATOR', allowComment: true, yourBrand: true });
+      expect(off).toEqual({
+        privacyLevel: 'FOLLOWER_OF_CREATOR',
+        allowComment: true,
+        allowDuet: false,
+        allowStitch: false,
+        commercial: { enabled: false, yourBrand: false, brandedContent: false },
+        musicConfirmed: true,
+      });
+      expect(buildTikTokSettings({ ...EMPTY_TIKTOK_FORM, privacyLevel: 'PUBLIC_TO_EVERYONE', disclose: true, brandedContent: true }).commercial).toEqual({ enabled: true, yourBrand: false, brandedContent: true });
+    });
+
+    it('routes server messages to a control and warns about long videos', () => {
+      expect(tiktokFieldForServerField('tiktok.privacyLevel')).toBe('privacy');
+      expect(tiktokFieldForServerField('tiktok.commercialBrand')).toBe('commercial');
+      expect(tiktokFieldForServerField('tiktok.allowDuet')).toBe('interactions');
+      expect(tiktokFieldForServerField('media')).toBe('general');
+      expect(tiktokFieldForServerField(null)).toBe('general');
+      expect(tiktokNeedsDisclosureChoice({ ...EMPTY_TIKTOK_FORM, disclose: true })).toBe(true);
+      expect(tiktokNeedsDisclosureChoice({ ...EMPTY_TIKTOK_FORM, disclose: true, yourBrand: true })).toBe(false);
+      const stored = tiktokFormFromSettings({ privacyLevel: 'SELF_ONLY', allowComment: true, allowDuet: false, allowStitch: false, commercial: { enabled: true, yourBrand: true, brandedContent: false }, musicConfirmed: true });
+      expect(stored).toMatchObject({ privacyLevel: 'SELF_ONLY', allowComment: true, disclose: true, yourBrand: true });
+      expect(tiktokFormFromSettings(undefined)).toEqual(EMPTY_TIKTOK_FORM);
+      expect(tiktokDurationWarning(200, 180)).toMatch(/up to 3 minutes/);
+      expect(tiktokDurationWarning(60, 180)).toBeNull();
+      expect(tiktokDurationWarning(null, 180)).toBeNull();
+    });
   });
 });

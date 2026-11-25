@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
-import { CAPTION_CENTER } from '../graphics-utils';
+import { useCaptionCenter } from '../graphics-utils';
 import type { CaptionPage } from '../types';
 import type { StyleFonts } from './fonts';
 import { enterProgress, enterStyle, exitProgress } from './motion';
@@ -15,6 +15,7 @@ const MAX_WIDTH = 0.86;
  */
 export function StyledCaptions({ pages, theme, accent, fonts }: { pages: CaptionPage[]; theme: StyleTheme; accent: string; fonts: StyleFonts }) {
   const frame = useCurrentFrame();
+  const captionCenter = useCaptionCenter();
   const { fps, width, height } = useVideoConfig();
   let page: CaptionPage | null = null;
   for (const p of pages) if (frame >= p.startFrame && frame < p.endFrame) page = p;
@@ -28,7 +29,7 @@ export function StyledCaptions({ pages, theme, accent, fonts }: { pages: Caption
   const t = enterProgress(look.entrance, stepped(local, theme.step), fps, 2);
   return (
     <AbsoluteFill data-captions={theme.id}>
-      <div style={{ position: 'absolute', left: '50%', top: Math.round(height * CAPTION_CENTER), transform: 'translate(-50%, -50%)' }}>
+      <div style={{ position: 'absolute', left: '50%', top: Math.round(height * captionCenter), transform: 'translate(-50%, -50%)' }}>
         <div style={{ whiteSpace: 'nowrap', textAlign: 'center', lineHeight: 1.15, ...look.box(c), fontSize: size, ...enterStyle(look.entrance, t, 0, local) }}>
           {page.words.map((w, k) => {
             // Kinetic styles bring each word in on its own, at the moment it is said.

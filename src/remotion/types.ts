@@ -1,3 +1,4 @@
+import type { Brand } from './brand';
 import type { StyleId } from './styles/ids';
 
 /**
@@ -58,6 +59,8 @@ export interface Graphic {
   visual?: string;
   /** For type "slam": draw it under the captions because the top of the frame is taken. */
   low?: boolean;
+  /** "behind": drawn under the speaker (needs props.matte); otherwise in front as always. */
+  layer?: 'behind';
 }
 
 export interface Look {
@@ -87,6 +90,29 @@ export interface SkillProps {
   layout?: 'scene' | 'footage';
 }
 
+/** A focus point on the screen recording: x and y are 0 to 1 across the picture, zoom 1 (whole screen) to 2.5. */
+export interface ScreenFocus {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/**
+ * A screen recording shot (EDITOR_FEATURES_V2). The camera moves from `from` to `to` over the shot.
+ * layout 'safe': fills the 4:5 safe area over the speaker; 'bottom': the lower half while split screen keeps the speaker on top.
+ */
+export interface ScreenShot {
+  startFrame: number;
+  durationFrames: number;
+  /** Where in the recording the shot starts, in seconds. */
+  recStartSec: number;
+  /** Width over height of the recording. */
+  aspect: number;
+  from: ScreenFocus;
+  to: ScreenFocus;
+  layout: 'safe' | 'bottom';
+}
+
 /** Story mode: one scene of a video animated from a storyboard, and what it shows behind its words. */
 export interface StoryboardScene {
   startFrame: number;
@@ -114,7 +140,9 @@ export type EditProps = {
   overlays?: { startFrame: number; durationFrames: number; text: string; position: 'top' | 'center' | 'bottom' }[];
   sfx: { type: SfxType; frame: number; volume?: number }[];
   music: { trackId: string; volume: number; duck: { startFrame: number; endFrame: number }[] } | null;
-  framing: { mode: 'fill' | 'fit_blur'; focusX: number };
+  framing: { mode: 'fill' | 'fit_blur' | 'split'; focusX: number; /** Split screen (EDITOR_FEATURES_V2): the zoomed detail pane's center, 0 to 1. */ split?: { detailX: number; detailY: number; zoom: number } };
+  /** Background matte (EDITOR_BG_REMOVAL_ENABLED): a WebM with alpha of the speaker, same timing as the source. */
+  matte?: { url: string; mode: 'alpha-webm' };
   /** Preview uses the 720p proxy; the final render uses the original upload. */
   videoUrl: string;
   musicUrl: string | null;
@@ -123,6 +151,11 @@ export type EditProps = {
   sfxUrls: Partial<Record<SfxType, string>>;
   /** Optional: absent for standard edits and for props built before skills existed. */
   skill?: SkillProps;
+  /** Screen recording shots and the recording's URL; absent unless the creator attached one (EDITOR_FEATURES_V2). */
+  screens?: ScreenShot[];
+  screenUrl?: string;
+  /** The creator's brand sheet (EDITOR_FEATURES_V2); absent for everyone else. */
+  brand?: Brand;
   /**
    * Story mode (a video animated from a typed idea): there is no footage; each scene's backdrop is drawn
    * in its place (or the style's own scene), so `videoUrl` is empty and `timeline` is unused.

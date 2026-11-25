@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { isLimitError, limitPath, planLocks, trialEndLabel, trialHeadline } from './plan-limits';
 import { getCardCta } from '@/pages/User/SubscriptionPlans/card-cta';
+import { disconnectRequestConfig, returnErrorMessage } from '@/api/accounts';
 import { getTier } from '@/config/tiers';
+import { activeSubscriptions, ageLabel, ownerConsoleUrl, planRows, promoLength } from '@/api/admin';
 
 const err = (status: number, message: string, code?: string) => ({ response: { status, data: { message, data: code ? { code } : null } } });
 
@@ -57,5 +59,35 @@ describe('free trial offer', () => {
     // Paying customers switch plans; the trial never applies.
     expect(getCardCta('premium', pro, { eligible: false, days: 7 }).action).toEqual({ kind: 'switch', plan: 'pro' });
     expect(getCardCta('free', getTier('free')!, { eligible: true, days: 7 }).label).toBe('Current Plan');
+  });
+
+  it('maps account sign-in error codes to plain messages', () => {
+    expect(returnErrorMessage('still_deleting')).toContain("still removing your previous data");
+    expect(returnErrorMessage('denied')).toContain('cancelled');
+    expect(returnErrorMessage('something_new')).toBe(returnErrorMessage('failed'));
+    expect(returnErrorMessage(null)).toBe(returnErrorMessage('failed'));
+  });
+
+  it('only asks the backend to delete copied numbers when the box is ticked', () => {
+    expect(disconnectRequestConfig(true)).toEqual({ params: { deleteData: true } });
+    expect(disconnectRequestConfig(false)).toEqual({});
+  });
+});
+
+describe('admin dashboard helpers', () => {
+  it('counts paid plans and sorts the breakdown', () => {
+    const plans = { free: 10, pro: 2, premium: 3 };
+    expect(activeSubscriptions(plans)).toBe(5);
+    expect(planRows(plans).map((r) => r.plan)).toEqual(['free', 'premium', 'pro']);
+  });
+
+  it('labels promo length, ages and the owner console link', () => {
+    expect(promoLength(null)).toBe('Never expires');
+    expect(promoLength(30)).toBe('30 days');
+    const now = Date.parse('2026-11-23T12:00:00Z');
+    expect(ageLabel(null, now)).toBe('never');
+    expect(ageLabel('2026-11-23T11:30:00Z', now)).toBe('30m ago');
+    expect(ageLabel('2026-11-20T12:00:00Z', now)).toBe('3d ago');
+    expect(ownerConsoleUrl('https://api.x.io/')).toBe('https://api.x.io/admin/videos');
   });
 });

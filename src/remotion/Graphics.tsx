@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { textOn } from './brand';
 import { DISPLAY, FONT } from './fonts';
 import type { Graphic } from './types';
-import { BELOW_CAPTIONS, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, chartBars, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
+import { BELOW_CAPTIONS, useCaptionBand, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, chartBars, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
 import { VisualStage } from './visuals/VisualStage';
 
 /** Height of a callout's label box, so its position can be worked out before it is drawn. */
@@ -181,12 +182,13 @@ function List({ g, frame, fps, accent }: GraphicProps) {
 }
 
 function Callout({ g, frame, fps, accent, width, height }: GraphicProps) {
+  const band = useCaptionBand();
   const x = g.focusX * width;
   const y = g.focusY * height;
   const ring = spring({ frame, fps, config: SNAP });
   const pulse = (frame % 30) / 30;
   const out = exitAt(frame, g.durationFrames);
-  const { top: labelTop, above: labelAbove } = calloutLabel(y, height, LABEL_HEIGHT);
+  const { top: labelTop, above: labelAbove } = calloutLabel(y, height, LABEL_HEIGHT, band);
   // The stem runs from the ring to the near edge of the label.
   const stemFrom = labelAbove ? y - 95 : y + 95;
   const stemTo = labelAbove ? labelTop + LABEL_HEIGHT : labelTop;
@@ -212,7 +214,7 @@ function Callout({ g, frame, fps, accent, width, height }: GraphicProps) {
             transform: `translateX(-50%) scale(${0.85 + 0.15 * label})`,
             opacity: Math.max(0, Math.min(1, label * 1.6)),
             background: accent,
-            color: '#0a0a0f',
+            color: textOn(accent),
             fontFamily: FONT,
             fontWeight: 900,
             fontSize: 46,
@@ -237,7 +239,7 @@ function Cta({ g, frame, fps, accent, height }: GraphicProps) {
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: Math.round(height * BELOW_CAPTIONS) }}>
       <div style={{ textAlign: 'center', transform: `scale(${0.8 + 0.2 * enter})`, opacity: Math.min(1, enter * 1.6) * (1 - out) }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, background: accent, color: '#0a0a0f', fontFamily: FONT, fontWeight: 900, fontSize: 60, textTransform: 'uppercase', padding: '26px 52px', borderRadius: 999, boxShadow: `0 0 0 ${Math.round(26 * halo)}px ${accent}${Math.round(70 * (1 - halo)).toString(16).padStart(2, '0')}, 0 20px 50px rgba(0,0,0,0.5)` }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, background: accent, color: textOn(accent), fontFamily: FONT, fontWeight: 900, fontSize: 60, textTransform: 'uppercase', padding: '26px 52px', borderRadius: 999, boxShadow: `0 0 0 ${Math.round(26 * halo)}px ${accent}${Math.round(70 * (1 - halo)).toString(16).padStart(2, '0')}, 0 20px 50px rgba(0,0,0,0.5)` }}>
           <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           {g.text}
         </div>

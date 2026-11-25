@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
-import { BELOW_CAPTIONS, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, chartBars, clamp, formatCount, parseCount } from '../graphics-utils';
+import { BELOW_CAPTIONS, useCaptionBand, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, chartBars, clamp, formatCount, parseCount } from '../graphics-utils';
 import type { Graphic } from '../types';
 import { VISUALS } from '../visuals/registry';
 import type { StyleFonts } from './fonts';
@@ -147,11 +147,12 @@ const LABEL_HEIGHT = 90;
 
 function Callout(p: P) {
   const { g, c, theme } = p;
+  const band = useCaptionBand();
   // A style that shows the footage in a window points inside the window.
   const { x, y } = pointInFrame(theme, g.focusX, g.focusY, c.width, c.height);
   const ring = Math.min(1, enterProgress(theme.entrance === 'step' ? 'step' : 'pop', p.f, c.fps));
   const out = exitProgress(c.frame, g.durationFrames);
-  const { top: labelTop, above } = calloutLabel(y, c.height, LABEL_HEIGHT);
+  const { top: labelTop, above } = calloutLabel(y, c.height, LABEL_HEIGHT, band);
   const stemFrom = above ? y - 100 : y + 100;
   const stemTo = above ? labelTop + LABEL_HEIGHT : labelTop;
   const line = interpolate(p.f, [4, 12], [0, 1], clamp);

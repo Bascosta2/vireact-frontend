@@ -9,6 +9,7 @@ import { track } from '@/lib/analytics';
 import { apiErrorCode, apiErrorMessage } from '@/api/analytics';
 import {
   confirmEditUpload,
+  editorFeaturesV2,
   createEditProject,
   getEditorUsage,
   listEditProjects,
@@ -18,7 +19,7 @@ import {
   type EditProjectSummary,
 } from '@/api/editor';
 import { FootageDisclaimer } from './Disclaimer';
-import { ACCEPT, TYPES, LockedCard, ProjectCard, UsagePill } from './shared';
+import { ACCEPT, TYPES, BrandSheet, LockedCard, ProjectCard, UsagePill } from './shared';
 import { isFreePlan, resetDate } from './usage';
 
 /**
@@ -143,6 +144,8 @@ export default function Editor() {
             </>
           )}
         </div>
+
+        {editorFeaturesV2() && usage?.available && <div className="mb-8"><BrandSheet /></div>}
 
         <section aria-labelledby="edits-heading">
           <h2 id="edits-heading" className="mb-4 flex items-center gap-2 text-lg font-semibold text-fg">

@@ -43,6 +43,7 @@ export type AnalyticsEvent =
   | 'account_post_unlinked'
   | 'editor_upgrade_clicked'
   | 'edit_change_toggled'
+  | 'edit_beat_swapped'
   | 'edit_export_clicked'
   | 'demo_step_clicked';
 

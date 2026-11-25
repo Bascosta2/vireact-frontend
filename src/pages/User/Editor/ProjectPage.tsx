@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Check, Download, Loader2, MonitorPlay, Trash2, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { Skeleton } from '@/components/app/Skeleton';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import { usePublishingAccess } from '@/lib/publishing-access';
+import { scheduleTimeZone } from '@/pages/User/Analytics/schedule';
+import { useToast } from '@/components/app/Toast';
 import { apiErrorMessage } from '@/api/analytics';
 import {
+  attachScreenRecording,
+  confirmScreenRecording,
+  removeScreenRecording,
+  uploadToStorage,
   deleteEditProject,
   getEditorUsage,
   getEditProject,
@@ -16,16 +23,106 @@ import {
   saveEdits,
   scoreEdit,
   startRender,
+  swapStoryboardBeat,
+  editorFeaturesV2,
+  isBeatStoryboard,
+  isStoryView,
   IN_PROGRESS,
   type EditProjectDetail,
   type Edits,
   type PreviewProps,
   type RenderInfo,
+  type Storyboard,
 } from '@/api/editor';
 import { FootageDisclaimer } from './Disclaimer';
 import Preview from './Preview';
 import ReviewPanel from './ReviewPanel';
+import { StoryboardPanel } from './Storyboard';
 import StoryboardChooser from './StoryboardChooser';
+import { ACCEPT, TYPES } from './shared';
+
+const MAX_SCREEN_BYTES = 500 * 1024 * 1024;
+
+interface ScreenRecordingCardProps {
+  project: EditProjectDetail;
+  /** Called after the recording was added or removed, so the page reloads the edit. */
+  onChanged: () => void;
+}
+
+/** Add (or remove) a screen recording the editor can cut to over the talking head. Upload shows its progress. */
+function ScreenRecordingCard({ project, onChanged }: ScreenRecordingCardProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pct, setPct] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const rec = project.screenRecording ?? null;
+  const uploading = pct !== null;
+
+  const handleAdd = () => inputRef.current?.click();
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!TYPES.has(file.type)) return setMessage('Upload an MP4, MOV, WebM or MKV screen recording.');
+    if (file.size > MAX_SCREEN_BYTES) return setMessage('Screen recordings can be up to 500 MB.');
+    setMessage(null);
+    setPct(0);
+    try {
+      const target = await attachScreenRecording(project.id, file);
+      await uploadToStorage(target.url, file, target.headers, setPct);
+      await confirmScreenRecording(project.id);
+      onChanged();
+    } catch (err) {
+      setMessage(apiErrorMessage(err, err instanceof Error && err.message ? err.message : 'Upload failed. Try again.'));
+    } finally {
+      setPct(null);
+    }
+  };
+  const handleRemove = async () => {
+    try {
+      await removeScreenRecording(project.id);
+      onChanged();
+    } catch (err) {
+      setMessage(apiErrorMessage(err, 'Could not remove the screen recording.'));
+    }
+  };
+
+  return (
+    <section aria-labelledby="screen-recording-title" className="rounded-xl border border-line bg-surface p-4">
+      <h2 id="screen-recording-title" className="text-base font-semibold text-fg">
+        Screen recording
+      </h2>
+      <p className="mt-1 text-sm text-fg-muted">
+        {rec ? `${rec.name ?? 'Your screen recording'}${rec.durationSec ? `, ${Math.round(rec.durationSec)}s` : ''}. The editor cuts to it while you talk about it, and moves the camera to what matters.` : 'Add a screen recording and the editor cuts to it while you talk about it, with a smooth pan and zoom to what matters. Up to 3 minutes.'}
+      </p>
+      <input ref={inputRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Choose a screen recording" onChange={(e) => void handleFile(e)} />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {uploading ? (
+          <div className="w-full" aria-live="polite">
+            <p className="tabular text-sm text-fg-muted">Uploading… {pct}%</p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Screen recording upload">
+              <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${Math.max(3, pct)}%` }} />
+            </div>
+          </div>
+        ) : rec ? (
+          <Button variant="ghost" size="sm" onClick={() => void handleRemove()}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Remove screen recording
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={handleAdd}>
+            <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+            Add screen recording
+          </Button>
+        )}
+      </div>
+      {message && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
 
 const STEPS = ['Uploading', 'Preparing your footage', 'Transcribing every word', 'Studying viral patterns', 'Planning your edit'];
 /** Story mode: the storyboards for a typed idea. */
@@ -77,13 +174,28 @@ function ProcessingSteps({ project }: { project: EditProjectDetail }) {
   );
 }
 
-function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; renderAvailable: boolean }) {
+const ScheduleSheet = lazy(() => import('@/pages/User/Analytics/ScheduleSheet').then((m) => ({ default: m.ScheduleSheet })));
+
+function ExportCard({ project, renderAvailable, locked }: { project: EditProjectDetail; renderAvailable: boolean; locked: boolean }) {
   const navigate = useNavigate();
   const latest = project.renders.at(-1) ?? null;
   const [render, setRender] = useState<RenderInfo | null>(latest);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkedVideoId, setLinkedVideoId] = useState(project.linkedVideoId);
+  const publishing = usePublishingAccess();
+  const toast = useToast();
+  const [scheduling, setScheduling] = useState(false);
+  const openSchedule = useCallback(() => setScheduling(true), []);
+  const closeSchedule = useCallback(() => setScheduling(false), []);
+  const scheduleDraft = useMemo(() => ({ projectId: project.id }), [project.id]);
+  const onScheduled = useCallback(
+    (_post: unknown, message: string) => {
+      setScheduling(false);
+      toast.show({ message });
+    },
+    [toast]
+  );
 
   // Poll an export in progress.
   useEffect(() => {
@@ -161,6 +273,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
               Score this edit
             </Button>
           )}
+          {publishing.access === 'granted' && (
+            <Button variant="secondary" onClick={openSchedule}>
+              Schedule post
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => void exportNow()} disabled={busy}>
             Export again
           </Button>
@@ -169,10 +286,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
         <>
           <p className="mt-1 text-sm text-fg-muted">Renders a 1080×1920 MP4 with every change you made here.</p>
           {render?.status === 'failed' && <p className="mt-2 text-sm text-danger">{render.error ?? 'The last export failed.'}</p>}
-          <Button className="mt-3" onClick={() => void exportNow()} disabled={busy}>
+          <Button className="mt-3" onClick={() => void exportNow()} disabled={busy || locked}>
             {busy && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
             Export MP4
           </Button>
+          {locked && <p className="mt-2 text-xs text-fg-subtle">Approve the storyboard to export.</p>}
         </>
       )}
       {render?.status === 'done' && !linkedVideoId && <p className="mt-2 text-xs text-fg-subtle">Scoring runs a normal analysis and uses one from your plan.</p>}
@@ -180,6 +298,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
         <p role="alert" className="mt-2 text-sm text-danger">
           {error}
         </p>
+      )}
+      {publishing.access === 'granted' && scheduling && (
+        <Suspense fallback={null}>
+          <ScheduleSheet open draft={scheduleDraft} timeZone={scheduleTimeZone()} capabilities={publishing.capabilities} onClose={closeSchedule} onSaved={onScheduled} />
+        </Suspense>
       )}
     </div>
   );
@@ -197,6 +320,8 @@ export default function EditProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
   const [renderAvailable, setRenderAvailable] = useState(true);
+  const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
+  const [busyBeat, setBusyBeat] = useState<string | null>(null);
   const saveSeq = useRef(0);
 
   const load = useCallback(async () => {
@@ -204,6 +329,7 @@ export default function EditProjectPage() {
       const p = await getEditProject(projectId);
       setProject(p);
       setProps(p.props);
+      setStoryboard(isBeatStoryboard(p.storyboard) ? p.storyboard : null);
       setEdits(p.edits ?? {});
       setError(null);
     } catch (err) {
@@ -235,6 +361,7 @@ export default function EditProjectPage() {
         if (seq !== saveSeq.current) return;
         setEdits(res.edits);
         setProps(res.props);
+        if (res.storyboard) setStoryboard(res.storyboard);
         setSaveState('idle');
       } catch (err) {
         if (seq !== saveSeq.current) return;
@@ -249,6 +376,30 @@ export default function EditProjectPage() {
     setEdits((e) => ({ ...e, ...patch }));
     track('edit_change_toggled', { project_id: projectId, change: Object.keys(patch)[0] ?? 'unknown' });
     void persist(patch);
+  };
+  const onDropBeat = (id: string, drop: boolean) => {
+    const current = edits.disabledSegments ?? [];
+    onEdit({ disabledSegments: drop ? [...new Set([...current, id])] : current.filter((x) => x !== id), storyboardApproved: false });
+  };
+  const onApprove = () => onEdit({ storyboardApproved: true });
+  const onScreenChanged = () => void load();
+  const onSwapBeat = async (beatId: string) => {
+    const seq = ++saveSeq.current;
+    setBusyBeat(beatId);
+    setError(null);
+    try {
+      const res = await swapStoryboardBeat(projectId, beatId);
+      // A newer change was made while the planner worked: its result wins.
+      if (seq !== saveSeq.current) return;
+      setEdits(res.edits);
+      setProps(res.props);
+      setStoryboard(res.storyboard);
+      track('edit_beat_swapped', { project_id: projectId });
+    } catch (err) {
+      if (seq === saveSeq.current) setError(apiErrorMessage(err, 'Could not find another option for that beat. Try again.'));
+    } finally {
+      setBusyBeat(null);
+    }
   };
   const onEditText = (i: number, text: string) => void persist({ captionText: { [i]: text } });
 
@@ -302,7 +453,7 @@ export default function EditProjectPage() {
           )
         ) : working ? (
           <ProcessingSteps project={project} />
-        ) : project.status === 'choosing' && project.storyboard ? (
+        ) : project.status === 'choosing' && isStoryView(project.storyboard) ? (
           <StoryboardChooser
             project={project}
             onDone={(done) => {
@@ -333,11 +484,25 @@ export default function EditProjectPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
               <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
                 <Preview props={props} proxyUrl={project.proxyUrl} originalSec={project.source?.durationSec ?? null} />
-                <ExportCard project={project} renderAvailable={renderAvailable} />
+                <ExportCard project={project} renderAvailable={renderAvailable} locked={editorFeaturesV2() && Boolean(storyboard) && !edits.storyboardApproved} />
                 {project.kind !== 'storyboard' && <FootageDisclaimer compact />}
               </div>
-              <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
-                <ReviewPanel project={project} props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} onRegenerate={onRegenerate} />
+              <div className="min-w-0 space-y-4">
+                {editorFeaturesV2() && <ScreenRecordingCard project={project} onChanged={onScreenChanged} />}
+                {editorFeaturesV2() && storyboard && (
+                  <StoryboardPanel
+                    storyboard={storyboard}
+                    dropped={edits.disabledSegments ?? []}
+                    approved={edits.storyboardApproved === true}
+                    busyBeat={busyBeat}
+                    onDrop={onDropBeat}
+                    onSwap={(id) => void onSwapBeat(id)}
+                    onApprove={onApprove}
+                  />
+                )}
+                <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
+                  <ReviewPanel project={project} props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} onRegenerate={onRegenerate} />
+                </div>
               </div>
             </div>
           </>

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Thumbnail } from '@remotion/player';
 import { EditComposition } from '../EditComposition';
+import { splitGraphicLayers, splitLayout } from '../timeline-utils';
+import { CAPTION_BAND, CAPTION_BAND_SPLIT, CAPTION_CENTER_SPLIT, calloutLabel } from '../graphics-utils';
 import type { EditProps, Graphic } from '../types';
+import { BRAND_FONT_NAMES, brandVars, textOn } from '../brand';
 import { STYLE_IDS } from './ids';
 import { StyleShowcase } from './Showcase';
 
@@ -91,5 +94,96 @@ describe('animation styles', () => {
       const html = frame(StyleShowcase as never, { style: id, still: '/demo/cedlom-still.jpg' }, at, 125);
       expect(html.length).toBeGreaterThan(500);
     }
+  });
+});
+
+describe('brand sheet', () => {
+  it('draws a styled and a standard edit with brand colors and fonts', () => {
+    const brand = { accent: '#00AAFF', secondary: '#FF00AA', displayFont: 'Anton', bodyFont: 'Inter' };
+    const styled = { ...props('comic-art'), brand };
+    const html = frame(EditComposition as never, styled, 20, styled.durationInFrames);
+    expect(html).toContain('data-hook="comic-art"');
+    const standard: EditProps = { ...props('comic-art'), skill: undefined };
+    const plain = frame(EditComposition as never, { ...standard, brand }, 20, standard.durationInFrames);
+    expect(plain).toContain('--brand-secondary:#FF00AA');
+    expect(plain).toContain('#00AAFF');
+  });
+
+  it('applies the brand sheet to a painted style too', () => {
+    const brand = { accent: '#00AAFF', secondary: '#FF00AA', displayFont: 'Anton', bodyFont: 'Inter' };
+    const painted = { ...props('watercolour'), brand };
+    expect(frame(EditComposition as never, painted, 20, painted.durationInFrames)).toContain('data-hook="watercolour"');
+  });
+
+  it('ignores an unknown font or a bad color', () => {
+    const p = { ...props('pixel-art'), brand: { accent: 'red', displayFont: 'Comic Sans' } };
+    expect(frame(EditComposition as never, p, 20, p.durationInFrames)).toContain('data-hook="pixel-art"');
+  });
+
+  it('brandVars is empty without a brand and only knows listed fonts', () => {
+    expect(brandVars(undefined)).toEqual({});
+    expect(brandVars({ displayFont: 'Nope' })).toEqual({});
+    expect(BRAND_FONT_NAMES).toContain('Anton');
+  });
+});
+
+describe('text on an accent', () => {
+  it('picks near-black on light accents and white on dark ones', () => {
+    expect(textOn('#FFD43B')).toBe('#0a0a0f');
+    expect(textOn('#00AAFF')).toBe('#0a0a0f');
+    expect(textOn('#0B1F4B')).toBe('#ffffff');
+    expect(textOn('#6B21A8')).toBe('#ffffff');
+    expect(textOn('nonsense')).toBe('#0a0a0f');
+  });
+});
+
+describe('split screen', () => {
+  it('stacks the speaker over a zoomed detail pane inside the frame', () => {
+    const l = splitLayout({ mode: 'split', focusX: 0.4, split: { detailX: 0.7, detailY: 0.3, zoom: 1.8 } });
+    expect(l.top).toMatchObject({ top: 0, height: '50%' });
+    expect(l.bottom).toMatchObject({ bottom: 0, height: '50%' });
+    expect(l.bottomVideo).toMatchObject({ transform: 'scale(1.8)', transformOrigin: '70% 30%' });
+    expect(l.topVideo.objectPosition).toBe('40% 30%');
+  });
+
+  it('draws an edit in split mode, styled or standard', () => {
+    const framing = { mode: 'split' as const, focusX: 0.5, split: { detailX: 0.5, detailY: 0.6, zoom: 1.8 } };
+    for (const p of [{ ...props('comic-art'), framing }, { ...props('comic-art'), skill: undefined, framing }]) {
+      expect(frame(EditComposition as never, p, 20, p.durationInFrames).length).toBeGreaterThan(500);
+    }
+  });
+
+  it('keeps captions and callout labels off the seam, inside the 4:5 safe area', () => {
+    expect(CAPTION_CENTER_SPLIT).toBeGreaterThan(0.148);
+    expect(CAPTION_BAND_SPLIT[1]).toBeLessThan(0.5);
+    const label = calloutLabel(960, 1920, 90, CAPTION_BAND_SPLIT);
+    expect(label.top + 90 <= 1920 * CAPTION_BAND_SPLIT[0] || label.top >= 1920 * CAPTION_BAND_SPLIT[1]).toBe(true);
+    expect(calloutLabel(960, 1920, 90, CAPTION_BAND)).toBeDefined();
+    const split = { ...props('comic-art'), framing: { mode: 'split' as const, focusX: 0.5 } };
+    expect(frame(EditComposition as never, split, 20, split.durationInFrames)).toContain('top:845px');
+  });
+});
+
+describe('background matte layers', () => {
+  const g = (type: Graphic['type'], layer?: 'behind'): Graphic => ({ type, startFrame: 0, durationFrames: 30, text: 'Big', subtext: '', items: [], focusX: 0.5, focusY: 0.5, ...(layer ? { layer } : {}) });
+  const matte = { url: 'https://example.com/matte.webm', mode: 'alpha-webm' as const };
+
+  it('moves only behind-marked graphics, and only when there is a matte', () => {
+    const list = [g('headline', 'behind'), g('pill')];
+    expect(splitGraphicLayers(list, matte).behind.map((x) => x.type)).toEqual(['headline']);
+    expect(splitGraphicLayers(list, matte).front.map((x) => x.type)).toEqual(['pill']);
+    expect(splitGraphicLayers(list, undefined)).toEqual({ behind: [], front: list });
+  });
+
+  it('draws the matte video only with a matte url and behind graphics', () => {
+    const base = {
+      width: 1080, height: 1920, fps: 30, durationInFrames: 60, timeline: [{ id: 'a', segId: 's', srcStart: 0, srcEnd: 2, outStartFrame: 0, durationFrames: 60 }],
+      captions: null, hook: null, zooms: [], graphics: [g('headline', 'behind')], sfx: [], music: null, framing: { mode: 'fill' as const, focusX: 0.5 },
+      videoUrl: 'https://example.com/v.mp4', musicUrl: null, sfxUrls: {},
+    } as EditProps;
+    const html = (p: EditProps) => renderToStaticMarkup(<Thumbnail component={EditComposition} compositionWidth={1080} compositionHeight={1920} durationInFrames={60} fps={30} frameToDisplay={5} inputProps={p as unknown as Record<string, unknown>} />);
+    expect(html({ ...base, matte })).toContain('matte.webm');
+    expect(html(base)).not.toContain('matte.webm');
+    expect(html({ ...base, graphics: [g('headline')], matte })).not.toContain('matte.webm');
   });
 });
