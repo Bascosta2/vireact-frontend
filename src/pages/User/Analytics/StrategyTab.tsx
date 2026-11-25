@@ -19,7 +19,7 @@ import { Button, ButtonLink } from '@/components/app/Button';
 import { Select } from '@/components/app/Select';
 import { Skeleton } from '@/components/app/Skeleton';
 import { formatNumber } from '@/components/charts/chart-theme';
-import { cleanVideoTitle } from '@/lib/video-file';
+import { displayVideoTitle } from '@/lib/video-file';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { usePublishingAccess } from '@/lib/publishing-access';
@@ -59,7 +59,7 @@ function EvidenceChips({ ids, videos }: { ids: string[]; videos: Strategy['video
     <span className="mt-1.5 flex flex-wrap gap-1.5">
       {known.map((id) => (
         <Link key={id} to={`/videos/${id}`} className="app-focus inline-flex max-w-[14rem] items-center gap-1 rounded-full border border-line bg-white/[0.03] px-2 py-0.5 text-xs text-fg-muted hover:text-fg">
-          <span className="truncate">{cleanVideoTitle(videos[id].title)}</span>
+          <span className="truncate">{displayVideoTitle(videos[id].title)}</span>
           {videos[id].score != null && <span className="tabular text-fg-subtle">· {videos[id].score}</span>}
         </Link>
       ))}
@@ -191,7 +191,7 @@ function SlotCard({
         {slot.status === 'posted' ? (
           <>
             {linked && slot.linkedVideoId ? (
-              <Button size="sm" variant="secondary" onClick={() => onLog(slot.linkedVideoId!, cleanVideoTitle(linked.title))}>
+              <Button size="sm" variant="secondary" onClick={() => onLog(slot.linkedVideoId!, displayVideoTitle(linked.title))}>
                 {linked.actualViews != null ? `${formatNumber(linked.actualViews)} views · update` : 'Log its views'}
               </Button>
             ) : (
@@ -233,7 +233,7 @@ function SlotCard({
               label="Video you posted"
               value={pick}
               onChange={setPick}
-              options={[{ value: '', label: 'Not analyzed / skip linking' }, ...videos.slice(0, 30).map((v) => ({ value: v.videoId, label: cleanVideoTitle(v.title) }))]}
+              options={[{ value: '', label: 'Not analyzed / skip linking' }, ...videos.slice(0, 30).map((v) => ({ value: v.videoId, label: displayVideoTitle(v.title, v.createdAt) }))]}
             />
           )}
           <div className="mt-2 flex gap-2">

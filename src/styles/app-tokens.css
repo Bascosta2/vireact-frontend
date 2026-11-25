@@ -85,14 +85,30 @@
     backdrop-filter: blur(16px);
   }
 
+  /*
+   * One button style per role: primary is the brand orange (dark text, 5.6:1), kept for the single most
+   * important action on a screen. App-wide controls that are always on screen (the sidebar's New analysis)
+   * use .app-quiet so they never compete with it.
+   */
   .app-primary {
-    background-color: var(--app-surface-raised);
-    color: var(--app-text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 24px rgba(232, 103, 53, 0.08);
+    background-color: var(--app-accent);
+    color: var(--app-on-brand);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 0 24px rgba(232, 103, 53, 0.25);
   }
 
   .app-primary:hover {
+    background-color: #f07a4b;
+  }
+
+  .app-quiet {
+    background-color: var(--app-surface-raised);
+    color: var(--app-text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .app-quiet:hover {
     background-color: #1d2230;
     border-color: rgba(232, 103, 53, 0.4);
   }

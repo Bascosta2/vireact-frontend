@@ -51,7 +51,9 @@ import {
     ScrollText,
     Sparkles,
 } from 'lucide-react';
-import { displayVideoTitle } from '@/lib/video-file';
+import { videoName } from '@/lib/video-file';
+import { rememberRecent } from '@/lib/recent-items';
+import { VideoHistory } from './VideoHistory';
 import ScriptSuggestions from '@/components/domain/ScriptSuggestions';
 import { VideoSwitcher } from '@/components/domain/VideoSwitcher';
 import ActualViewsCard from '@/components/domain/ActualViews';
@@ -1094,6 +1096,14 @@ function Chat() {
     const [video, setVideo] = useState<Video | null>(null);
     /** Analysed videos, newest first, for the switcher in the header. */
     const [videoOptions, setVideoOptions] = useState<Video[]>([]);
+    // The list entry carries the automatic name (first spoken words) that the full video does not.
+    const listEntry = video ? videoOptions.find((o) => o._id === video._id) : undefined;
+    const displayName = video ? videoName({ ...video, autoTitle: listEntry?.autoTitle }) : '';
+    // Shortcuts in the sidebar, Home and the command bar: what was opened last.
+    useEffect(() => {
+        if (!video?._id || !displayName) return;
+        rememberRecent({ id: `video-${video._id}`, title: displayName, href: `/videos/${video._id}` });
+    }, [video?._id, displayName]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -1639,6 +1649,7 @@ function Chat() {
         ...(showFrameFeedbackSection ? [{ id: 'report-moments', label: 'Moments' }] : []),
         ...(scriptRewriteList.length > 0 ? [{ id: 'report-rewrites', label: 'Rewrites' }] : []),
         { id: 'report-details', label: 'Details' },
+        { id: 'report-history', label: 'History' },
     ];
     const sectionNumber = (id: string) => String(jumpTargets.findIndex((t) => t.id === id) + 1).padStart(2, '0');
     const jumpTo = (id: string) => {
@@ -1694,8 +1705,8 @@ function Chat() {
                                 onSelect={(id) => navigate(`/videos/${id}${VIDEO_VIEW_PATH[activeTab]}`)}
                             />
                         ) : (
-                            <p className="truncate text-sm font-medium text-fg" title={video.filename}>
-                                {displayVideoTitle(video.filename, video.createdAt)}
+                            <p className="truncate text-sm font-medium text-fg" title={displayName}>
+                                {displayName}
                             </p>
                         )}
                     </div>
@@ -2266,6 +2277,11 @@ function Chat() {
                                     </FeatureDetail>
                                 </AccordionCard>
                             )}
+                        </ReportSection>
+
+                        {/* History and details: what happened to this video, and its file facts. */}
+                        <ReportSection id="report-history" index={sectionNumber('report-history')} title="History and details">
+                            <VideoHistory video={video} onRenamed={(title) => setVideo((v) => (v ? { ...v, title } : v))} />
                         </ReportSection>
                     </div>
                     )}

@@ -18,11 +18,12 @@ vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: 'user-1' }) }))
 vi.mock('@/api/posts', () => ({ getPostCapabilities: vi.fn(() => Promise.resolve({ enabled: true, platforms: [] })) }));
 
 describe('sidebar', () => {
-  it('groups the pages under headings, with the three video views under Your videos', () => {
+  it('groups the pages by what the creator is doing: create, review, grow', () => {
     expect(APP_NAV_SECTIONS.map((s) => [s.label, s.items.map((i) => i.name)])).toEqual([
       [null, ['Home']],
-      ['Your videos', ['Library', 'Feedback Reports', 'Personal Video Coach', 'Scripts']],
-      ['Grow', ['Analytics', 'Skills Editor', 'Accounts']],
+      ['Create', ['Scripts', 'Skills Editor']],
+      ['Review', ['Library', 'Feedback Reports', 'Personal Video Coach']],
+      ['Grow', ['Analytics', 'Accounts']],
     ]);
   });
 

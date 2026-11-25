@@ -39,7 +39,7 @@ const props: EditProps = {
 describe('Editor tab navigation', () => {
   it('sits after Analytics in the Grow group of the sidebar', () => {
     const ids = APP_NAV_ITEMS.map((i) => i.id);
-    expect(ids).toEqual(['home', 'library', 'report', 'coach', 'scripts', 'analytics', 'skills', 'accounts', 'settings']);
+    expect(ids).toEqual(['home', 'scripts', 'skills', 'library', 'report', 'coach', 'analytics', 'accounts', 'settings']);
   });
   it('stays active on project pages', () => {
     expect(isNavActive('/editor', '/editor')).toBe(true);

@@ -8,8 +8,27 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
+const COLLAPSED_KEY = 'vireact_sidebar_collapsed';
+
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+/** The rail remembers being collapsed (icons only) between visits. */
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setCollapsedState] = useState(readCollapsed);
+  const setIsCollapsed = (collapsed: boolean) => {
+    setCollapsedState(collapsed);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch {
+      // private window: remember for this visit only
+    }
+  };
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>

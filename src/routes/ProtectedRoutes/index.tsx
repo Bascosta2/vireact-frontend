@@ -10,6 +10,7 @@ import { SidebarProvider } from '@/contexts/SidebarContext'
 import { PendingUploadProvider } from '@/contexts/PendingUploadContext'
 import { ActiveAnalysesProvider } from '@/contexts/ActiveAnalysesContext'
 import { ToastProvider } from '@/components/app/Toast'
+import { CommandProvider } from '@/contexts/CommandContext'
 // import BottomNav from '@/components/Header/UserHeader/BottomNav'
 
 const ProtectedRoutes = () => {
@@ -37,7 +38,9 @@ const ProtectedRoutes = () => {
                                         <PendingUploadProvider>
                                             <ToastProvider>
                                                 <ActiveAnalysesProvider>
-                                                    <UserRoutes />
+                                                    <CommandProvider>
+                                                        <UserRoutes />
+                                                    </CommandProvider>
                                                 </ActiveAnalysesProvider>
                                             </ToastProvider>
                                         </PendingUploadProvider>

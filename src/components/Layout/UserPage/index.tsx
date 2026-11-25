@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Loader2, Plus, Search, X } from 'lucide-react';
 import { Sidebar, SIDEBAR_TRANSITION } from '@/components/UI/modern-sidebar';
 import BottomNav from '@/components/Header/UserHeader/BottomNav';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -8,6 +8,8 @@ import { useActiveAnalyses } from '@/contexts/ActiveAnalysesContext';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import VerifyEmailBanner from '@/components/VerifyEmailBanner';
 import { cn } from '@/lib/utils';
+import { useCommands } from '@/contexts/command-context';
+import { NotificationsBell } from '@/components/app/NotificationsBell';
 
 const PAYMENT_FAILED_BANNER_DISMISS_KEY = 'vireact_payment_failed_banner_dismissed';
 
@@ -25,6 +27,7 @@ interface UserPageProps {
 function MobileTopBar() {
   const { inProgressCount } = useActiveAnalyses();
   const { plan } = useSubscription();
+  const { openPalette } = useCommands();
   const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : null;
 
   return (
@@ -43,19 +46,29 @@ function MobileTopBar() {
           <span className="font-heading text-[22px] leading-none tracking-[0.12em] text-fg">VIREACT</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => openPalette()}
+            aria-label="Search"
+            className="app-focus inline-flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-white/5 hover:text-fg"
+          >
+            <Search className="h-[18px] w-[18px]" aria-hidden="true" />
+          </button>
+          <NotificationsBell side="bottom-end" />
           {inProgressCount > 0 ? (
             <Link
               to="/videos"
               className="app-focus tabular inline-flex h-8 items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-3 text-xs font-medium text-warning"
             >
               <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" aria-hidden="true" />
-              {inProgressCount} analyzing
+              {inProgressCount}
+              <span className="hidden min-[380px]:inline"> analyzing</span>
             </Link>
           ) : planLabel ? (
             <Link
               to="/settings?tab=plan"
-              className="app-focus inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white/[0.03] px-3 text-xs font-medium text-fg-muted"
+              className="app-focus hidden h-8 items-center gap-1.5 rounded-full border border-line bg-white/[0.03] px-3 text-xs font-medium text-fg-muted min-[400px]:inline-flex"
               aria-label={`${planLabel} plan, open plan settings`}
             >
               <span aria-hidden="true" className="app-glow-dot h-1.5 w-1.5 rounded-full bg-success" />
@@ -65,7 +78,7 @@ function MobileTopBar() {
           <Link
             to="/new"
             aria-label="New analysis"
-            className="app-focus app-primary inline-flex h-9 w-9 items-center justify-center rounded-xl"
+            className="app-focus app-quiet inline-flex h-9 w-9 items-center justify-center rounded-xl text-accent"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
           </Link>

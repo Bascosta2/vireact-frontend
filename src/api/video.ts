@@ -48,6 +48,16 @@ interface Video {
     updatedAt: string;
     /** Sanitized client-safe message when analysis failed (from status API or list if provided) */
     errorSummary?: string;
+    /** Name the creator gave the video in the app. Shown before any other name. */
+    title?: string | null;
+    /** Platform title when the video came from a link. */
+    sourceTitle?: string | null;
+    /** First spoken words (list only), used to name videos whose file name is an id. */
+    autoTitle?: string | null;
+    postedAt?: string | null;
+    postUrl?: string | null;
+    creatorPlatform?: string | null;
+    scriptSuggestions?: unknown[];
     /** When returned from GET /videos/:id, analysis is the VideoAnalysis DTO */
     analysis?: {
         viralityScore: number;
@@ -447,4 +457,16 @@ export const addPerformanceSnapshot = async (videoId: string, body: SnapshotInpu
 export const deletePerformanceSnapshot = async (videoId: string, snapshotId: string): Promise<VideoPerformance> => {
     const response = await Axios.delete<{ data: VideoPerformance }>(`/videos/${videoId}/snapshots/${snapshotId}`);
     return response.data.data;
+};
+
+/** Rename a video in the app. An empty name goes back to the automatic one. */
+export const renameVideo = async (videoId: string, title: string): Promise<string | null> => {
+    const response = await Axios.patch<{ data: { video: { title: string | null } } }>(`/videos/${videoId}/title`, { title });
+    return response.data.data.video.title ?? null;
+};
+
+/** Fresh thumbnail links for videos whose saved link stopped loading (null: no picture). */
+export const refreshThumbnails = async (ids: string[]): Promise<Record<string, string | null>> => {
+    const response = await Axios.post<{ data: { thumbnails: Record<string, string | null> } }>('/videos/thumbnails/refresh', { ids });
+    return response.data.data.thumbnails ?? {};
 };

@@ -23,16 +23,28 @@ export const VIDEO_VIEW_SUFFIX: Record<VideoViewId, string> = { report: '', coac
 /** Sidebar entry points that pick a video for the person, then open that view. */
 export const VIDEO_HUB_PATH: Record<VideoViewId, string> = { report: '/reports', coach: '/coach', scripts: '/scripts' };
 
+/**
+ * Grouped by what the creator is doing: making something, reviewing what Vireact found, growing.
+ * "New analysis" sits above the groups as the one primary action.
+ */
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   { id: 'main', label: null, items: [{ id: 'home', name: 'Home', icon: Home, href: '/dashboard' }] },
   {
-    id: 'videos',
-    label: 'Your videos',
+    id: 'create',
+    label: 'Create',
+    items: [
+      { id: 'scripts', name: 'Scripts', icon: ScrollText, href: VIDEO_HUB_PATH.scripts },
+      // The Skills Editor stands in for the Editor tab; the classic editor stays at /editor (linked from it).
+      { id: 'skills', name: 'Skills Editor', icon: Wand2, href: '/skills' },
+    ],
+  },
+  {
+    id: 'review',
+    label: 'Review',
     items: [
       { id: 'library', name: 'Library', icon: Library, href: '/videos' },
       { id: 'report', name: 'Feedback Reports', icon: FileBarChart, href: VIDEO_HUB_PATH.report },
       { id: 'coach', name: 'Personal Video Coach', icon: MessageSquare, href: VIDEO_HUB_PATH.coach },
-      { id: 'scripts', name: 'Scripts', icon: ScrollText, href: VIDEO_HUB_PATH.scripts },
     ],
   },
   {
@@ -40,12 +52,13 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     label: 'Grow',
     items: [
       { id: 'analytics', name: 'Analytics', icon: BarChart3, href: '/analytics' },
-      // The Skills Editor stands in for the Editor tab; the classic editor stays at /editor (linked from it).
-      { id: 'skills', name: 'Skills Editor', icon: Wand2, href: '/skills' },
       { id: 'accounts', name: 'Accounts', icon: Link2, href: '/accounts' },
     ],
   },
 ];
+
+/** Beta pages: shown only to accounts that have them; everyone else sees one "Coming soon" line. */
+export const BETA_NAV_IDS = ['skills', 'accounts'] as const;
 
 /** Settings sits in the sidebar footer, next to Log out. */
 export const SETTINGS_NAV_ITEM: AppNavItem = { id: 'settings', name: 'Settings', icon: Settings, href: '/settings' };

@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Check, ChevronDown, Film, Search } from 'lucide-react';
 import type { Video } from '@/api/video';
-import { displayVideoTitle, formatDuration, scoreTone } from '@/lib/video-file';
+import { formatDuration, scoreTone, videoName } from '@/lib/video-file';
 import { cn } from '@/lib/utils';
 
 const TONE_CLASS = {
@@ -51,7 +51,7 @@ export function VideoSwitcher({ current, videos, onSelect }: { current: Video; v
   const searchable = videos.length > 6;
 
   const items = useMemo(() => {
-    const rows = videos.map((v) => ({ video: v, title: displayVideoTitle(v.filename, v.createdAt) }));
+    const rows = videos.map((v) => ({ video: v, title: videoName(v) }));
     const q = query.trim().toLowerCase();
     return q ? rows.filter((r) => r.title.toLowerCase().includes(q)) : rows;
   }, [videos, query]);
@@ -111,7 +111,7 @@ export function VideoSwitcher({ current, videos, onSelect }: { current: Video; v
     }
   };
 
-  const currentTitle = displayVideoTitle(current.filename, current.createdAt);
+  const currentTitle = videoName(current);
   const activeId = items[active] ? `${listId}-${items[active].video._id}` : undefined;
 
   return (
