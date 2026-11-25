@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
+import { focus, grainStyle, loop } from '../painted';
 import { H, W, noise, type StyleTheme } from '../theme';
 
 /**
@@ -116,7 +116,7 @@ export const romanMosaic: StyleTheme = {
   entrance: 'pop',
   step: 1,
   textScale: 0.86,
-  Overlay: ({ c }) => {
+  Overlay: ({ c, scene }) => {
     const light = loop(c.frame, 150);
     return (
       <AbsoluteFill style={{ pointerEvents: 'none' }}>
@@ -125,12 +125,37 @@ export const romanMosaic: StyleTheme = {
         <AbsoluteFill style={{ background: `linear-gradient(115deg, transparent ${light * 140 - 40}%, rgba(255,240,200,0.22) ${light * 140 - 25}%, transparent ${light * 140 - 10}%)`, mixBlendMode: 'screen' }} />
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
           {bands()}
-          {turtle(c.frame)}
+          {!scene && turtle(c.frame)}
         </svg>
         <div style={grainStyle({ color: '#3A2A1A', alpha: 0.35, freq: 1.2, size: 200, seed: 5, opacity: 0.5 })} />
       </AbsoluteFill>
     );
   },
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, #2B6F66 0%, ${SEA} 38%, #78AE9A 62%, #D9C59A 76%, #C9AE7E 100%)` }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        {/* Coral and weed laid in tiles on the sea floor. */}
+        {Array.from({ length: 6 }, (_, k) => {
+          const cx = 90 + k * 185;
+          const cy = 1470 + (k % 2) * 110;
+          return (
+            <g key={k}>
+              {Array.from({ length: 19 }, (_, i) => {
+                const a = (i / 19) * Math.PI * 2;
+                const r = i % 2 ? 36 : 18;
+                return <rect key={i} x={cx + Math.cos(a) * r - 7} y={cy + Math.sin(a) * r * 0.8 - 7} width={14} height={14} rx={2} fill={shift(k % 2 ? TERRA : OCHRE, i + k * 19)} />;
+              })}
+              {Array.from({ length: 7 }, (_, i) => (
+                <rect key={`w${i}`} x={cx + 60 + Math.sin(c.frame / 30 + i * 0.6 + k) * (i * 2)} y={cy - 40 - i * 16} width={12} height={14} rx={2} fill={shift(SEA, 200 + i + k)} />
+              ))}
+            </g>
+          );
+        })}
+        {/* Slower than in the border and timed to be mid-floor early on, so the story opens on it. */}
+        <g transform={focus(540, 1640, 540, 930, 2.3)}>{turtle(c.frame * 0.45 + 300)}</g>
+      </svg>
+    </AbsoluteFill>
+  ),
   caption: {
     size: 66,
     glyph: 0.78,

@@ -171,6 +171,12 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
   );
 }
 
+const STYLE_GROUPS = [
+  { id: 'talking-head', title: 'For talking heads' },
+  { id: 'any-footage', title: 'For any footage' },
+  { id: 'storytelling', title: 'Animated storytelling' },
+] as const;
+
 /** Switch an animation-style edit to another style: the cut stays, only the look changes. */
 function StyleTab({ project, edits, onEdit }: { project: EditProjectDetail; edits: Edits; onEdit: (e: Edits) => void }) {
   const current = activeStyle(project, edits);
@@ -178,24 +184,37 @@ function StyleTab({ project, edits, onEdit }: { project: EditProjectDetail; edit
   return (
     <div className="space-y-4">
       <p className="text-sm text-fg-muted">Pick another animation style and the preview redraws right away. Your cut, captions, hook and graphics stay the same.</p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {ANIMATION_STYLES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            aria-pressed={current === s.id}
-            onClick={() => {
-              if (current === s.id) return;
-              track('edit_style_switched', { project_id: project.id, from: current, to: s.id });
-              onEdit({ animationStyle: s.id as StyleId });
-            }}
-            className={cn('app-focus flex flex-col gap-1.5 rounded-lg border p-1.5 text-left', current === s.id ? 'border-accent bg-accent-tint' : 'border-line hover:bg-white/[0.03]')}
-          >
-            <ShowcaseThumbnail showcase={s.hero} className="w-full" />
-            <span className="px-0.5 text-xs font-medium text-fg">{s.name}</span>
-          </button>
-        ))}
-      </div>
+      {info?.category === 'storytelling' && (
+        <Toggle
+          checked={!edits.sceneOff}
+          onChange={(v) => onEdit({ sceneOff: !v })}
+          label="Painted scene"
+          description={edits.sceneOff ? 'Your footage shows, in the style.' : 'The style paints the whole frame and your voice narrates it. Turn off to show your footage.'}
+        />
+      )}
+      {STYLE_GROUPS.map((g) => (
+        <div key={g.id}>
+          <h3 className="app-label mb-2">{g.title}</h3>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {ANIMATION_STYLES.filter((s) => s.category === g.id).map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                aria-pressed={current === s.id}
+                onClick={() => {
+                  if (current === s.id) return;
+                  track('edit_style_switched', { project_id: project.id, from: current, to: s.id });
+                  onEdit({ animationStyle: s.id as StyleId });
+                }}
+                className={cn('app-focus flex flex-col gap-1.5 rounded-lg border p-1.5 text-left', current === s.id ? 'border-accent bg-accent-tint' : 'border-line hover:bg-white/[0.03]')}
+              >
+                <ShowcaseThumbnail showcase={s.hero} className="w-full" />
+                <span className="px-0.5 text-xs font-medium text-fg">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
       {info && (
         <div className="rounded-lg border border-line p-3">
           <p className="text-sm font-medium text-fg">{info.name}</p>

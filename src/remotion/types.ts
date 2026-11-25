@@ -81,6 +81,11 @@ export interface SkillProps {
   hookVariant: 'white' | 'black' | 'plain';
   /** The hook text broken into its lines. */
   hookLines: string[];
+  /**
+   * 'scene': an animated storytelling style paints its world over the whole frame instead of showing the
+   * camera; the footage still plays underneath for its sound (the creator narrates). Absent = footage.
+   */
+  layout?: 'scene' | 'footage';
 }
 
 // A type alias (not an interface) so it is assignable to Remotion's Record<string, unknown> props.

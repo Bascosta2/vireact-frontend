@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
+import { focus, grainStyle, loop } from '../painted';
 import { H, W, hexA, type StyleTheme } from '../theme';
 
 /**
@@ -70,7 +70,7 @@ export const artNouveau: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => (
+  Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
         {/* The poster frame: double rule with corner ornaments. */}
@@ -90,9 +90,29 @@ export const artNouveau: StyleTheme = {
         {vine(c.frame, -1, true)}
         {vine(c.frame, 1)}
         {vine(c.frame, -1)}
-        {hummingbird(c.frame)}
+        {!scene && hummingbird(c.frame)}
       </svg>
       <div style={grainStyle({ color: '#6B5322', alpha: 0.4, freq: 0.8, size: 240, seed: 8, opacity: 0.38 })} />
+    </AbsoluteFill>
+  ),
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 42%, #F6EEDA 0%, ${CREAM} 55%, #DCCDA6 100%)` }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        {/* The halo behind the bird: a fine pattern that slowly turns. */}
+        <g transform={`rotate(${c.frame * 0.25} 520 860)`}>
+          <circle cx={520} cy={860} r={360} fill={hexA(GOLD, 0.25)} stroke={INK} strokeWidth={6} />
+          <circle cx={520} cy={860} r={320} fill="none" stroke={GOLD} strokeWidth={10} strokeDasharray="4 22" />
+          <circle cx={520} cy={860} r={270} fill="none" stroke={INK} strokeWidth={2.5} strokeDasharray="30 10" opacity={0.6} />
+          {Array.from({ length: 24 }, (_, k) => (
+            <ellipse key={k} cx={520} cy={860 - 340} rx={10} ry={22} fill={SAGE} stroke={INK} strokeWidth={2} transform={`rotate(${k * 15} 520 860)`} />
+          ))}
+        </g>
+        {/* Sweeping leaves in the lower half. */}
+        {[0, 1, 2, 3].map((k) => (
+          <path key={k} d={`M${k * 280 - 40} ${H} Q${k * 280 + 60} ${1350 - k * 30} ${k * 280 + 230 + Math.sin(c.frame / 40 + k) * 18} ${1280 + (k % 2) * 60} Q${k * 280 + 120} ${1500} ${k * 280 + 120} ${H} Z`} fill={k % 2 ? SAGE : OLIVE} stroke={INK} strokeWidth={5} />
+        ))}
+        <g transform={focus(700, 650, 540, 860, 1.9)}>{hummingbird(c.frame)}</g>
+      </svg>
     </AbsoluteFill>
   ),
   caption: {

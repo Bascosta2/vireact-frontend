@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { drawStroke, grainStyle, loop, roughFilter } from '../painted';
+import { drawStroke, grainStyle, loop, roughFilter, smooth } from '../painted';
 import { H, W, hexA, type StyleTheme } from '../theme';
 
 /**
@@ -59,7 +59,7 @@ export const sumiE: StyleTheme = {
   entrance: 'write',
   step: 1,
   textScale: 1.05,
-  Overlay: ({ c }) => {
+  Overlay: ({ c, scene }) => {
     // The pair crosses every 8 seconds; the mate joins halfway.
     const p = loop(c.frame, 240);
     const x = interpolate(p, [0, 1], [W + 160, -220]);
@@ -81,13 +81,38 @@ export const sumiE: StyleTheme = {
           {RIDGES.map((r, k) => (
             <path key={k} d={r.d} fill={INK} opacity={r.opacity} filter="url(#sumi-wash)" transform={`translate(${-((c.frame * r.speed) % 1080)} 0)`} />
           ))}
-          {crane(x, y, (c.frame % 26) / 26, 1, 'lead')}
-          {join > 0 && crane(mateX, mateY, ((c.frame + 9) % 26) / 26, 0.8, 'mate')}
+          {!scene && crane(x, y, (c.frame % 26) / 26, 1, 'lead')}
+          {!scene && join > 0 && crane(mateX, mateY, ((c.frame + 9) % 26) / 26, 0.8, 'mate')}
         </svg>
         {/* Mist that blooms and fades like a wet wash. */}
         <div style={{ position: 'absolute', left: -200, right: -200, top: 120, height: 260, background: `radial-gradient(ellipse at ${50 + Math.sin(c.frame / 80) * 12}% 50%, ${hexA(PAPER, 0.85)}, transparent 70%)`, opacity: mist(0), filter: 'blur(18px)' }} />
         <div style={{ position: 'absolute', left: -200, right: -200, top: 1580, height: 300, background: `radial-gradient(ellipse at ${50 - Math.sin(c.frame / 70) * 15}% 50%, ${hexA(PAPER, 0.9)}, transparent 70%)`, opacity: mist(1), filter: 'blur(20px)' }} />
         <div style={grainStyle({ color: '#5A4E3A', alpha: 0.4, freq: 0.75, size: 260, seed: 9, opacity: 0.6, stretch: [1, 2.5] })} />
+      </AbsoluteFill>
+    );
+  },
+  Scene: ({ c }) => {
+    const drift = Math.sin(c.frame / 60) * 30;
+    const climb = Math.sin(c.frame / 45) * 46;
+    // The mate curves in from the left, flies alongside, then leaves to the right.
+    const p = loop(c.frame, 300);
+    const mateX = p < 0.8 ? -300 + smooth(p, 0.2, 0.45) * 1080 : 780 + smooth(p, 0.8, 1) * 700;
+    const mateY = 1080 + climb * 0.8 - smooth(p, 0.2, 0.45) * 60;
+    return (
+      <AbsoluteFill style={{ background: PAPER }}>
+        <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+          <defs>
+            {roughFilter('sumi-edge', { scale: 5, freq: 0.06, blur: 0.6 })}
+            {roughFilter('sumi-wash', { scale: 22, freq: 0.012, blur: 6 })}
+          </defs>
+          <circle cx={760} cy={560} r={160} fill={SUN} opacity={0.9} filter="url(#sumi-edge)" />
+          {RIDGES.map((r, k) => (
+            <path key={k} d={r.d} fill={INK} opacity={r.opacity} filter="url(#sumi-wash)" transform={`translate(${-((c.frame * r.speed * 1.4) % 1080)} ${[-640, -430, -210][k]})`} />
+          ))}
+          {crane(470 + drift, 860 + climb, (c.frame % 26) / 26, 2.4, 'hero')}
+          {crane(mateX + drift, mateY, ((c.frame + 9) % 26) / 26, 1.7, 'mate')}
+        </svg>
+        <div style={{ position: 'absolute', left: -200, right: -200, top: 1180, height: 360, background: `radial-gradient(ellipse at ${50 + Math.sin(c.frame / 70) * 14}% 50%, ${hexA(PAPER, 0.9)}, transparent 70%)`, filter: 'blur(22px)' }} />
       </AbsoluteFill>
     );
   },

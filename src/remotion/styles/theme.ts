@@ -73,8 +73,16 @@ export interface StyleTheme {
   textScale: number;
   /** The same for body text (subtext, list items); 1 when not set. */
   bodyScale?: number;
-  /** Ambient layer over the footage: texture, frame, slow decoration. `c.frame` is the edit frame. */
-  Overlay: (p: { c: Ctx; total: number }) => ReactNode;
+  /**
+   * Ambient layer over the footage: texture, frame, slow decoration. `c.frame` is the edit frame. `scene`
+   * is true when the style's Scene fills the frame (its own hero is then drawn by the Scene, not here).
+   */
+  Overlay: (p: { c: Ctx; total: number; scene?: boolean }) => ReactNode;
+  /**
+   * Animated storytelling styles: a whole painted world that fills the frame in place of the camera,
+   * with the main subject in the middle. The creator's voice narrates it.
+   */
+  Scene?: (p: { c: Ctx }) => ReactNode;
   caption: CaptionLook;
   hook: HookLook;
   /** The surface graphics sit on. */

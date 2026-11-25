@@ -112,6 +112,8 @@ export interface Edits {
   hookVariant?: 'white' | 'black' | 'plain';
   /** Another animation style for an edit made with one (Style tab); the backend ignores it for other edits. */
   animationStyle?: StyleId;
+  /** Storytelling styles: show the creator's footage instead of the painted scene. */
+  sceneOff?: boolean;
 }
 
 export type PreviewProps = Omit<EditProps, 'videoUrl'>;
