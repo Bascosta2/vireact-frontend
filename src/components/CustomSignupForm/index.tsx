@@ -86,7 +86,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
 
   const initialValues: FormValues = {
     name: '',
-    email: '',
+    // After confirming a new email the confirm page sends people here with it filled in.
+    email: isLogin ? new URLSearchParams(window.location.search).get('email') ?? '' : '',
     password: '',
     ...(isLogin ? {} : { confirmPassword: '' })
   };

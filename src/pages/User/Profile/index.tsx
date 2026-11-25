@@ -25,10 +25,19 @@ import { ErrorNotification, SuccessNotification } from '@/utils/toast';
 import { useSubscription } from '@/redux/hooks/use-subscription';
 import { PromoCodePanel } from '@/components/app/PromoCodePanel';
 import { promoSummary } from '@/lib/promo';
+import {
+  emailChangeSentMessage,
+  needsPasswordForEmailChange,
+  pendingEmailNotice,
+  isSetPasswordFirstError,
+  forgotPasswordPath,
+  profileUpdateErrorMessage,
+} from '@/lib/verification-email';
 
 interface ProfileFormValues {
   name: string;
   email: string;
+  currentPassword: string;
 }
 
 interface PasswordFormValues {
@@ -55,6 +64,10 @@ function Profile() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  // True right after a change was requested, so the notice says "Check <inbox>" instead of "Waiting for".
+  const [emailChangeJustSent, setEmailChangeJustSent] = useState(false);
+  const [needsPasswordFirst, setNeedsPasswordFirst] = useState(false);
+  const [isCancellingEmailChange, setIsCancellingEmailChange] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -112,6 +125,7 @@ function Profile() {
   const profileInitialValues: ProfileFormValues = {
     name: user?.name || '',
     email: user?.email || '',
+    currentPassword: '',
   };
 
   const profileValidationSchema = Yup.object({
@@ -122,6 +136,7 @@ function Profile() {
     email: Yup.string()
       .email('Invalid email address')
       .required('Email is required'),
+    currentPassword: Yup.string(),
   });
 
   const passwordInitialValues: PasswordFormValues = {
@@ -214,23 +229,49 @@ function Profile() {
   };
 
   const handleProfileSubmit = async (values: ProfileFormValues, { setSubmitting }: any) => {
+    if (!user) return;
+    const isGoogleUser = user.provider === 'google';
+    const email = isGoogleUser ? user.email : values.email.trim();
+    if (needsPasswordForEmailChange(email, user.email, user.provider) && !values.currentPassword) {
+      ErrorNotification('Enter your current password to change your email.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       setIsUpdatingProfile(true);
-      const isGoogleUser = user?.provider === 'google';
-      const updateData = {
+      setNeedsPasswordFirst(false);
+      const emailChanging = email.toLowerCase() !== user.email.toLowerCase();
+      const { user: updatedUser, emailChange } = await updateProfile({
         name: values.name,
-        email: isGoogleUser ? user?.email : values.email,
-      };
-
-      const updatedUser = await updateProfile(updateData);
-      setUser(updatedUser);
-      SuccessNotification('Profile updated successfully');
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile';
-      ErrorNotification(errorMessage);
+        email,
+        ...(emailChanging && values.currentPassword ? { currentPassword: values.currentPassword } : {}),
+      });
+      setUser(emailChange ? { ...updatedUser, pendingEmail: updatedUser.pendingEmail ?? emailChange.pendingEmail } : updatedUser);
+      setEmailChangeJustSent(Boolean(emailChange));
+      SuccessNotification(emailChange ? 'Confirmation email sent' : 'Profile updated successfully');
+    } catch (error: unknown) {
+      setNeedsPasswordFirst(isSetPasswordFirstError(error));
+      ErrorNotification(profileUpdateErrorMessage(error));
     } finally {
       setIsUpdatingProfile(false);
       setSubmitting(false);
+    }
+  };
+
+  // Sending the current email again cancels a change that is waiting for confirmation.
+  const handleCancelEmailChange = async () => {
+    if (!user) return;
+    try {
+      setIsCancellingEmailChange(true);
+      const { user: updatedUser } = await updateProfile({ name: user.name, email: user.email, cancelEmailChange: true });
+      setUser({ ...updatedUser, pendingEmail: null });
+      setEmailChangeJustSent(false);
+      SuccessNotification('Email change cancelled');
+    } catch (error: unknown) {
+      ErrorNotification(profileUpdateErrorMessage(error));
+    } finally {
+      setIsCancellingEmailChange(false);
     }
   };
 
@@ -319,13 +360,37 @@ function Profile() {
           {activeTab === 'profile' && (
             <section className={cardClass} aria-labelledby="settings-profile">
               <h2 id="settings-profile" className={sectionTitleClass}>Profile</h2>
+              {user.pendingEmail && (
+                <div role="status" className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-white/90">
+                  <p>
+                    {emailChangeJustSent
+                      ? emailChangeSentMessage(user.pendingEmail, user.email)
+                      : pendingEmailNotice(user.pendingEmail, user.email)}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="mt-3"
+                    onClick={handleCancelEmailChange}
+                    disabled={isCancellingEmailChange}
+                  >
+                    {isCancellingEmailChange ? 'Cancelling' : 'Cancel change'}
+                  </Button>
+                </div>
+              )}
+              {needsPasswordFirst && (
+                <p role="alert" className="mb-4 text-sm text-white/90">
+                  Set a password first, then change your email.{' '}
+                  <Link to={forgotPasswordPath(user.email)} className="underline">Set a password</Link>
+                </p>
+              )}
               <Formik
                 initialValues={profileInitialValues}
                 validationSchema={profileValidationSchema}
                 enableReinitialize
                 onSubmit={handleProfileSubmit}
               >
-                {({ isSubmitting, isValid, dirty }) => (
+                {({ isSubmitting, isValid, dirty, values }) => (
                   <Form className="space-y-4">
                     <TextField
                       field="name"
@@ -346,6 +411,17 @@ function Profile() {
                       helpText={isGoogleUser ? 'Email is managed by Google and cannot be changed' : undefined}
                       autoComplete="email"
                     />
+
+                    {needsPasswordForEmailChange(values.email, user.email, user.provider) && (
+                      <PasswordField
+                        field="currentPassword"
+                        label_text="Current password"
+                        placeholder="Enter your current password"
+                        required
+                        helpText="We ask for it before sending a link to your new email."
+                        autoComplete="current-password"
+                      />
+                    )}
 
                     <Button type="submit" disabled={isSubmitting || isUpdatingProfile || !isValid || !dirty}>
                       {isSubmitting || isUpdatingProfile ? 'Saving' : 'Save changes'}
