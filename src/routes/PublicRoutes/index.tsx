@@ -35,6 +35,7 @@ const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
 const TermsAndConditions = lazy(() => import('@/pages/PreLogin/TrustAndLegal/TermsAndConditions'));
 const PrivacyPolicy = lazy(() => import('@/pages/PreLogin/TrustAndLegal/PrivacyPolicy'));
 const TermsOfServices = lazy(() => import('@/pages/PreLogin/TrustAndLegal/TermsOfServices'));
+const DataDeletion = lazy(() => import('@/pages/PreLogin/DataDeletion'));
 const CookiesPreferences = lazy(() => import('@/pages/PreLogin/TrustAndLegal/CookiesPreferences'));
 const AccessibilityStatement = lazy(() => import('@/pages/PreLogin/TrustAndLegal/AccessibilityStatement'));
 
@@ -78,6 +79,7 @@ function PublicRoutes() {
                 {/* Trust & Legal */}
                 <Route path='/terms-and-conditions' element={<TermsAndConditions />} />
                 <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+                <Route path='/data-deletion' element={<DataDeletion />} />
                 <Route path='/terms-of-services' element={<TermsOfServices />} />
                 <Route path='/cookies-preferences' element={<CookiesPreferences />} />
                 <Route path='/accessibility-statement' element={<AccessibilityStatement />} />

@@ -125,3 +125,6 @@ export const VIDEO_INDEXING_MESSAGES = [
   export const getRandomIndexingMessage = () => {
     return VIDEO_INDEXING_MESSAGES[Math.floor(Math.random() * VIDEO_INDEXING_MESSAGES.length)];
   };
+
+/** Public support mailbox shown on legal pages and Contact. Owner must confirm which domain is monitored. */
+export const SUPPORT_EMAIL = 'support@vireact.io';
