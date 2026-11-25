@@ -1,8 +1,18 @@
-﻿import { describe, expect, it } from 'vitest';
+﻿import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
 import { APP_NAV_SECTIONS, isNavActive, parseVideoPath, videoViewHref } from './app-nav';
+import { isPublishingFlagOn, publishingAvailable, usePublishingAccess } from './publishing-access';
+import { getPostCapabilities } from '@/api/posts';
+import { buildAgenda, dateKeyInZone, matchSlotsToPosts, platformChoices, weekDays, weekRange, zonedToUtcIso } from '@/pages/User/Analytics/schedule';
+import type { StrategySlot } from '@/api/analytics';
+import type { PostCapabilities, ScheduledPost } from '@/api/posts';
 import { completedVideos, pickHubVideo } from './video-hub';
 import { viewBadges } from './nav-badges';
 import { scriptAccessForPlan } from './plan-limits';
+
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: 'user-1' }) }));
+vi.mock('@/api/posts', () => ({ getPostCapabilities: vi.fn(() => Promise.resolve({ enabled: true, platforms: [] })) }));
 
 describe('sidebar', () => {
   it('groups the pages under headings, with the three video views under Your videos', () => {
@@ -85,5 +95,81 @@ describe('sidebar plan badges', () => {
 
   it('matches the backend script access', () => {
     expect([scriptAccessForPlan('free'), scriptAccessForPlan('premium'), scriptAccessForPlan('pro'), scriptAccessForPlan('enterprise'), scriptAccessForPlan(null)]).toEqual([2, 6, 10, 10, 2]);
+  });
+});
+
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ id: '' }) }));
+
+
+const mkSlot = (id: string, date: string, timeLocal: string, platform = 'tiktok'): StrategySlot =>
+  ({ id, date, timeLocal, platform, title: id, status: 'planned' }) as StrategySlot;
+const mkPost = (id: string, scheduledAt: string, platform = 'tiktok', status: ScheduledPost['status'] = 'scheduled'): ScheduledPost => ({
+  id,
+  mediaUrl: 'u',
+  caption: '',
+  scheduledAt,
+  status,
+  mode: 'publish',
+  targets: [{ platform: platform as 'tiktok', status: 'scheduled' }],
+  createdAt: scheduledAt,
+  updatedAt: scheduledAt,
+});
+
+describe('post scheduling logic', () => {
+  it('makes no request and stays denied when VITE_PUBLISHING is not true', () => {
+    vi.stubEnv('VITE_PUBLISHING', '');
+    function Probe() {
+      return createElement('span', null, usePublishingAccess().access);
+    }
+    expect(renderToString(createElement(Probe))).toContain('denied');
+    expect(getPostCapabilities).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  const tz = 'America/New_York';
+
+  it('converts wall-clock time in a zone to UTC and back to the same day', () => {
+    expect(zonedToUtcIso('2026-11-24', '09:00', tz)).toBe('2026-11-24T14:00:00.000Z');
+    expect(dateKeyInZone('2026-11-25T03:30:00Z', tz)).toBe('2026-11-24');
+    expect(zonedToUtcIso('bad', '09:00', tz)).toBeNull();
+  });
+
+  it('builds week ranges and day keys', () => {
+    expect(weekDays('2026-11-22')[6]).toBe('2026-11-28');
+    expect(weekRange('2026-11-22', 'UTC')).toEqual({ from: '2026-11-22T00:00:00.000Z', to: '2026-11-29T00:00:00.000Z' });
+  });
+
+  it('matches a post to the nearest same-day slot on its platform, one post per slot', () => {
+    const slots = [mkSlot('a', '2026-11-24', '09:00'), mkSlot('b', '2026-11-24', '09:30'), mkSlot('c', '2026-11-24', '09:00', 'instagram')];
+    const posts = [mkPost('p1', '2026-11-24T14:25:00Z')];
+    expect([...matchSlotsToPosts(slots, posts, tz)]).toEqual([['b', 'p1']]);
+  });
+
+  it('merges slots and posts per day, skipping cancelled posts and not duplicating matched ones', () => {
+    const slots = [mkSlot('a', '2026-11-24', '09:00')];
+    const posts = [mkPost('p1', '2026-11-24T14:00:00Z'), mkPost('p2', '2026-11-25T20:00:00Z'), mkPost('p3', '2026-11-25T21:00:00Z', 'tiktok', 'cancelled')];
+    const days = buildAgenda(['2026-11-24', '2026-11-25'], slots, posts, tz);
+    expect(days[0].items.map((i) => i.kind)).toEqual(['slot']);
+    expect(days[0].items[0].kind === 'slot' && days[0].items[0].post?.id).toBe('p1');
+    expect(days[1].items.map((i) => i.key)).toEqual(['post-p2']);
+  });
+
+  it('gates on the build flag and the server switch, and explains disabled platforms', () => {
+    const caps: PostCapabilities = {
+      enabled: true,
+      platforms: [
+        { platform: 'tiktok', connected: true, canPublish: true },
+        { platform: 'instagram', connected: false, canPublish: false, reason: 'not_connected' },
+      ],
+    };
+    expect(isPublishingFlagOn(undefined)).toBe(false);
+    expect(isPublishingFlagOn('true')).toBe(true);
+    expect(publishingAvailable(false, caps)).toBe(false);
+    expect(publishingAvailable(true, { ...caps, enabled: false })).toBe(false);
+    expect(publishingAvailable(true, caps)).toBe(true);
+    const choices = platformChoices(caps);
+    expect(choices.find((c) => c.platform === 'tiktok')?.disabled).toBe(false);
+    expect(choices.find((c) => c.platform === 'instagram')?.reason).toMatch(/Accounts page/);
+    expect(choices.find((c) => c.platform === 'youtube')?.disabled).toBe(true);
   });
 });

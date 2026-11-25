@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Check, ChevronDown, FlaskConical, Loader2, Lock, Pencil, Sparkles, Target, ThumbsDown, ThumbsUp, Wand2 } from 'lucide-react';
 import {
@@ -22,9 +22,13 @@ import { formatNumber } from '@/components/charts/chart-theme';
 import { cleanVideoTitle } from '@/lib/video-file';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import { usePublishingAccess } from '@/lib/publishing-access';
 import CreatorProfileForm from './CreatorProfileForm';
+import { scheduleTimeZone } from './schedule';
 import { GOAL_OPTIONS, NICHE_OPTIONS, PLATFORM_LABELS, WEEKDAYS } from './labels';
 import type { OpenLog } from './index';
+
+const ScheduleView = lazy(() => import('./ScheduleView'));
 
 const PROGRESS_STEPS = [
   'Reading your videos and scores…',
@@ -271,6 +275,7 @@ export default function StrategyTab({ onLog, dataVersion }: { onLog: OpenLog; da
   const [videos, setVideos] = useState<AnalyticsVideoRow[] | null>(null);
   const [historyId, setHistoryId] = useState('');
   const loadingVideos = useRef(false);
+  const publishing = usePublishingAccess();
 
   useEffect(() => {
     let cancelled = false;
@@ -549,6 +554,17 @@ export default function StrategyTab({ onLog, dataVersion }: { onLog: OpenLog; da
               </section>
             )}
           </div>
+
+          {strategy.schedule && publishing.access === 'granted' && (
+            <Suspense fallback={<Skeleton className="h-64" />}>
+              <ScheduleView
+                slots={strategy.schedule.slots}
+                planStart={strategy.schedule.startDate}
+                timeZone={scheduleTimeZone(strategy.schedule.timezone, state.profile?.timezone)}
+                capabilities={publishing.capabilities}
+              />
+            </Suspense>
+          )}
 
           {strategy.schedule && (
             <section aria-labelledby="schedule-title">
