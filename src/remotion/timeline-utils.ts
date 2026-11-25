@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { EditProps } from './types';
-import type { TimelinePiece } from './types';
+import type { Graphic, TimelinePiece } from './types';
 
 /** Index of the piece playing at `frame` (the last one when past the end). */
 export function pieceIndexAt(frame: number, timeline: TimelinePiece[]): number {
@@ -39,3 +39,12 @@ export function splitLayout(framing: EditProps['framing']) {
   };
 }
 
+
+/**
+ * Splits graphics into the ones drawn under the speaker and the ones in front. Only graphics marked
+ * layer "behind" move, and only when the props carry a matte; with no matte everything stays in front.
+ */
+export function splitGraphicLayers(graphics: Graphic[], matte: EditProps['matte']): { behind: Graphic[]; front: Graphic[] } {
+  if (!matte?.url) return { behind: [], front: graphics };
+  return { behind: graphics.filter((g) => g.layer === 'behind'), front: graphics.filter((g) => g.layer !== 'behind') };
+}
