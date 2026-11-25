@@ -1,8 +1,8 @@
 import Axios from './index';
 
-/** Accounts tab: connected TikTok / YouTube / Instagram accounts (backend /accounts). */
+/** Accounts tab: connected TikTok / YouTube / Instagram / Facebook accounts (backend /accounts). */
 
-export type AccountPlatform = 'tiktok' | 'youtube' | 'instagram';
+export type AccountPlatform = 'tiktok' | 'youtube' | 'instagram' | 'facebook';
 
 export interface PlatformStatus {
   id: AccountPlatform;

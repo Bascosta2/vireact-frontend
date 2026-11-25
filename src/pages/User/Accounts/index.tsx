@@ -21,6 +21,7 @@ const PLATFORM_COPY: Record<AccountPlatform, { what: string }> = {
   tiktok: { what: 'Views, likes, comments and shares of your TikToks.' },
   youtube: { what: 'Shorts views, likes, comments, average watch time and where viewers drop off.' },
   instagram: { what: 'Reels views, reach, saves, shares and average watch time. Needs a professional (Creator or Business) account.' },
+  facebook: { what: 'Views, reach, average watch time and where viewers drop off for the videos and Reels on your Facebook Pages. You choose which Pages to share.' },
 };
 
 const RETURN_ERRORS: Record<string, string> = {
@@ -39,6 +40,14 @@ const ago = (iso: string | null) => {
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours} h ago`;
   return formatShortDate(iso);
+};
+
+const PLATFORM_NAMES: Record<AccountPlatform, string> = { tiktok: 'TikTok', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook' };
+
+/** Facebook accounts are named after their Pages, so no "@" in front. */
+const accountLabel = (a: ConnectedAccount) => {
+  if (!a.handle) return PLATFORM_NAMES[a.platform];
+  return `${PLATFORM_NAMES[a.platform]} ${a.platform === 'facebook' ? a.handle : `@${a.handle.replace(/^@/, '')}`}`;
 };
 
 const watch = (r: ConnectedPost['latest']) => {
@@ -85,7 +94,7 @@ function PlatformCard({
               </span>
             )}
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-fg">{account.handle ? `@${account.handle.replace(/^@/, '')}` : account.displayName || name}</p>
+              <p className="truncate text-sm font-medium text-fg">{account.handle ? (platform === 'facebook' ? account.handle : `@${account.handle.replace(/^@/, '')}`) : account.displayName || name}</p>
               <p className="tabular text-xs text-fg-muted">
                 {account.followers != null ? `${formatCompact(account.followers)} followers · ` : ''}
                 {account.posts} posts · {account.linked} linked
@@ -181,7 +190,7 @@ function PostRow({ post, onLink }: { post: ConnectedPost; onLink: (post: Connect
 }
 
 /**
- * Accounts: connect TikTok, YouTube and Instagram so each post's real numbers arrive every night. A post
+ * Accounts: connect TikTok, YouTube, Instagram and Facebook so each post's real numbers arrive every night. A post
  * linked to its Vireact upload (automatically when the match is clear) feeds that video's report and the
  * view predictions with verified results.
  */
@@ -279,7 +288,7 @@ export default function Accounts() {
   };
 
   const connected = overview?.accounts ?? [];
-  const filterOptions = [{ value: 'all', label: 'All accounts' }, ...connected.map((a) => ({ value: a.id, label: `${a.platform === 'youtube' ? 'YouTube' : a.platform === 'tiktok' ? 'TikTok' : 'Instagram'}${a.handle ? ` @${a.handle.replace(/^@/, '')}` : ''}` }))];
+  const filterOptions = [{ value: 'all', label: 'All accounts' }, ...connected.map((a) => ({ value: a.id, label: accountLabel(a) }))];
   const visible = (posts ?? []).filter((p) => filter === 'all' || p.accountId === filter);
 
   return (
