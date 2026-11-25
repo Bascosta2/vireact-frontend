@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { track } from '@/lib/analytics';
 import type { CaptionPreset } from '@/remotion/types';
 import { isStyleId, type StyleId } from '@/remotion/styles/ids';
-import type { EditProjectDetail, Edits, Evidence, PreviewProps } from '@/api/editor';
+import { editorFeaturesV2, type EditProjectDetail, type Edits, type Evidence, type PreviewProps } from '@/api/editor';
 import { ANIMATION_STYLES, skillById } from '../Skills/catalog';
 import { ShowcaseThumbnail } from '../Skills/ShowcasePlayer';
 
@@ -74,7 +74,10 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
   const reordered = plan.segments.some((s, i) => i > 0 && s.start < plan.segments[i - 1].start);
   const removedSec = project.candidates.reduce((n, c) => n + (c.end - c.start), 0);
   const landscape = Boolean(project.source && project.source.width > project.source.height);
-  const showFraming = plan.framing.mode === 'fit_blur' || landscape;
+  // With the flag off a saved split edit plays as fill, so the fill/fit control treats it as fill.
+  const mode = plan.framing.mode === 'split' && !editorFeaturesV2() ? 'fill' : plan.framing.mode;
+  const framingNow = edits.framingMode ?? mode;
+  const showFraming = mode === 'fit_blur' || landscape;
   return (
     <div className="space-y-6">
       <div>
@@ -112,9 +115,17 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
         {(plan.transitionCount ?? 0) > 0 && <Toggle checked={!edits.transitionsOff} onChange={(v) => onEdit({ transitionsOff: !v })} label={`Transitions and jump-cut zooms (${plan.transitionCount})`} />}
         {(plan.effectCount ?? 0) > 0 && <Toggle checked={!edits.effectsOff} onChange={(v) => onEdit({ effectsOff: !v })} label={`Shake and flash effects (${plan.effectCount})`} />}
         {plan.sfxCount > 0 && <Toggle checked={!edits.sfxOff} onChange={(v) => onEdit({ sfxOff: !v })} label={`Sound effects (${plan.sfxCount})`} />}
-        {showFraming ? (
+        {editorFeaturesV2() && (
           <Toggle
-            checked={(edits.framingMode ?? plan.framing.mode) === 'fill'}
+            checked={framingNow === 'split'}
+            onChange={(v) => onEdit({ framingMode: v ? 'split' : 'fill' })}
+            label="Split screen"
+            description="You on top, a zoomed detail of the same shot below."
+          />
+        )}
+        {showFraming && framingNow !== 'split' ? (
+          <Toggle
+            checked={framingNow === 'fill'}
             onChange={(v) => onEdit({ framingMode: v ? 'fill' : 'fit_blur' })}
             label="Fill the vertical frame"
             description="Off shows the whole shot on a blurred background."

@@ -9,6 +9,7 @@ import { FONT } from './fonts';
 import { SFX_SECONDS } from './sfx';
 import type { EditProps, Grade, Graphic, Look } from './types';
 import { ReelCaptions, TextHook } from './skills/remotion-reel/parts';
+import { SplitContext } from './graphics-utils';
 import { brandFont, brandVars, isHex } from './brand';
 import { styleFonts } from './styles/fonts';
 import { themeFor } from './styles/registry';
@@ -207,6 +208,7 @@ export function EditComposition(props: EditProps) {
   const ducked = (f: number) => music?.duck.some((r) => f >= r.startFrame - 3 && f < r.endFrame + 3) ?? false;
 
   return (
+    <SplitContext.Provider value={props.framing.mode === 'split'}>
     <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden', ...(brand ? { fontSynthesis: 'none' } : {}), ...brandVars(brand), ...(isHex(brand?.secondary) ? { '--brand-secondary': brand.secondary } : {}) } as CSSProperties}>
       <AbsoluteFill style={shakeStyle}>
         <AbsoluteFill style={footageStyle}>
@@ -272,5 +274,6 @@ export function EditComposition(props: EditProps) {
         ) : null
       )}
     </AbsoluteFill>
+    </SplitContext.Provider>
   );
 }
