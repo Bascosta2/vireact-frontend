@@ -86,3 +86,42 @@ describe('auth interceptor', () => {
     expect(h.location.href).toBe('/pricing');
   });
 });
+
+describe('verification email messages', () => {
+  it('maps each backend outcome to its own message', async () => {
+    const { outcomeNotice, readVerificationOutcome } = await import('@/lib/verification-email');
+    expect(outcomeNotice('sent', 'a@b.co').message).toBe('We sent a link to a@b.co. Check spam and promotions too.');
+    expect(outcomeNotice('recent', 'a@b.co').message).toContain('We just sent one');
+    expect(outcomeNotice('bad_address', 'a@b.co')).toMatchObject({ canEditAddress: true, canResend: false });
+    expect(outcomeNotice('unavailable', 'a@b.co')).toMatchObject({ tone: 'warning', canResend: true });
+    expect(readVerificationOutcome({ verificationEmail: 'bad_address' })).toBe('bad_address');
+    expect(readVerificationOutcome({ verificationEmailSent: false })).toBe('unavailable');
+    expect(readVerificationOutcome({ verificationEmailSent: true })).toBe('sent');
+    expect(readVerificationOutcome(undefined)).toBe('sent');
+  });
+
+  it('treats any 200 as verified and 400 as a bad link', async () => {
+    const { readVerifyResponse, readVerifyError, resendErrorMessage } = await import('@/lib/verification-email');
+    expect(readVerifyResponse({ success: true })).toBe('verified');
+    expect(readVerifyResponse({ data: { status: 'already_verified' } })).toBe('already_verified');
+    expect(readVerifyError({ response: { status: 400 } })).toBe('invalid_link');
+    expect(readVerifyError({ response: { status: 429 } })).toBe('rate_limited');
+    expect(readVerifyError(new Error('network'))).toBe('failed');
+    expect(resendErrorMessage({ response: { status: 429 } }, 'x')).toContain('Too many attempts');
+  });
+});
+
+describe('verify outcome: set a new password', () => {
+  it('maps verified_set_password to the reset page and flags re-signups', async () => {
+    const { readVerifyResponse, setPasswordPath, isResignup, outcomeNotice } = await import('@/lib/verification-email');
+    const body = { data: { status: 'verified_set_password', resetToken: 'abc' } };
+    expect(readVerifyResponse(body)).toBe('verified_set_password');
+    expect(setPasswordPath(body)).toBe('/reset-password?token=abc');
+    expect(setPasswordPath({ data: { status: 'verified_set_password' } })).toBeNull();
+    const now = Date.parse('2026-01-01T00:10:00Z');
+    expect(isResignup({ createdAt: '2026-01-01T00:00:00Z' }, now)).toBe(true);
+    expect(isResignup({ createdAt: '2026-01-01T00:09:30Z' }, now)).toBe(false);
+    expect(outcomeNotice('unavailable', 'a@b.co', true).message).toBe("We couldn't send the email right now. Try again in a few minutes.");
+    expect(outcomeNotice('sent', 'a@b.co', true).message).toContain('newest email');
+  });
+});
