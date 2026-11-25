@@ -11,7 +11,7 @@ import { useToast } from '@/components/app/Toast';
 import { formatCompact, formatShortDate } from '@/components/charts/chart-theme';
 import { apiErrorCode, apiErrorMessage } from '@/api/analytics';
 import {
-  disconnectAccount, getAccounts, getConnectedPosts, linkPost, startConnect, syncAccount,
+  disconnectAccount, getAccounts, returnErrorMessage, getConnectedPosts, linkPost, startConnect, syncAccount,
   type AccountPlatform, type AccountsOverview, type ConnectedAccount, type ConnectedPost,
 } from '@/api/accounts';
 import { track } from '@/lib/analytics';
@@ -22,14 +22,6 @@ const PLATFORM_COPY: Record<AccountPlatform, { what: string }> = {
   youtube: { what: 'Shorts views, likes, comments, average watch time and where viewers drop off.' },
   instagram: { what: 'Reels views, reach, saves, shares and average watch time. Needs a professional (Creator or Business) account.' },
   facebook: { what: 'Views, reach, average watch time and where viewers drop off for the videos and Reels on your Facebook Pages. You choose which Pages to share.' },
-};
-
-const RETURN_ERRORS: Record<string, string> = {
-  denied: 'You cancelled the sign-in, so nothing was connected.',
-  expired: 'That sign-in took too long or was already used. Try connecting again.',
-  failed: 'The platform did not finish the sign-in. Try again in a minute.',
-  missing_state: 'The sign-in link was incomplete. Try connecting again.',
-  unknown_platform: 'That platform is not supported.',
 };
 
 const ago = (iso: string | null) => {
@@ -189,6 +181,51 @@ function PostRow({ post, onLink }: { post: ConnectedPost; onLink: (post: Connect
   );
 }
 
+interface DisconnectDialogProps {
+  account: ConnectedAccount | null;
+  onCancel: () => void;
+  onConfirm: (deleteData: boolean) => void;
+}
+
+/** Disconnect confirmation with the optional "delete the numbers this account added to my videos" choice. */
+function DisconnectDialog({ account, onCancel, onConfirm }: DisconnectDialogProps) {
+  const [deleteData, setDeleteData] = useState(false);
+
+  useEffect(() => {
+    setDeleteData(false);
+    if (!account) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [account, onCancel]);
+
+  const toggle = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setDeleteData(e.target.checked), []);
+  const confirm = useCallback(() => onConfirm(deleteData), [onConfirm, deleteData]);
+
+  if (!account) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="disconnect-title" aria-describedby="disconnect-desc" className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
+        <h2 id="disconnect-title" className="text-lg font-semibold">Disconnect this account?</h2>
+        <p id="disconnect-desc" className="mt-2 text-sm text-text-secondary">
+          Vireact stops syncing it, and its posts and sign-in access are removed from this tab. Results already saved on your videos stay unless you tick the box below.
+        </p>
+        <label className="mt-4 flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-0.5" checked={deleteData} onChange={toggle} />
+          <span>
+            Also delete the numbers this account added to my videos
+            <span className="mt-1 block text-xs text-text-secondary">Your uploads, analyses and anything you typed stay.</span>
+          </span>
+        </label>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button onClick={confirm}>Disconnect</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Accounts: connect TikTok, YouTube, Instagram and Facebook so each post's real numbers arrive every night. A post
  * linked to its Vireact upload (automatically when the match is clear) feeds that video's report and the
@@ -200,6 +237,8 @@ export default function Accounts() {
   const [overview, setOverview] = useState<AccountsOverview | null>(null);
   const [posts, setPosts] = useState<ConnectedPost[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [toDisconnect, setToDisconnect] = useState<ConnectedAccount | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const loadId = useRef(0);
@@ -235,7 +274,7 @@ export default function Accounts() {
       setParams({}, { replace: true });
       return () => clearTimeout(t);
     }
-    toast.show({ message: RETURN_ERRORS[err ?? ''] ?? RETURN_ERRORS.failed });
+    setReturnError(returnErrorMessage(err));
     setParams({}, { replace: true });
     return undefined;
   }, [params, setParams, toast, load]);
@@ -264,11 +303,11 @@ export default function Accounts() {
     }
   };
 
-  const disconnect = async (a: ConnectedAccount) => {
-    if (!window.confirm('Disconnect this account? Its post numbers are removed from this tab. Results already saved on your videos stay.')) return;
+  const disconnect = async (a: ConnectedAccount, deleteData: boolean) => {
+    setToDisconnect(null);
     setBusy(a.platform);
     try {
-      await disconnectAccount(a.id);
+      await disconnectAccount(a.id, deleteData);
       await load();
     } catch (err) {
       toast.show({ message: apiErrorMessage(err, 'Could not disconnect. Try again.') });
@@ -276,6 +315,12 @@ export default function Accounts() {
       setBusy(null);
     }
   };
+
+  const closeDisconnect = useCallback(() => setToDisconnect(null), []);
+  const confirmDisconnect = useCallback((deleteData: boolean) => {
+    if (toDisconnect) void disconnect(toDisconnect, deleteData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toDisconnect]);
 
   const onLink = async (post: ConnectedPost, videoId: string | null) => {
     try {
@@ -298,6 +343,7 @@ export default function Accounts() {
           title="Accounts"
           subtitle="Connect your accounts and your posts' real numbers arrive every night. Linked to their Vireact uploads, they make your reports and view predictions more accurate."
         />
+        {returnError && <p className="mb-6 rounded-lg border border-danger/40 px-4 py-3 text-sm text-danger" role="alert">{returnError}</p>}
         {error && <p className="mb-6 rounded-lg border border-danger/40 px-4 py-3 text-sm text-danger" role="alert">{error}</p>}
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -312,7 +358,7 @@ export default function Accounts() {
                 busy={busy === p.id}
                 onConnect={() => void connect(p.id)}
                 onSync={(a) => void sync(a)}
-                onDisconnect={(a) => void disconnect(a)}
+                onDisconnect={setToDisconnect}
               />
             ))
             : [0, 1, 2].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
@@ -354,6 +400,7 @@ export default function Accounts() {
           )}
         </section>
       </div>
+    <DisconnectDialog account={toDisconnect} onCancel={closeDisconnect} onConfirm={confirmDisconnect} />
     </UserPage>
   );
 }
