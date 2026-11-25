@@ -57,10 +57,12 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     // here — it lives only in an HttpOnly cookie set by the backend on
     // this response, and is sent back automatically via withCredentials
     // when the auth interceptor calls /auth/refresh-token.
+    // The server's role decides the area: admin and super-admin use the admin pages, everyone else the app.
+    const storedRole = user.role === 'admin' || user.role === 'super-admin' ? 'admin' : 'user';
     login(true);
     updateAuthData({
       token: accessToken,
-      role: 'user',
+      role: storedRole,
       user: mappedUser
     });
     setUserData(mappedUser);
@@ -68,7 +70,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     // Store access token + identity in localStorage for rehydration on
     // reload. Refresh token is never persisted client-side.
     localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('auth_role', 'user');
+    localStorage.setItem('auth_role', storedRole);
     localStorage.setItem('auth_user', JSON.stringify(mappedUser));
     localStorage.setItem('auth_is_authenticated', 'true');
 
