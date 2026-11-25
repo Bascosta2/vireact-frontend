@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions } from './Captions';
 import { Footage, PersonLayer } from './Footage';
+import { ScreenRecording } from './ScreenRecording';
 import { pieceIndexAt, splitGraphicLayers } from './timeline-utils';
 import { GraphicLayer } from './Graphics';
 import { SMOOTH } from './graphics-utils';
@@ -240,6 +241,9 @@ export function EditComposition(props: EditProps) {
 
       {/* The style's ambient layer sits on the picture, under the text, and holds still when the camera shakes. */}
       {theme && fonts && <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={props.durationInFrames} scene={scene} />}
+
+      {/* A screen recording shot sits over the footage and under the graphics and captions. */}
+      <ScreenRecording shots={props.screens ?? []} videoUrl={props.screenUrl} accent={accent} />
 
       <AbsoluteFill style={shakeStyle}>
         {graphics.map((g, k) => drawGraphic(g, k, 'g'))}
