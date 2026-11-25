@@ -101,8 +101,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     email: Yup.string()
       .email('Invalid email address')
       .required('Email is required'),
-    password: Yup.string()
-      .min(6, 'Password must be at least 6 characters')
+    password: isLogin ? Yup.string().required('Password is required') : Yup.string()
+      .min(8, 'Password must be at least 8 characters')
       .required('Password is required'),
     ...(isLogin ? {} : {
       confirmPassword: Yup.string()
