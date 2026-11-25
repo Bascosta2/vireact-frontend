@@ -30,8 +30,8 @@ function postVerifyOnce(token: string): Promise<{ data: unknown }> {
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { setUserData } = useUser();
+  const { isAuthenticated, logout: clearAuth } = useAuth();
+  const { setUserData, clearUserData } = useUser();
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('verifying');
   const [alreadyVerified, setAlreadyVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -51,6 +51,9 @@ function VerifyEmail() {
         const result = readVerifyResponse(response.data);
         const passwordPath = result === 'verified_set_password' ? setPasswordPath(response.data) : null;
         if (passwordPath) {
+          // The server revoked every session; drop the local one without calling the backend logout.
+          clearAuth();
+          clearUserData();
           SuccessNotification(SET_PASSWORD_NOTICE);
           navigate(passwordPath, { replace: true });
           return;

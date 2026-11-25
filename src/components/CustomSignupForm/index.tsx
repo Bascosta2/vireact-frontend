@@ -158,7 +158,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
           }
 
           try { sessionStorage.setItem('vireact-pending-verify-email', values.email); } catch { /* ignore */ }
-          setVerification({ outcome: readVerificationOutcome(response.data.data), email: values.email, resignup: isResignup(user) });
+          setVerification({ outcome: readVerificationOutcome(response.data.data), email: values.email, resignup: response.data.data?.resignup === true || (response.data.data?.resignup === undefined && isResignup(user)) });
 
           if (onSuccess) {
             onSuccess();
