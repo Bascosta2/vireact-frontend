@@ -52,7 +52,7 @@ export function BeatCard({ beat, dropped, busy, locked, number, onDrop, onSwap }
       </div>
       {beat.reason && <p className="mt-1 text-sm text-fg-muted">{beat.reason}</p>}
       {!dropped && (
-        <dl className="mt-2 grid gap-1 text-xs text-fg-muted sm:grid-cols-3">
+        <dl className={cn('mt-2 grid gap-1 text-xs text-fg-muted', beat.screens?.length ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
           <div>
             <dt className="app-label">Graphics</dt>
             <dd>{beat.graphics.length ? beat.graphics.map((g) => `${g.type}${g.text ? `: ${g.text}` : ''}`).join('; ') : 'None'}</dd>
@@ -61,6 +61,12 @@ export function BeatCard({ beat, dropped, busy, locked, number, onDrop, onSwap }
             <dt className="app-label">Sounds</dt>
             <dd>{[...beat.sounds, ...beat.effects].length ? [...beat.sounds, ...beat.effects].map((x) => x.type).join(', ') : 'Automatic only'}</dd>
           </div>
+          {beat.screens && beat.screens.length > 0 && (
+            <div>
+              <dt className="app-label">Screen recording</dt>
+              <dd>{beat.screens.map((x) => `${mmss(x.start)} to ${mmss(x.end)}${x.zoom > 1.05 ? `, zooms in ${x.zoom.toFixed(1)}x` : ''}`).join('; ')}</dd>
+            </div>
+          )}
           <div>
             <dt className="app-label">Framing</dt>
             <dd>

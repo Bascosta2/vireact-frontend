@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Player, Thumbnail } from '@remotion/player';
 import { RemotionReelShowcase, SHOWCASE_FPS, SHOWCASE_FRAMES, SHOWCASE_STILL } from '@/remotion/skills/remotion-reel/Showcase';
-import { STYLE_THUMBNAIL_FRAME, StyleShowcase } from '@/remotion/styles/Showcase';
+import { coverFrame } from '@/remotion/styles/covers';
+import { StyleShowcase } from '@/remotion/styles/Showcase';
 import { cn } from '@/lib/utils';
 import type { Showcase } from './catalog';
 
@@ -46,7 +47,7 @@ export function ShowcaseThumbnail({ showcase, className }: { showcase: Showcase;
         component={ShowcaseClip}
         inputProps={{ showcase, still: SHOWCASE_STILL }}
         {...SIZE}
-        frameToDisplay={showcase.kind === 'style' ? STYLE_THUMBNAIL_FRAME : 20}
+        frameToDisplay={showcase.kind === 'style' ? coverFrame(showcase.id) : 20}
         style={{ width: '100%', aspectRatio: '9 / 16' }}
       />
     </div>

@@ -1,6 +1,6 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { focus, grainStyle, loop } from '../painted';
+import { H, W, hexA, noise, type StyleTheme } from '../theme';
 
 /**
  * Paper Cut: a diorama of 6 to 9 layers of cut paper, pale surface blue to near black, each casting a
@@ -71,12 +71,12 @@ export const paperCut: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => (
+  Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
         {layers(c.frame, true)}
         {fish(c.frame)}
-        {jellyfish(c.frame)}
+        {!scene && jellyfish(c.frame)}
         {layers(c.frame)}
         {/* Punched paper dots drifting down like snow. */}
         {Array.from({ length: 20 }, (_, k) => {
@@ -85,6 +85,21 @@ export const paperCut: StyleTheme = {
         })}
       </svg>
       <div style={grainStyle({ color: '#FFFFFF', alpha: 0.35, freq: 0.95, size: 200, seed: 6, opacity: 0.3 })} />
+    </AbsoluteFill>
+  ),
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${SURFACE} 0%, ${LAYERS[1]} 30%, ${LAYERS[3]} 62%, ${LAYERS[5]} 100%)` }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        {/* Deeper paper layers sliding past at their own speeds, like a multiplane camera. */}
+        <g transform="translate(0 -760)" opacity={0.55}>{layers(c.frame * 0.5)}</g>
+        <g transform="translate(0 -430)" opacity={0.8}>{layers(c.frame * 0.8)}</g>
+        <g transform={focus(205, 1010, 540, 880, 2.2)}>{jellyfish(c.frame)}</g>
+        {Array.from({ length: 14 }, (_, k) => {
+          const x = 60 + noise(k, 31) * 960;
+          const y = ((c.frame * (1.2 + noise(k, 32)) + noise(k, 33) * 1900) % 1900) - 20;
+          return <circle key={k} cx={x + Math.sin(c.frame / 30 + k) * 14} cy={y} r={7 + noise(k, 34) * 6} fill="#F4FBFD" opacity={0.75} style={{ filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.25))' }} />;
+        })}
+      </svg>
     </AbsoluteFill>
   ),
   caption: {

@@ -81,6 +81,34 @@ export interface SkillProps {
   hookVariant: 'white' | 'black' | 'plain';
   /** The hook text broken into its lines. */
   hookLines: string[];
+  /**
+   * 'scene': an animated storytelling style paints its world over the whole frame instead of showing the
+   * camera; the footage still plays underneath for its sound (the creator narrates). Absent = footage.
+   */
+  layout?: 'scene' | 'footage';
+}
+
+/** A focus point on the screen recording: x and y are 0 to 1 across the picture, zoom 1 (whole screen) to 2.5. */
+export interface ScreenFocus {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/**
+ * A screen recording shot (EDITOR_FEATURES_V2). The camera moves from `from` to `to` over the shot.
+ * layout 'safe': fills the 4:5 safe area over the speaker; 'bottom': the lower half while split screen keeps the speaker on top.
+ */
+export interface ScreenShot {
+  startFrame: number;
+  durationFrames: number;
+  /** Where in the recording the shot starts, in seconds. */
+  recStartSec: number;
+  /** Width over height of the recording. */
+  aspect: number;
+  from: ScreenFocus;
+  to: ScreenFocus;
+  layout: 'safe' | 'bottom';
 }
 
 // A type alias (not an interface) so it is assignable to Remotion's Record<string, unknown> props.
@@ -111,6 +139,9 @@ export type EditProps = {
   sfxUrls: Partial<Record<SfxType, string>>;
   /** Optional: absent for standard edits and for props built before skills existed. */
   skill?: SkillProps;
+  /** Screen recording shots and the recording's URL; absent unless the creator attached one (EDITOR_FEATURES_V2). */
+  screens?: ScreenShot[];
+  screenUrl?: string;
   /** The creator's brand sheet (EDITOR_FEATURES_V2); absent for everyone else. */
   brand?: Brand;
 };

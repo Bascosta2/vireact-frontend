@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop } from '../painted';
+import { focus, grainStyle, loop } from '../painted';
 import { H, W, hexA, type StyleTheme } from '../theme';
 
 /**
@@ -65,7 +65,7 @@ export const goldenHour: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => {
+  Overlay: ({ c, scene }) => {
     const glow = 0.5 + Math.sin(c.frame / 47) * 0.08;
     return (
       <AbsoluteFill style={{ pointerEvents: 'none' }}>
@@ -74,13 +74,31 @@ export const goldenHour: StyleTheme = {
           {/* Long shadows raking up from the bottom corners. */}
           <path d={`M0 ${H} L420 ${H} L120 ${H - 420} L0 ${H - 300} Z`} fill={SHADOW} opacity={0.14} />
           <path d={`M${W} ${H} L${W - 380} ${H} L${W - 90} ${H - 460} L${W} ${H - 320} Z`} fill={SHADOW} opacity={0.12} />
-          {swallow(c.frame)}
+          {!scene && swallow(c.frame)}
           {wheat(c.frame)}
         </svg>
         <div style={grainStyle({ color: '#7A4A21', alpha: 0.42, freq: 0.65, size: 220, seed: 12, stretch: [1.9, 0.85], opacity: 0.36 })} />
       </AbsoluteFill>
     );
   },
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, #F4A261 0%, ${SKY} 38%, #FFD9A0 54%, ${GOLD} 62%, ${WHEAT} 80%, ${SHADOW} 100%)` }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        <circle cx={540} cy={1060} r={260} fill="#FFE8B0" opacity={0.35} />
+        <circle cx={540} cy={1060} r={130} fill={SUN} opacity={0.95} />
+        <rect x={0} y={1130} width={W} height={H - 1130} fill={GOLD} opacity={0.9} />
+        {/* Far wheat: a band of strokes that slides by slowly. */}
+        {Array.from({ length: 40 }, (_, k) => {
+          const x = ((k * 30 - c.frame * 0.6) % 1200 + 1200) % 1200 - 60;
+          return <path key={k} d={`M${x} 1260 q${4 + Math.sin(c.frame / 20 + k) * 6} -40 ${2} -80`} stroke={WHEAT} strokeWidth={6} fill="none" opacity={0.8} strokeLinecap="round" />;
+        })}
+        {/* Two swallows half a loop apart, at half speed, so one is always skimming the field. */}
+        <g transform={focus(540, 330, 540, 900, 1.8)}>{swallow(c.frame * 0.5 + 140)}</g>
+        <g transform={focus(540, 330, 560, 980, 1.3)}>{swallow(c.frame * 0.5 + 305)}</g>
+        <g transform={focus(540, H - 30, 540, H + 40, 2)}>{wheat(c.frame)}</g>
+      </svg>
+    </AbsoluteFill>
+  ),
   caption: {
     size: 82,
     glyph: 0.58,

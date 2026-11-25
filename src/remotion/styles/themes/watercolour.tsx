@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { grainStyle, loop, roughFilter } from '../painted';
+import { focus, grainStyle, loop, roughFilter } from '../painted';
 import { H, W, hexA, noise, type StyleTheme } from '../theme';
 
 /**
@@ -90,7 +90,7 @@ export const watercolour: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => {
+  Overlay: ({ c, scene }) => {
     // One sun glint crosses the water every few seconds.
     const glint = loop(c.frame, 180);
     return (
@@ -102,7 +102,7 @@ export const watercolour: StyleTheme = {
           {PADS.map((p, k) => ripple(p.x, p.y, c.frame, k * 25))}
           {ripple(((c.frame * KOI[0].speed + KOI[0].phase) % (W + 400)) - 220, KOI[0].y, c.frame, 10)}
           {PADS.map((_, k) => pad(k, c.frame))}
-          {KOI.map((_, k) => koi(k, c.frame))}
+          {!scene && KOI.map((_, k) => koi(k, c.frame))}
           <ellipse cx={-100 + glint * 1300} cy={1760} rx={90} ry={10} fill="#ffffff" opacity={0.35 * Math.sin(glint * Math.PI)} />
         </svg>
         {/* Cold-press paper: grain fixed to the frame, and the unpainted paper at the very edge. */}
@@ -111,6 +111,22 @@ export const watercolour: StyleTheme = {
       </AbsoluteFill>
     );
   },
+  Scene: ({ c }) => (
+    <AbsoluteFill style={{ background: `radial-gradient(ellipse 95% 75% at 50% 42%, ${POND_PALE} 0%, #86C5BC 40%, ${POND} 82%, #1F6A66 100%)` }}>
+      {/* Blooms and granulation in the pond wash. */}
+      <div style={grainStyle({ color: '#1E5A5A', alpha: 0.55, freq: 0.012, size: 700, seed: 12, opacity: 0.5 })} />
+      <div style={grainStyle({ color: '#173F4A', alpha: 0.4, freq: 1.4, size: 220, seed: 3, opacity: 0.35 })} />
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+        <defs>{roughFilter('wc-edge', { scale: 7, freq: 0.05, blur: 0.8 })}</defs>
+        {PADS.slice(3).map((_, k) => pad(k + 3, c.frame))}
+        <g transform={focus(640, 1770, 540, 940, 1.7)}>
+          {PADS.slice(0, 3).map((p, k) => ripple(p.x, p.y, c.frame, k * 25))}
+          {PADS.slice(0, 3).map((_, k) => pad(k, c.frame))}
+          {KOI.map((_, k) => koi(k, c.frame))}
+        </g>
+      </svg>
+    </AbsoluteFill>
+  ),
   caption: {
     size: 84,
     glyph: 0.52,

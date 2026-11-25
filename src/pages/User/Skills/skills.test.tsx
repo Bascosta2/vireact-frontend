@@ -87,3 +87,28 @@ describe('Skills Editor', () => {
     expect(d).toContain('144');
   });
 });
+
+describe('Skills library curation', () => {
+  it('groups every skill by what it is for, and covers each on the kind of video it is for', async () => {
+    const { STYLE_COVERS } = await import('@/remotion/styles/covers');
+    const byCat = (c: string) => SKILLS.filter((s) => s.category === c).map((s) => s.id);
+    expect(byCat('talking-head')).toEqual(['remotion-reel', 'chalkboard', 'flat-vector', 'minimal-line']);
+    expect(byCat('any-footage')).toEqual(['glow-sketch', 'comic-art', 'brick-build', 'pixel-art', 'retro-3d', 'cgi-motion', 'explainer-3d']);
+    expect(byCat('storytelling')).toEqual(['watercolour', 'roman-mosaic', 'sumi-e', 'impasto-oil', 'nocturne-gouache', 'botanical-plate', 'paper-cut', 'art-nouveau', 'golden-hour', 'painted-anime']);
+    // Not one talking head for everything: animation styles each show a different kind of footage.
+    const screens = byCat('any-footage').map((id) => STYLE_COVERS[id as keyof typeof STYLE_COVERS].base);
+    expect(new Set(screens).size).toBe(screens.length);
+    expect(screens).not.toContain('talking');
+    for (const s of SKILLS) expect(s.shown.length).toBeGreaterThan(3);
+  });
+
+  it('every storytelling style paints a scene; no other style does', async () => {
+    const { STYLE_COVERS } = await import('@/remotion/styles/covers');
+    const { STYLE_THEMES } = await import('@/remotion/styles/registry');
+    for (const id of STYLE_IDS) {
+      const story = STYLE_COVERS[id].category === 'storytelling';
+      expect(Boolean(STYLE_THEMES[id].Scene)).toBe(story);
+      expect(STYLE_COVERS[id].base === 'scene').toBe(story);
+    }
+  });
+});

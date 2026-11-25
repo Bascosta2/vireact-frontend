@@ -1,5 +1,5 @@
 import { AbsoluteFill, interpolate } from 'remotion';
-import { drawStroke, grainStyle, loop } from '../painted';
+import { drawStroke, focus, grainStyle, loop } from '../painted';
 import { H, W, hexA, type StyleTheme } from '../theme';
 
 /**
@@ -90,14 +90,14 @@ export const botanicalPlate: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
-  Overlay: ({ c }) => (
+  Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       {/* The plate: cream corners and a fine double rule like an old print. */}
       <div style={{ position: 'absolute', inset: 18, border: `2px solid ${hexA(INK, 0.5)}`, outline: `1px solid ${hexA(INK, 0.3)}`, outlineOffset: 7 }} />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 40%, transparent 55%, ${hexA('#D8CBA4', 0.35)} 100%)` }} />
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
         {PLANTS.map((p, k) => plant(p, c.frame, k))}
-        {butterfly(c.frame)}
+        {!scene && butterfly(c.frame)}
         {/* A second, smaller butterfly crosses behind, higher up. */}
         <g transform={`translate(${W - ((c.frame * 2.6) % (W + 240)) + 120} ${300 + Math.sin(c.frame / 23) * 40}) scale(0.55)`} opacity={0.65}>
           <ellipse cx={-26} cy={0} rx={26} ry={14} fill={BLUE} stroke={INK} strokeWidth={2.4} />
@@ -108,6 +108,29 @@ export const botanicalPlate: StyleTheme = {
       <div style={grainStyle({ color: '#7A6A42', alpha: 0.4, freq: 0.9, size: 240, seed: 4, opacity: 0.4 })} />
     </AbsoluteFill>
   ),
+  Scene: ({ c }) => {
+    // Where butterfly() draws itself this frame, so the scene can move it to its own path.
+    const p = loop(c.frame, 420);
+    const flying = p < 0.62;
+    const path = interpolate(p, [0, 0.62], [0, 1], clamp);
+    const bx = flying ? -80 + path * (560 + 80) : 480;
+    const by = flying ? 420 + Math.sin(path * 9) * 90 - path * 160 : H - 60 - 205 - 34 + Math.sin(c.frame / 30) * 3;
+    // In the scene it loops across the middle of the plate and settles on the big daisy (plants shown at PS).
+    const PS = 2.8;
+    const landX = 540 + (480 - 540) * PS;
+    const landY = H + 90 + (H - 60 - 205 - 34 - (H - 40)) * PS;
+    const tx = flying ? interpolate(path, [0, 1], [180, landX]) + Math.sin(path * 7) * 260 * (1 - path) : landX;
+    const ty = flying ? interpolate(path, [0, 1], [760, landY]) + Math.sin(path * 11) * 160 * (1 - path) : landY + Math.sin(c.frame / 30) * 8;
+    return (
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 35%, #FBF6E8 0%, ${PAPER} 60%, #E8DCBC 100%)` }}>
+        <div style={grainStyle({ color: '#B9C98F', alpha: 0.5, freq: 0.01, size: 800, seed: 6, opacity: 0.35 })} />
+        <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+          <g transform={focus(540, H - 40, 540, H + 90, PS)}>{PLANTS.map((pl, k) => plant(pl, c.frame, k))}</g>
+          <g transform={`translate(${tx} ${ty}) scale(3.2) translate(${-bx} ${-by})`}>{butterfly(c.frame)}</g>
+        </svg>
+      </AbsoluteFill>
+    );
+  },
   caption: {
     size: 78,
     glyph: 0.56,

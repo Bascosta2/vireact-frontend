@@ -64,5 +64,14 @@ export const drawStroke = (t: number, length = 1000): Pick<CSSProperties, 'strok
   strokeDashoffset: length * (1 - Math.max(0, Math.min(1, t))),
 });
 
+/** Move a drawing from (fx, fy) to (tx, ty) at `s` times its size (SVG transform). */
+export const focus = (fx: number, fy: number, tx: number, ty: number, s: number) => `translate(${tx} ${ty}) scale(${s}) translate(${-fx} ${-fy})`;
+
+/** Smooth 0 → 1 between two values. */
+export const smooth = (v: number, a: number, b: number) => {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 /** A loop of `period` frames, as 0 → 1. */
 export const loop = (frame: number, period: number, offset = 0) => ((((frame + offset) % period) + period) % period) / period;
