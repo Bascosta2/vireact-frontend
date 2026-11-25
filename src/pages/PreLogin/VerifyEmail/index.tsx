@@ -19,6 +19,9 @@ const ERROR_MESSAGES = {
 // The link is single-use: keep the first request per token at module level so remounts reuse it.
 const verifyRequests = new Map<string, Promise<{ data: unknown }>>();
 
+// The token is stripped from the address bar once read, so a remount must remember it.
+let rememberedToken: string | null = null;
+
 function postVerifyOnce(token: string): Promise<{ data: unknown }> {
   const existing = verifyRequests.get(token);
   if (existing) return existing;
@@ -38,7 +41,12 @@ function VerifyEmail() {
 
   useEffect(() => {
     const verifyEmail = async () => {
-      const token = searchParams.get('token');
+      const token = searchParams.get('token') ?? rememberedToken;
+      if (token) {
+        rememberedToken = token;
+        // Keep the one-time token out of history and screenshots.
+        window.history.replaceState(window.history.state, '', window.location.pathname);
+      }
 
       if (!token) {
         setVerificationStatus('error');
