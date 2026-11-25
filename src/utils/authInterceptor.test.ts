@@ -135,3 +135,42 @@ describe('login: account needs a password', () => {
     expect(forgotPasswordPath('a+b@c.co')).toBe('/forgot-password?email=a%2Bb%40c.co');
   });
 });
+
+describe('changing the account email', () => {
+  it('reads the pending change and writes the notices', async () => {
+    const { readEmailChange, emailChangeSentMessage, needsPasswordForEmailChange } = await import('@/lib/verification-email');
+    expect(readEmailChange({ emailChange: { pendingEmail: 'new@b.co', expiresAt: 'x' } })).toEqual({ pendingEmail: 'new@b.co', expiresAt: 'x' });
+    expect(readEmailChange({ emailChange: null })).toBeNull();
+    expect(readEmailChange(undefined)).toBeNull();
+    expect(emailChangeSentMessage('new@b.co', 'old@b.co')).toBe(
+      "Check new@b.co for a link to confirm your new email. Until then you'll keep signing in with old@b.co."
+    );
+    expect(needsPasswordForEmailChange('New@b.co', 'old@b.co', 'local')).toBe(true);
+    expect(needsPasswordForEmailChange('OLD@b.co ', 'old@b.co', 'local')).toBe(false);
+    expect(needsPasswordForEmailChange('new@b.co', 'old@b.co', 'google')).toBe(false);
+  });
+
+  it('gives a plain message for each profile error', async () => {
+    const { profileUpdateErrorMessage } = await import('@/lib/verification-email');
+    const err = (status: number) => ({ response: { status } });
+    expect(profileUpdateErrorMessage(err(401))).toContain('not correct');
+    expect(profileUpdateErrorMessage(err(403))).toContain('Google');
+    expect(profileUpdateErrorMessage(err(409))).toBe('That email is already used by another account.');
+    expect(profileUpdateErrorMessage(err(429))).toContain('Too many attempts');
+    expect(profileUpdateErrorMessage(err(503))).toContain('Nothing was changed');
+    expect(profileUpdateErrorMessage({ response: { status: 400, data: { message: 'Bad email' } } })).toBe('Bad email');
+    expect(profileUpdateErrorMessage(new Error('network'))).toBe('Failed to update profile');
+  });
+
+  it('handles the confirm link response and errors', async () => {
+    const { readConfirmedEmail, readConfirmEmailChangeError, CONFIRM_EMAIL_CHANGE_ERRORS, loginPathWithEmail } = await import('@/lib/verification-email');
+    expect(readConfirmedEmail({ data: { email: 'new@b.co' } })).toBe('new@b.co');
+    expect(readConfirmedEmail({ success: true })).toBeNull();
+    expect(readConfirmEmailChangeError({ response: { status: 400 } })).toBe('invalid_link');
+    expect(readConfirmEmailChangeError({ response: { status: 409 } })).toBe('email_taken');
+    expect(readConfirmEmailChangeError({ response: { status: 500 } })).toBe('failed');
+    expect(CONFIRM_EMAIL_CHANGE_ERRORS.invalid_link).toBe('This link is invalid or already used');
+    expect(CONFIRM_EMAIL_CHANGE_ERRORS.email_taken).toBe('That email is already used by another account');
+    expect(loginPathWithEmail('a+b@c.co')).toBe('/login?email=a%2Bb%40c.co');
+  });
+});

@@ -115,3 +115,78 @@ export function isSetPasswordLoginError(error: unknown): boolean {
 export function forgotPasswordPath(email: string): string {
   return `/forgot-password?email=${encodeURIComponent(email)}`;
 }
+
+/** ---- Changing the account email (PATCH /profile, POST /auth/confirm-email-change) ---- */
+
+export interface EmailChange {
+  pendingEmail: string;
+  expiresAt?: string;
+}
+
+/** `emailChange` from a profile update: the waiting change, or null when only the name changed. */
+export function readEmailChange(data: unknown): EmailChange | null {
+  const change = (data as { emailChange?: { pendingEmail?: unknown; expiresAt?: unknown } | null } | undefined)?.emailChange;
+  if (!change || typeof change.pendingEmail !== 'string' || !change.pendingEmail) return null;
+  return { pendingEmail: change.pendingEmail, expiresAt: typeof change.expiresAt === 'string' ? change.expiresAt : undefined };
+}
+
+export function emailChangeSentMessage(pendingEmail: string, currentEmail: string): string {
+  return `Check ${pendingEmail} for a link to confirm your new email. Until then you'll keep signing in with ${currentEmail}.`;
+}
+
+export function pendingEmailNotice(pendingEmail: string, currentEmail: string): string {
+  return `Waiting for you to confirm ${pendingEmail}. Open the link we sent there. Until then you'll keep signing in with ${currentEmail}.`;
+}
+
+/** True when saving would change the email, so the current password must be asked for. */
+export function needsPasswordForEmailChange(newEmail: string, currentEmail: string, provider: string): boolean {
+  return provider === 'local' && newEmail.trim().toLowerCase() !== currentEmail.trim().toLowerCase();
+}
+
+/** Plain-language message for each way saving the profile can fail. */
+export function profileUpdateErrorMessage(error: unknown): string {
+  const response = (error as { response?: { status?: number; data?: { message?: string } } } | undefined)?.response;
+  switch (response?.status) {
+    case 400:
+      return response.data?.message || 'Please check the details you entered and try again.';
+    case 401:
+      return 'That password is not correct.';
+    case 403:
+      return 'Your email is managed by Google and cannot be changed here.';
+    case 409:
+      return 'That email is already used by another account.';
+    case 429:
+      return TOO_MANY_ATTEMPTS_MESSAGE;
+    case 503:
+      return "We couldn't send the confirmation email right now. Nothing was changed. Try again in a few minutes.";
+    default:
+      return 'Failed to update profile';
+  }
+}
+
+export type ConfirmEmailChangeError = 'invalid_link' | 'email_taken' | 'rate_limited' | 'failed';
+
+export const CONFIRM_EMAIL_CHANGE_ERRORS: Record<ConfirmEmailChangeError, string> = {
+  invalid_link: 'This link is invalid or already used',
+  email_taken: 'That email is already used by another account',
+  rate_limited: TOO_MANY_ATTEMPTS_MESSAGE,
+  failed: "We couldn't confirm your new email right now. Try the link again in a moment.",
+};
+
+export function readConfirmEmailChangeError(error: unknown): ConfirmEmailChangeError {
+  const status = (error as { response?: { status?: number } } | undefined)?.response?.status;
+  if (status === 400) return 'invalid_link';
+  if (status === 409) return 'email_taken';
+  if (status === 429) return 'rate_limited';
+  return 'failed';
+}
+
+/** The new address from a confirm response body (`{ data: { email } }`), or null if it is missing. */
+export function readConfirmedEmail(body: unknown): string | null {
+  const email = (body as { data?: { email?: unknown } } | undefined)?.data?.email;
+  return typeof email === 'string' && email ? email : null;
+}
+
+export function loginPathWithEmail(email: string): string {
+  return `/login?email=${encodeURIComponent(email)}`;
+}
