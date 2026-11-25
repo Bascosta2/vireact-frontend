@@ -21,9 +21,10 @@ import { retro3d } from './themes/retro-3d';
 import { romanMosaic } from './themes/roman-mosaic';
 import { sumiE } from './themes/sumi-e';
 import { watercolour } from './themes/watercolour';
+import { LIBRARY_THEMES } from './themes/library';
 
 /** Every animation style the composition can draw, by id. */
-export const STYLE_THEMES: Record<StyleId, StyleTheme> = {
+const HAND_THEMES: Partial<Record<StyleId, StyleTheme>> = {
   'glow-sketch': glowSketch,
   'comic-art': comicArt,
   'brick-build': brickBuild,
@@ -45,5 +46,8 @@ export const STYLE_THEMES: Record<StyleId, StyleTheme> = {
   'golden-hour': goldenHour,
   'painted-anime': paintedAnime,
 };
+
+/** Every style the composition can draw: the hand-made sets and the library (styles.test checks none is missing). */
+export const STYLE_THEMES = { ...HAND_THEMES, ...LIBRARY_THEMES } as Record<StyleId, StyleTheme>;
 
 export const themeFor = (id: string | null | undefined): StyleTheme | null => (isStyleId(id) ? STYLE_THEMES[id] : null);

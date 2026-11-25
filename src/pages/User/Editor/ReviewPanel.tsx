@@ -6,6 +6,7 @@ import { Select } from '@/components/app/Select';
 import { cn } from '@/lib/utils';
 import { track } from '@/lib/analytics';
 import type { CaptionPreset } from '@/remotion/types';
+import type { StyleCategory } from '@/remotion/styles/covers';
 import { isStyleId, type StyleId } from '@/remotion/styles/ids';
 import type { EditProjectDetail, Edits, Evidence, PreviewProps } from '@/api/editor';
 import { ANIMATION_STYLES, skillById } from '../Skills/catalog';
@@ -160,32 +161,64 @@ function ChangesTab({ project, edits, onEdit }: { project: EditProjectDetail; ed
   );
 }
 
-const STYLE_GROUPS = [
-  { id: 'talking-head', title: 'For talking heads' },
-  { id: 'any-footage', title: 'For any footage' },
-  { id: 'storytelling', title: 'Animated storytelling' },
-] as const;
+const STYLE_GROUPS: { id: StyleCategory; title: string }[] = [
+  { id: 'talking-head', title: 'Talking heads' },
+  { id: 'any-footage', title: 'Any footage' },
+  { id: 'storytelling', title: 'Storytelling' },
+  { id: 'explainer', title: 'Explainers' },
+  { id: 'data', title: 'Data' },
+  { id: 'product', title: 'Product' },
+  { id: 'news', title: 'News' },
+  { id: 'retro', title: 'Retro' },
+  { id: 'motion', title: '3D and neon' },
+  { id: 'cartoon', title: 'Cartoon' },
+  { id: 'gaming', title: 'Gaming' },
+  { id: 'art', title: 'Art and print' },
+  { id: 'music', title: 'Music' },
+];
 
 /** Switch an animation-style edit to another style: the cut stays, only the look changes. */
 function StyleTab({ project, edits, onEdit }: { project: EditProjectDetail; edits: Edits; onEdit: (e: Edits) => void }) {
   const current = activeStyle(project, edits);
   const info = skillById(current);
+  // One category at a time (130 styles do not fit one panel), opening on the current style's.
+  const [group, setGroup] = useState<StyleCategory>(info?.category ?? 'talking-head');
+  const scene = info?.layout === 'story' || info?.layout === 'explainer';
   return (
     <div className="space-y-4">
       <p className="text-sm text-fg-muted">Pick another animation style and the preview redraws right away. Your cut, captions, hook and graphics stay the same.</p>
-      {info?.category === 'storytelling' && (
+      {scene && (
         <Toggle
           checked={!edits.sceneOff}
           onChange={(v) => onEdit({ sceneOff: !v })}
-          label="Painted scene"
-          description={edits.sceneOff ? 'Your footage shows, in the style.' : 'The style paints the whole frame and your voice narrates it. Turn off to show your footage.'}
+          label="Animated scene"
+          description={
+            edits.sceneOff
+              ? 'Your footage shows, in the style.'
+              : info?.layout === 'explainer'
+                ? 'The style draws the scene and you stay in a bubble. Turn off to show your full footage.'
+                : 'The style draws the whole frame and your voice narrates it. Turn off to show your footage.'
+          }
         />
       )}
-      {STYLE_GROUPS.map((g) => (
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Style categories">
+        {STYLE_GROUPS.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            aria-pressed={group === g.id}
+            onClick={() => setGroup(g.id)}
+            className={cn('app-focus rounded-full border px-2.5 py-1 text-xs', group === g.id ? 'border-accent bg-accent-tint text-fg' : 'border-line text-fg-muted hover:bg-white/[0.03]')}
+          >
+            {g.title}
+          </button>
+        ))}
+      </div>
+      {STYLE_GROUPS.filter((g) => g.id === group).map((g) => (
         <div key={g.id}>
           <h3 className="app-label mb-2">{g.title}</h3>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {ANIMATION_STYLES.filter((s) => s.category === g.id).map((s) => (
+            {ANIMATION_STYLES.filter((s) => s.category === g.id || s.tags.includes(g.id)).map((s) => (
               <button
                 key={s.id}
                 type="button"

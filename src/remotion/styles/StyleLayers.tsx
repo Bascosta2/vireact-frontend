@@ -24,6 +24,12 @@ export function StyleScene({ theme, accent, fonts }: { theme: StyleTheme; accent
   return theme.Scene ? <theme.Scene c={c} /> : null;
 }
 
+/** The world around a style's footage window (desk, board, room), under the footage. */
+export function StyleBackdrop({ theme, accent, fonts, total }: { theme: StyleTheme; accent: string; fonts: StyleFonts; total: number }) {
+  const c = useCtx(accent, fonts);
+  return theme.Backdrop ? <theme.Backdrop c={c} total={total} /> : null;
+}
+
 /** The transition layer for every cut in `frames` that is close enough to the current frame. */
 export function StyleTransitions({ theme, accent, fonts, frames }: { theme: StyleTheme; accent: string; fonts: StyleFonts; frames: number[] }) {
   const c = useCtx(accent, fonts);

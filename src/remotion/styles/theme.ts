@@ -32,6 +32,8 @@ export interface CaptionLook {
   word: (emphasis: boolean, c: Ctx) => CSSProperties;
   /** How a line arrives (faster than graphics). */
   entrance: Entrance;
+  /** Each word arrives on its own, when it is said (kinetic typography). */
+  stagger?: boolean;
 }
 
 export interface HookLook {
@@ -45,6 +47,29 @@ export interface HookLook {
   typewriter?: boolean;
   /** Drawn inside the card (positioned absolutely against it). `t` is the entrance, 0 to 1. */
   Decor?: (p: { c: Ctx; t: number; durationFrames: number }) => ReactNode;
+}
+
+/** A window in the frame (pixels of 1080 x 1920). */
+export interface Screen {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shape?: 'rect' | 'circle';
+  radius?: number;
+  /** Degrees. */
+  rotate?: number;
+  /** Border, shadow or frame of the window itself. */
+  style?: CSSProperties;
+}
+
+/** One bar of a chart: its label, its value and the text shown for it ("$1.2M"). */
+export interface ChartBar {
+  label: string;
+  value: number;
+  text: string;
+  /** 0 → 1: how far this bar has grown. */
+  grow: number;
 }
 
 export interface CameraMove {
@@ -110,6 +135,25 @@ export interface StyleTheme {
   };
   /** The style's progress indicator (replaces the standard bar when the edit has one). */
   Progress?: (p: { c: Ctx; total: number }) => ReactNode;
+  /**
+   * SVG definitions the style's footage treatment uses (filters referenced from `footage` as
+   * `url(#id)`: thermal, x-ray, dither, line art). Drawn once, invisibly, in the edit.
+   */
+  Defs?: () => ReactNode;
+  /**
+   * The footage sits inside a window instead of filling the frame (a screen on a desk, a slide on a light
+   * table, a microscope eyepiece). Pixels of the 1080 x 1920 frame; `Backdrop` draws the world around it.
+   */
+  screen?: Screen;
+  /** Drawn under the footage: the room, desk or board around a `screen`. */
+  Backdrop?: (p: { c: Ctx; total: number }) => ReactNode;
+  /**
+   * Explainer styles: while the Scene fills the frame, the creator stays on screen in this bubble
+   * (picture in picture). Without it a Scene hides the camera completely (storytelling).
+   */
+  pip?: Screen;
+  /** A bar chart in the style (the `chart` graphic); a plain chart on the style's card when not set. */
+  Chart?: (p: { c: Ctx; bars: ChartBar[]; t: number }) => ReactNode;
   /** Slow camera drift over the whole edit (CGI). */
   drift?: (frame: number) => CameraMove;
   /** The sample graphic in the Skills library showcase. */

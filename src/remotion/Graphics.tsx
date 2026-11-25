@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { DISPLAY, FONT } from './fonts';
 import type { Graphic } from './types';
-import { BELOW_CAPTIONS, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
+import { BELOW_CAPTIONS, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, GLASS, LIST_FIRST_SEC, LIST_STEP_SEC, SHADOW, SMOOTH, SNAP, STROKE, calloutLabel, chartBars, clamp, exitAt, formatCount, parseCount } from './graphics-utils';
 import { VisualStage } from './visuals/VisualStage';
 
 /** Height of a callout's label box, so its position can be worked out before it is drawn. */
@@ -247,6 +247,38 @@ function Cta({ g, frame, fps, accent, height }: GraphicProps) {
   );
 }
 
+/** A bar chart: the title, then one bar per item growing in turn, its value above and its label below. */
+function Chart({ g, frame, fps, accent }: GraphicProps) {
+  const card = spring({ frame, fps, config: SMOOTH });
+  const out = exitAt(frame, g.durationFrames, 8);
+  const bars = chartBars(g.items);
+  const max = Math.max(1e-9, ...bars.map((b) => b.value));
+  return (
+    <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: '12%' }}>
+      <div style={{ width: '84%', background: GLASS, borderRadius: 28, padding: '28px 34px 22px', transform: `scale(${0.92 + 0.08 * card}) translateY(${-30 * out}px)`, opacity: Math.min(1, card * 1.6) * (1 - out), boxShadow: SHADOW, border: `3px solid ${accent}` }}>
+        {g.text && <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 48, color: '#fff', textTransform: 'uppercase', marginBottom: 18 }}>{g.text}</div>}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, height: 420 }}>
+          {bars.map((b, k) => {
+            const at = Math.round((CHART_FIRST_SEC + k * CHART_STEP_SEC) * fps);
+            const grow = interpolate(frame - at, [0, CHART_GROW_SEC * fps], [0, 1], { ...clamp, easing: (v) => 1 - Math.pow(1 - v, 3) });
+            return (
+              <div key={k} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 34, color: accent, opacity: grow > 0.6 ? 1 : 0, whiteSpace: 'nowrap' }}>{b.text}</div>
+                <div style={{ width: '100%', height: `${(b.value / max) * 78 * grow}%`, minHeight: grow > 0 ? 6 : 0, marginTop: 8, borderRadius: '14px 14px 4px 4px', background: k === bars.length - 1 ? accent : 'rgba(255,255,255,0.82)' }} />
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 18, marginTop: 12 }}>
+          {bars.map((b, k) => (
+            <div key={k} style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 28, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</div>
+          ))}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+}
+
 function Visual(p: GraphicProps) {
   return <VisualStage g={p.g} frame={p.frame} fps={p.fps} accent={p.accent} />;
 }
@@ -270,6 +302,7 @@ const RENDERERS: Record<Graphic['type'], (p: GraphicProps) => ReactNode> = {
   callout: Callout,
   cta: Cta,
   visual: Visual,
+  chart: Chart,
 };
 
 /** One animated graphic; place it inside a Sequence that starts at its startFrame. */

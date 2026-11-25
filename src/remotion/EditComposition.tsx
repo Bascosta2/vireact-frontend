@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions } from './Captions';
 import { Footage } from './Footage';
@@ -13,7 +13,9 @@ import { styleFonts } from './styles/fonts';
 import { themeFor } from './styles/registry';
 import { StyledGraphic } from './styles/StyledGraphics';
 import { styleCamera } from './styles/camera';
-import { StyleOverlay, StyleProgress, StyleScene, StyleTransitions } from './styles/StyleLayers';
+import { PulseProvider, pulseFrom } from './styles/pulse';
+import { StyleStage } from './styles/Stage';
+import { StyleOverlay, StyleProgress, StyleTransitions } from './styles/StyleLayers';
 import { StyledCaptions, StyledHook } from './styles/StyledText';
 
 /**
@@ -201,20 +203,30 @@ export function EditComposition(props: EditProps) {
   };
   const shakeStyle: CSSProperties = { transform: `translate(${cam.x + (sc?.x ?? 0)}%, ${cam.y + (sc?.y ?? 0)}%) rotate(${cam.rotate + (sc?.rotate ?? 0)}deg)` };
 
+  const footage = <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />;
+  // The talk's rhythm (from the timed caption words), for styles that move with the voice.
+  const pulse = useMemo(() => pulseFrom(props.captions?.pages), [props.captions]);
+
   const music = props.music;
   const ducked = (f: number) => music?.duck.some((r) => f >= r.startFrame - 3 && f < r.endFrame + 3) ?? false;
 
   return (
+    <PulseProvider value={pulse}>
     <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
       <AbsoluteFill style={shakeStyle}>
-        <AbsoluteFill style={scene ? { opacity: 0 } : footageStyle}>
-          <Footage videoUrl={props.videoUrl} timeline={props.timeline} framing={props.framing} fps={props.fps} />
-        </AbsoluteFill>
-        {scene && theme && fonts && (
-          // The scene takes the edit's camera (zooms, push-in, transitions), not the footage grade.
-          <AbsoluteFill style={{ transform: footageStyle.transform, transformOrigin: footageStyle.transformOrigin, filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : undefined }}>
-            <StyleScene theme={theme} accent={accent} fonts={fonts} />
-          </AbsoluteFill>
+        {theme && fonts ? (
+          // The style lays out the picture: full frame, a window, or its scene (with the creator in a bubble).
+          <StyleStage
+            theme={theme}
+            accent={accent}
+            fonts={fonts}
+            total={props.durationInFrames}
+            scene={scene}
+            footage={footage}
+            camera={{ transform: String(footageStyle.transform), transformOrigin: String(footageStyle.transformOrigin), blur }}
+          />
+        ) : (
+          <AbsoluteFill style={footageStyle}>{footage}</AbsoluteFill>
         )}
         {!theme && <GlitchBars frame={frame} strength={cam.glitch} accent={look.accent} />}
       </AbsoluteFill>
@@ -276,5 +288,6 @@ export function EditComposition(props: EditProps) {
         ) : null
       )}
     </AbsoluteFill>
+    </PulseProvider>
   );
 }

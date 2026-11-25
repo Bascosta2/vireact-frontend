@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, Check, Clock, Palette, Sparkles, User, Wand2 } from 'lucide-react';
+import { BarChart3, BookOpen, Brush, Check, Clock, Film, Gamepad2, GraduationCap, LayoutGrid, Music, Newspaper, Palette, Search, ShoppingBag, Smile, Sparkles, User, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Dropzone } from '@/components/app/Dropzone';
@@ -24,23 +24,45 @@ import { ShowcasePlayer, ShowcaseThumbnail } from './ShowcasePlayer';
  * clips of what it does. Pick a skill, upload raw footage, and the AI edit follows that skill. Same plan
  * limits, upload flow and review page as the Editor.
  *
- * The library is grouped by what each skill is for: talking-head videos, animation styles for any footage
- * (gameplay, products, b-roll, screen recordings), and animated storytelling (a painted world narrated by
- * the creator). Each card's cover shows the skill on that kind of video. Covers are stills; only the
+ * The library is grouped by what each skill is for (a primary category; a skill can also be tagged into
+ * other sections): talking heads, looks for any footage, animated storytelling, explainers, data, product,
+ * news, retro, 3D and motion, cartoon, gaming, art and print, and music. Chips filter it to one section and
+ * a search box finds a skill by name or use. Covers are pre-rendered stills (public/skill-covers); only the
  * selected skill's showcase plays, so the page stays light.
  */
 
 const SECTIONS: { id: StyleCategory; title: string; blurb: string; icon: typeof User }[] = [
   { id: 'talking-head', title: 'For talking-head videos', blurb: 'Made for you on camera: the hook above your head, captions under your chin, graphics around your face.', icon: User },
-  { id: 'any-footage', title: 'Animation styles for any footage', blurb: 'Restyle whatever you filmed or recorded: gameplay, product shots, b-roll, app and screen recordings.', icon: Palette },
-  { id: 'storytelling', title: 'Animated storytelling', blurb: 'No camera needed: the style paints a whole animated world and your voice tells the story.', icon: BookOpen },
+  { id: 'any-footage', title: 'Looks for any footage', blurb: 'Restyle whatever you filmed or recorded: gameplay, product shots, b-roll, app and screen recordings.', icon: Palette },
+  { id: 'storytelling', title: 'Animated storytelling', blurb: 'No camera needed: the style draws a whole animated world and your voice tells the story.', icon: BookOpen },
+  { id: 'explainer', title: 'Explainers and diagrams', blurb: 'You in a bubble while the idea is drawn around you: boards, blueprints, maps and machines.', icon: GraduationCap },
+  { id: 'data', title: 'Data and numbers', blurb: 'Your numbers become things: coin stacks, pencil charts, spreadsheets and models.', icon: BarChart3 },
+  { id: 'product', title: 'Product and ads', blurb: 'Launch films, packshots, teardowns, app demos and screencasts.', icon: ShoppingBag },
+  { id: 'news', title: 'News and documentary', blurb: 'On-air packages, investigations, briefings, archives and countdowns.', icon: Newspaper },
+  { id: 'retro', title: 'Retro, film and TV', blurb: 'Newsreels, silent film, camcorder tape, terminals, thermal and X-ray cameras.', icon: Film },
+  { id: 'motion', title: '3D, neon and motion', blurb: 'Synthwave, neon, holograms, galaxies, glitch, chrome and point clouds.', icon: Sparkles },
+  { id: 'cartoon', title: 'Cartoon and characters', blurb: 'Clay, doodles, toons, anime, manga, game shows and a mascot that reacts to you.', icon: Smile },
+  { id: 'gaming', title: 'Gaming', blurb: 'Pixel effects, microgames and game-world looks for gameplay and streams.', icon: Gamepad2 },
+  { id: 'art', title: 'Art and print', blurb: 'Real media drawn in code: woodcut, risograph, pop art, stained glass, paper-cuts and more.', icon: Brush },
+  { id: 'music', title: 'Music and beat', blurb: 'Edits that move with your voice: beat cards, audiograms, kinetic type and city rhythms.', icon: Music },
 ];
 
-const UPLOAD_HINT: Record<StyleCategory, string> = {
+/** What to upload, by how the skill lays out the picture. */
+const UPLOAD_HINT = {
   'talking-head': 'A talking-head take works best.',
   'any-footage': 'Any footage works: you on camera, gameplay, a product, b-roll or a screen recording.',
-  storytelling: 'Record yourself telling the story: any video works, only your voice is used and the picture is painted.',
-};
+  story: 'Record yourself telling the story: any video works, only your voice is used and the picture is drawn.',
+  explainer: 'Record yourself explaining: you stay on screen in a bubble while the scene is drawn around you.',
+} as const;
+
+const hintFor = (skill: EditingSkill) =>
+  skill.layout === 'story' ? UPLOAD_HINT.story : skill.layout === 'explainer' ? UPLOAD_HINT.explainer : skill.category === 'talking-head' ? UPLOAD_HINT['talking-head'] : UPLOAD_HINT['any-footage'];
+
+/** Skills in a section: its own, then those tagged into it. */
+const inSection = (id: StyleCategory) => [...SKILLS.filter((x) => x.category === id), ...SKILLS.filter((x) => x.category !== id && x.tags.includes(id))];
+
+/** A chip's short label ("Talking-head videos", "Gaming"). */
+const chipLabel = (title: string) => title.replace(/^For /, '').replace(/^./, (m) => m.toUpperCase());
 
 function FeatureTile({ f, skill }: { f: EditingSkill['features'][number]; skill: EditingSkill }) {
   return (
@@ -104,6 +126,15 @@ export default function SkillsEditor() {
     // On a phone the details are far below the grid: bring them into view.
     detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
   };
+  const [filter, setFilter] = useState<StyleCategory | 'all'>('all');
+  const [query, setQuery] = useState('');
+  // A search or a chip shows one flat grid; otherwise the library shows every section.
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q && filter === 'all') return null;
+    const pool = filter === 'all' ? SKILLS : inSection(filter);
+    return q ? pool.filter((x) => `${x.name} ${x.bestFor ?? ''} ${x.tagline} ${x.shown}`.toLowerCase().includes(q)) : pool;
+  }, [filter, query]);
   const [usage, setUsage] = useState<EditorUsage | null>(null);
   const [projects, setProjects] = useState<EditProjectSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -176,8 +207,54 @@ export default function SkillsEditor() {
         )}
 
         <section aria-labelledby="library-heading" className="mb-10">
-          <h2 id="library-heading" className="mb-4 text-lg font-semibold text-fg">Skill library</h2>
-          {SECTIONS.map((sec, k) => (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 id="library-heading" className="text-lg font-semibold text-fg">
+              Skill library <span className="text-sm font-normal text-fg-subtle">({SKILLS.length} skills)</span>
+            </h2>
+            <label className="relative w-full sm:w-72">
+              <span className="sr-only">Search skills</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search: neon, podcast, pixel, blueprint..."
+                className="app-focus w-full rounded-xl border border-line bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle"
+              />
+            </label>
+          </div>
+          <div className="mb-6 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Skill categories">
+            {[{ id: 'all' as const, title: 'All', icon: LayoutGrid }, ...SECTIONS].map((c) => {
+              const n = c.id === 'all' ? SKILLS.length : inSection(c.id).length;
+              const on = filter === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setFilter(c.id)}
+                  className={cn('app-focus inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium', on ? 'border-accent bg-accent-tint text-fg' : 'border-line bg-surface text-fg-muted hover:bg-surface-raised')}
+                >
+                  <c.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {chipLabel(c.title)}
+                  <span className="text-fg-subtle">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+          {visible ? (
+            visible.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {visible.map((x) => (
+                  <StyleTile key={x.id} skill={x} selected={x.id === skill.id} onSelect={() => select(x.id)} />
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-fg-muted">
+                No skill matches &ldquo;{query}&rdquo;. Try a medium (ink, neon, pixel) or a use (podcast, product, history).
+              </p>
+            )
+          ) : SECTIONS.map((sec, k) => (
             <div key={sec.id} className={k ? 'mt-8' : ''}>
               <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
                 <h3 className="app-label flex items-center gap-2">
@@ -271,8 +348,8 @@ export default function SkillsEditor() {
               <Dropzone
                 onFile={(f) => void onFile(f)}
                 error={uploadError}
-                label={`Drop your ${skill.category === 'storytelling' ? 'narration' : 'raw'} video here for a ${isFreePlan(usage) ? 'free ' : ''}${skill.name} ${skill.category === 'storytelling' ? 'story' : 'edit'}`}
-                hint={`${UPLOAD_HINT[skill.category]} MP4, MOV, WebM or MKV. Up to 3 minutes and 500 MB.`}
+                label={`Drop your ${skill.layout === 'story' ? 'narration' : 'raw'} video here for a ${isFreePlan(usage) ? 'free ' : ''}${skill.name} ${skill.layout === 'story' ? 'story' : 'edit'}`}
+                hint={`${hintFor(skill)} MP4, MOV, WebM or MKV. Up to 3 minutes and 500 MB.`}
                 accept={ACCEPT}
               />
               {inProgressId && (

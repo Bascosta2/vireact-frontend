@@ -1,6 +1,7 @@
 import type { ShowcaseId } from '@/remotion/skills/remotion-reel/Showcase';
 import { STYLE_COVERS, type StyleCategory } from '@/remotion/styles/covers';
 import { PAINTED_STYLE_IDS, STYLE_IDS, type StyleId } from '@/remotion/styles/ids';
+import { LIBRARY, type LibraryLayout } from '@/remotion/styles/library';
 
 /**
  * The Skills library: each editing skill (ported from a Claude skill, see editor-skills/ in the parent
@@ -30,8 +31,12 @@ export type SkillId = 'remotion-reel' | StyleId;
 export interface EditingSkill {
   id: SkillId;
   kind: 'editing' | 'animation';
-  /** What it is for (talking head, any footage, animated storytelling); the library groups by it. */
+  /** What it is for (talking head, any footage, animated storytelling, explainers...); the library groups by it. */
   category: StyleCategory;
+  /** Other library sections it also shows in. */
+  tags: StyleCategory[];
+  /** How the picture is laid out (library styles): restyled footage, a window, a scene, or a scene with you in a bubble. */
+  layout: LibraryLayout;
   /** The kind of video its cover shows ("Gameplay", "Story: the koi pond"). */
   shown: string;
   name: string;
@@ -54,6 +59,8 @@ const REMOTION_REEL: EditingSkill = {
   id: 'remotion-reel',
   kind: 'editing',
   category: 'talking-head',
+  tags: [],
+  layout: 'footage',
   shown: 'Talking head: reel',
   bestFor: 'Talking-head reels for Instagram and TikTok',
   name: 'Remotion Reel',
@@ -119,7 +126,7 @@ interface StyleCopy {
   sound: string;
 }
 
-const STYLE_COPY: Record<StyleId, StyleCopy> = {
+const HAND_COPY: Partial<Record<StyleId, StyleCopy>> = {
   'glow-sketch': {
     name: 'Glow Sketch',
     tagline: 'Your video at night: thin neon outlines, a warm golden streetlight glow and a city skyline traced in light.',
@@ -362,24 +369,46 @@ const STYLE_COPY: Record<StyleId, StyleCopy> = {
   },
 };
 
+/** Every style's copy: the hand-written sets above, then the library's (library.json). */
+const STYLE_COPY = {
+  ...HAND_COPY,
+  ...Object.fromEntries(
+    Object.values(LIBRARY).map((e) => [e.id, { name: e.name, tagline: e.tagline, bestFor: e.bestFor, look: e.look.charAt(0).toUpperCase() + e.look.slice(1) + '.', ambient: e.ambient, captions: e.captions, hook: e.hook, graphics: e.graphics, transition: e.transition, sound: e.sound }]),
+  ),
+} as Record<StyleId, StyleCopy>;
+
 const styleSkill = (id: StyleId): EditingSkill => {
   const s = STYLE_COPY[id];
   const cover = STYLE_COVERS[id];
-  const story = cover.category === 'storytelling';
+  const lib = LIBRARY[id];
+  const layout: LibraryLayout = lib?.layout ?? (cover.category === 'storytelling' ? 'story' : 'footage');
+  const story = layout === 'story';
+  const explainer = layout === 'explainer';
   const feature = (key: string, title: string, what: string): SkillFeature => ({ id: key, title, what, showcase: null, status: 'live' });
   return {
     id,
     kind: 'animation',
     category: cover.category,
+    tags: lib?.tags ?? [],
+    layout,
     shown: cover.shown,
     name: s.name,
     tagline: s.tagline,
-    origin: (PAINTED_STYLE_IDS as readonly string[]).includes(id)
-      ? 'Painted style from the "10 Claude Animation Styles" prompts'
-      : 'Animation style from "10 Claude Animation Styles"',
+    origin: lib
+      ? `From ${lib.source}`
+      : (PAINTED_STYLE_IDS as readonly string[]).includes(id)
+        ? 'Painted style from the "10 Claude Animation Styles" prompts'
+        : 'Animation style from "10 Claude Animation Styles"',
     bestFor: s.bestFor,
     hero: { kind: 'style', id },
-    how: story
+    how: explainer
+      ? [
+          'Record yourself explaining: you stay on screen in a bubble in the corner.',
+          'Cuts your take like every skill does: dead air, filler and repeated takes out, the best moment up front.',
+          `Draws the idea around you as an animated ${s.name} scene, with your lists, numbers and charts in its style.`,
+          'Lets you switch to another style, or show your full footage instead of the scene, on the review page.',
+        ]
+      : story
       ? [
           'Record yourself telling the story: any video works, only your voice is used.',
           'Cuts the narration like every skill does: dead air, filler and repeated takes out, so the story flows.',
@@ -388,14 +417,16 @@ const styleSkill = (id: StyleId): EditingSkill => {
         ]
       : [
           'Cuts your take the same way every skill does: dead air, filler and repeated takes out, the best moment up front.',
-          cover.category === 'talking-head'
-            ? `Redraws everything around you in the ${s.name} style: captions, hook, graphics, transitions and the frame.`
-            : `Redraws your footage in the ${s.name} style, whatever it shows: gameplay, a product, b-roll or a screen recording.`,
+          layout === 'window'
+            ? `Places your footage inside the ${s.name} world and draws captions, hook, graphics and transitions in its style.`
+            : cover.category === 'talking-head'
+              ? `Redraws everything around you in the ${s.name} style: captions, hook, graphics, transitions and the frame.`
+              : `Redraws your footage in the ${s.name} style, whatever it shows: gameplay, a product, b-roll or a screen recording.`,
           `Plans the edit for the style: ${s.bestFor.toLowerCase()} suit it best, and graphics and sounds follow its rules.`,
           'Lets you switch to any other animation style on the review page, with no new edit needed.',
         ],
     features: [
-      feature('look', story ? 'The painted world' : 'Footage look', story ? `The whole frame is painted: ${s.look.charAt(0).toLowerCase()}${s.look.slice(1)}` : s.look),
+      feature('look', story ? 'The animated world' : explainer ? 'The scene around you' : 'Footage look', story ? `The whole frame is drawn: ${s.look.charAt(0).toLowerCase()}${s.look.slice(1)}` : s.look),
       feature('ambient', 'Ambient animation', s.ambient),
       feature('captions', 'Captions', s.captions),
       feature('hook', 'Text hook', s.hook),
@@ -404,8 +435,10 @@ const styleSkill = (id: StyleId): EditingSkill => {
     ],
     rules: [
       story
-        ? { title: 'Your voice, a painted world', what: 'The picture is painted in code from the style, nothing is AI-generated, and the voice is yours. You can show your own footage instead.' }
-        : { title: 'Your footage only', what: 'The style is drawn on top of your own video. Nothing is generated or swapped out.' },
+        ? { title: 'Your voice, an animated world', what: 'The picture is drawn in code from the style, nothing is AI-generated, and the voice is yours. You can show your own footage instead.' }
+        : explainer
+          ? { title: 'You, explaining', what: 'You stay on screen in a bubble while the scene is drawn in code around you. Nothing is AI-generated, and you can show your full footage instead.' }
+          : { title: 'Your footage only', what: 'The style is drawn on top of your own video. Nothing is generated or swapped out.' },
       { title: 'Sound to match', what: `${s.sound} Music stays under your voice.` },
       { title: 'Same restraint', what: 'Graphics only where they add something, never more than one every few seconds.' },
       { title: 'One look, start to finish', what: 'Every element shares the style’s colors, type and motion, so the edit looks designed.' },
