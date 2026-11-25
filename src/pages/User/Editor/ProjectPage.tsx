@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
@@ -6,6 +6,9 @@ import { Button, ButtonLink } from '@/components/app/Button';
 import { Skeleton } from '@/components/app/Skeleton';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import { usePublishingAccess } from '@/lib/publishing-access';
+import { scheduleTimeZone } from '@/pages/User/Analytics/schedule';
+import { useToast } from '@/components/app/Toast';
 import { apiErrorMessage } from '@/api/analytics';
 import {
   deleteEditProject,
@@ -68,6 +71,8 @@ function ProcessingSteps({ project }: { project: EditProjectDetail }) {
   );
 }
 
+const ScheduleSheet = lazy(() => import('@/pages/User/Analytics/ScheduleSheet').then((m) => ({ default: m.ScheduleSheet })));
+
 function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; renderAvailable: boolean }) {
   const navigate = useNavigate();
   const latest = project.renders.at(-1) ?? null;
@@ -75,6 +80,19 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkedVideoId, setLinkedVideoId] = useState(project.linkedVideoId);
+  const publishing = usePublishingAccess();
+  const toast = useToast();
+  const [scheduling, setScheduling] = useState(false);
+  const openSchedule = useCallback(() => setScheduling(true), []);
+  const closeSchedule = useCallback(() => setScheduling(false), []);
+  const scheduleDraft = useMemo(() => ({ projectId: project.id }), [project.id]);
+  const onScheduled = useCallback(
+    (_post: unknown, message: string) => {
+      setScheduling(false);
+      toast.show({ message });
+    },
+    [toast]
+  );
 
   // Poll an export in progress.
   useEffect(() => {
@@ -152,6 +170,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
               Score this edit
             </Button>
           )}
+          {publishing.access === 'granted' && (
+            <Button variant="secondary" onClick={openSchedule}>
+              Schedule post
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => void exportNow()} disabled={busy}>
             Export again
           </Button>
@@ -171,6 +194,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
         <p role="alert" className="mt-2 text-sm text-danger">
           {error}
         </p>
+      )}
+      {publishing.access === 'granted' && scheduling && (
+        <Suspense fallback={null}>
+          <ScheduleSheet open draft={scheduleDraft} timeZone={scheduleTimeZone()} capabilities={publishing.capabilities} onClose={closeSchedule} onSaved={onScheduled} />
+        </Suspense>
       )}
     </div>
   );
