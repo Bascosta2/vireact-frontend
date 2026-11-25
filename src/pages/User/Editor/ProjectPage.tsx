@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Check, Download, Loader2, MonitorPlay, Trash2, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { Skeleton } from '@/components/app/Skeleton';
@@ -8,6 +8,10 @@ import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/api/analytics';
 import {
+  attachScreenRecording,
+  confirmScreenRecording,
+  removeScreenRecording,
+  uploadToStorage,
   deleteEditProject,
   getEditorUsage,
   getEditProject,
@@ -29,6 +33,90 @@ import { FootageDisclaimer } from './Disclaimer';
 import Preview from './Preview';
 import ReviewPanel from './ReviewPanel';
 import { StoryboardPanel } from './Storyboard';
+import { ACCEPT, TYPES } from './shared';
+
+const MAX_SCREEN_BYTES = 500 * 1024 * 1024;
+
+interface ScreenRecordingCardProps {
+  project: EditProjectDetail;
+  /** Called after the recording was added or removed, so the page reloads the edit. */
+  onChanged: () => void;
+}
+
+/** Add (or remove) a screen recording the editor can cut to over the talking head. Upload shows its progress. */
+function ScreenRecordingCard({ project, onChanged }: ScreenRecordingCardProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pct, setPct] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const rec = project.screenRecording ?? null;
+  const uploading = pct !== null;
+
+  const handleAdd = () => inputRef.current?.click();
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!TYPES.has(file.type)) return setMessage('Upload an MP4, MOV, WebM or MKV screen recording.');
+    if (file.size > MAX_SCREEN_BYTES) return setMessage('Screen recordings can be up to 500 MB.');
+    setMessage(null);
+    setPct(0);
+    try {
+      const target = await attachScreenRecording(project.id, file);
+      await uploadToStorage(target.url, file, target.headers, setPct);
+      await confirmScreenRecording(project.id);
+      onChanged();
+    } catch (err) {
+      setMessage(apiErrorMessage(err, err instanceof Error && err.message ? err.message : 'Upload failed. Try again.'));
+    } finally {
+      setPct(null);
+    }
+  };
+  const handleRemove = async () => {
+    try {
+      await removeScreenRecording(project.id);
+      onChanged();
+    } catch (err) {
+      setMessage(apiErrorMessage(err, 'Could not remove the screen recording.'));
+    }
+  };
+
+  return (
+    <section aria-labelledby="screen-recording-title" className="rounded-xl border border-line bg-surface p-4">
+      <h2 id="screen-recording-title" className="text-base font-semibold text-fg">
+        Screen recording
+      </h2>
+      <p className="mt-1 text-sm text-fg-muted">
+        {rec ? `${rec.name ?? 'Your screen recording'}${rec.durationSec ? `, ${Math.round(rec.durationSec)}s` : ''}. The editor cuts to it while you talk about it, and moves the camera to what matters.` : 'Add a screen recording and the editor cuts to it while you talk about it, with a smooth pan and zoom to what matters. Up to 3 minutes.'}
+      </p>
+      <input ref={inputRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Choose a screen recording" onChange={(e) => void handleFile(e)} />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {uploading ? (
+          <div className="w-full" aria-live="polite">
+            <p className="tabular text-sm text-fg-muted">Uploading… {pct}%</p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Screen recording upload">
+              <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${Math.max(3, pct)}%` }} />
+            </div>
+          </div>
+        ) : rec ? (
+          <Button variant="ghost" size="sm" onClick={() => void handleRemove()}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Remove screen recording
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={handleAdd}>
+            <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+            Add screen recording
+          </Button>
+        )}
+      </div>
+      {message && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
 
 const STEPS = ['Uploading', 'Preparing your footage', 'Transcribing every word', 'Studying viral patterns', 'Planning your edit'];
 
@@ -255,6 +343,7 @@ export default function EditProjectPage() {
     onEdit({ disabledSegments: drop ? [...new Set([...current, id])] : current.filter((x) => x !== id), storyboardApproved: false });
   };
   const onApprove = () => onEdit({ storyboardApproved: true });
+  const onScreenChanged = () => void load();
   const onSwapBeat = async (beatId: string) => {
     const seq = ++saveSeq.current;
     setBusyBeat(beatId);
@@ -350,6 +439,7 @@ export default function EditProjectPage() {
                 <FootageDisclaimer compact />
               </div>
               <div className="min-w-0 space-y-4">
+                {editorFeaturesV2() && <ScreenRecordingCard project={project} onChanged={onScreenChanged} />}
                 {editorFeaturesV2() && storyboard && (
                   <StoryboardPanel
                     storyboard={storyboard}

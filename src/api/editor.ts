@@ -80,6 +80,8 @@ export interface StoryboardBeat {
   effects: { type: string; at: number }[];
   zooms: number;
   framing: 'fill' | 'fit_blur' | 'split';
+  /** Screen recording shots that start in this beat (absent when none are attached). */
+  screens?: { start: number; end: number; zoom: number }[];
 }
 
 export interface Storyboard {
@@ -128,6 +130,8 @@ export interface RenderInfo {
 }
 
 export interface EditProjectDetail extends EditProjectSummary {
+  /** The attached screen recording (EditorFeaturesV2 only); ready once it is prepared. */
+  screenRecording?: { name: string | null; durationSec: number | null; ready: boolean } | null;
   source: { durationSec: number; width: number; height: number; hasAudio: boolean } | null;
   regenerationsLeft: number;
   billing: 'trial' | 'plan' | null;
@@ -182,6 +186,22 @@ export const uploadToStorage = (url: string, file: File, headers: Record<string,
 
 export const confirmEditUpload = async (id: string): Promise<EditProjectSummary> =>
   (await Axios.post<{ data: EditProjectSummary }>(`/editor/projects/${id}/uploaded`)).data.data;
+
+/** Screen recording: ask for an upload URL, upload, then confirm (the server prepares it and re-plans; this does not use a regeneration). */
+export const attachScreenRecording = async (id: string, file: File): Promise<{ url: string; method: 'PUT'; headers: Record<string, string> }> =>
+  (await Axios.post<{ data: { upload: { url: string; method: 'PUT'; headers: Record<string, string> } } }>(`/editor/projects/${id}/screen-recording`, {
+    fileName: file.name,
+    contentType: file.type,
+    sizeBytes: file.size,
+  })).data.data.upload;
+
+export const confirmScreenRecording = async (id: string): Promise<void> => {
+  await Axios.post(`/editor/projects/${id}/screen-recording/uploaded`);
+};
+
+export const removeScreenRecording = async (id: string): Promise<void> => {
+  await Axios.delete(`/editor/projects/${id}/screen-recording`);
+};
 
 export const saveEdits = async (id: string, edits: Edits): Promise<{ edits: Edits; props: PreviewProps; storyboard?: Storyboard }> =>
   (await Axios.patch<{ data: { edits: Edits; props: PreviewProps; storyboard?: Storyboard } }>(`/editor/projects/${id}/edits`, edits)).data.data;

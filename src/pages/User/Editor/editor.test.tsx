@@ -9,6 +9,7 @@ import { APP_NAV_ITEMS, isNavActive } from '@/lib/app-nav';
 import { EditComposition } from '@/remotion/EditComposition';
 import { BELOW_CAPTIONS, CAPTION_BAND, CAPTION_CENTER, calloutLabel } from '@/remotion/graphics-utils';
 import { SFX_SECONDS } from '@/remotion/sfx';
+import { clampFocus, focusTransform, screenBox, screenFocusAt } from '@/remotion/timeline-utils';
 import { SFX_TYPES, type CaptionPreset, type EditProps, type Graphic } from '@/remotion/types';
 import { VisualStage } from '@/remotion/visuals/VisualStage';
 import { VISUAL_NAMES } from '@/remotion/visuals/registry';
@@ -240,5 +241,60 @@ describe('Storyboard review', () => {
     expect(html).toContain('Bring back beat 2, Payoff, 0:09 to 0:14');
     expect(html).toContain('Storyboard approved');
     expect(html).toContain('disabled');
+  });
+});
+
+describe('Screen recording layer', () => {
+  const shot = { startFrame: 10, durationFrames: 60, recStartSec: 2, aspect: 16 / 9, from: { x: 0.5, y: 0.5, zoom: 1 }, to: { x: 0.8, y: 0.3, zoom: 2 }, layout: 'safe' as const };
+  const withShot = (layout: 'safe' | 'bottom') => ({ ...full, screens: [{ ...shot, layout }], screenUrl: 'https://example.invalid/screen.mp4' });
+
+  it('keeps the focus point inside the picture at every zoom', () => {
+    expect(clampFocus({ x: 0, y: 1, zoom: 2 })).toEqual({ x: 0.25, y: 0.75, zoom: 2 });
+    expect(clampFocus({ x: 0.5, y: 0.5, zoom: 9 }).zoom).toBe(2.5);
+    expect(clampFocus({ x: Number.NaN, y: 0.5, zoom: 0 })).toEqual({ x: 0.5, y: 0.5, zoom: 1 });
+  });
+
+  it('eases the camera: still at both ends, moving in between, never outside the picture', () => {
+    const at = (f: number) => screenFocusAt(f, 60, shot.from, shot.to);
+    expect(at(0)).toEqual({ x: 0.5, y: 0.5, zoom: 1 });
+    expect(at(59)).toEqual(clampFocus(shot.to));
+    const early = at(5).zoom - at(0).zoom;
+    const middle = at(31).zoom - at(26).zoom;
+    expect(middle).toBeGreaterThan(early);
+    for (let f = 0; f < 60; f += 1) {
+      const c = at(f);
+      expect(c.x).toBeGreaterThanOrEqual(0.5 / c.zoom - 1e-9);
+      expect(c.x).toBeLessThanOrEqual(1 - 0.5 / c.zoom + 1e-9);
+    }
+    expect(focusTransform({ x: 0.5, y: 0.5, zoom: 1 })).toBe('translate(0.000%, 0.000%) scale(1.0000)');
+  });
+
+  it('fits the recording in the 4:5 safe area, or the lower half with split screen', () => {
+    const safe = screenBox('safe', 16 / 9);
+    expect(safe.top).toBeGreaterThanOrEqual(285);
+    expect(safe.top + safe.height).toBeLessThanOrEqual(285 + 1350);
+    expect(safe.left + safe.width).toBeLessThanOrEqual(1080);
+    const bottom = screenBox('bottom', 16 / 9);
+    expect(bottom.top).toBeGreaterThanOrEqual(960);
+    expect(bottom.top + bottom.height).toBeLessThanOrEqual(1920);
+    // A phone recording is height-limited.
+    const phone = screenBox('safe', 9 / 19.5);
+    expect(phone.height).toBeLessThanOrEqual(1350);
+    expect(phone.width / phone.height).toBeCloseTo(9 / 19.5, 3);
+  });
+
+  it('renders during its shot only, and not at all without shots or a URL', () => {
+    expect(frameHtml(withShot('safe'), 30)).toContain('data-screen-recording="safe"');
+    expect(frameHtml(withShot('bottom'), 30)).toContain('data-screen-recording="bottom"');
+    expect(frameHtml(withShot('safe'), 100)).not.toContain('data-screen-recording');
+    expect(frameHtml({ ...withShot('safe'), screenUrl: undefined }, 30)).not.toContain('data-screen-recording');
+    expect(frameHtml(full, 30)).not.toContain('data-screen-recording');
+  });
+
+  it('shows the recording on the storyboard beat', () => {
+    const sb: Storyboard = { approved: false, beats: [{ id: 's1', role: 'body', start: 0, end: 6, reason: '', dropped: false, swapped: false, swapNote: null, graphics: [], sounds: [], effects: [], zooms: 0, framing: 'fill', screens: [{ start: 1, end: 4, zoom: 2 }] }] };
+    const html = renderToStaticMarkup(<StoryboardPanel storyboard={sb} dropped={[]} approved={false} busyBeat={null} onDrop={() => {}} onSwap={() => {}} onApprove={() => {}} />);
+    expect(html).toContain('Screen recording');
+    expect(html).toContain('0:01 to 0:04, zooms in 2.0x');
   });
 });
