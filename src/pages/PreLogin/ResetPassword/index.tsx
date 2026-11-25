@@ -41,7 +41,7 @@ function ResetPassword() {
               <Formik
                 initialValues={{ password: '', confirmPassword: '' }}
                 validationSchema={Yup.object({
-                  password: Yup.string().min(6, 'Use at least 6 characters').max(128, 'Use at most 128 characters').required('Password is required'),
+                  password: Yup.string().min(8, 'Use at least 8 characters').max(128, 'Use at most 128 characters').required('Password is required'),
                   confirmPassword: Yup.string().oneOf([Yup.ref('password')], 'Passwords must match').required('Confirm your password'),
                 })}
                 onSubmit={async (values, { setSubmitting }) => {
@@ -66,7 +66,7 @@ function ResetPassword() {
               >
                 {({ isSubmitting, isValid, dirty }) => (
                   <Form className="space-y-4">
-                    <PasswordField field="password" label_text="New password" placeholder="At least 6 characters" required autoComplete="new-password" />
+                    <PasswordField field="password" label_text="New password" placeholder="At least 8 characters" required autoComplete="new-password" />
                     <PasswordField field="confirmPassword" label_text="Confirm new password" placeholder="Type it again" required autoComplete="new-password" />
                     {error && (
                       <p role="alert" className="text-sm text-red-400">
