@@ -84,7 +84,7 @@ function PrivacyPolicy() {
                     You can ask us to delete your data at any time.
                 </p>
                 <ul className="list-disc pl-6 space-y-2 mt-4">
-                    <li><strong>In the app:</strong> disconnect an account on the Accounts page. This takes effect right away and removes that account's stored tokens and saved post numbers.</li>
+                    <li><strong>In the app:</strong> disconnect an account on the Accounts page. This takes effect right away and removes that account's stored tokens and saved post numbers. Disconnecting always removes the account's synced posts and sign-in tokens. You can also tick "Also delete the numbers this account added to my videos" to remove the numbers that account copied onto your uploaded videos. Your uploads, analyses, and anything you typed yourself are kept.</li>
                     <li><strong>By email:</strong> write to <a className={linkClass} href={`mailto:${SUPPORT_EMAIL}?subject=Data%20deletion%20request`}>{SUPPORT_EMAIL}</a> from the address on your Vireact account and tell us what to delete: your connected accounts only, or your whole Vireact account.</li>
                 </ul>
                 <p className="mt-4">

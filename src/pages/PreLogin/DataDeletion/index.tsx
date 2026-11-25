@@ -62,6 +62,7 @@ function DataDeletion() {
                     <li>Sign in to Vireact and open the Accounts page.</li>
                     <li>Choose Disconnect next to the account you want to remove (TikTok, Instagram, Facebook or YouTube).</li>
                     <li>We ask the platform to revoke our access, then delete the stored access tokens and the post numbers we saved for that account.</li>
+                    <li>Optionally tick "Also delete the numbers this account added to my videos" to remove the numbers that account copied onto your uploaded videos. Your uploads, analyses, and anything you typed yourself are kept.</li>
                 </ol>
             </section>
 
