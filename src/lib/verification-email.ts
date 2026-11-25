@@ -103,3 +103,15 @@ export function resendErrorMessage(error: unknown, fallback: string): string {
   if (response?.status === 429) return TOO_MANY_ATTEMPTS_MESSAGE;
   return response?.data?.message || fallback;
 }
+
+export const SET_PASSWORD_LOGIN_MESSAGE = 'For your security, please set a new password.';
+
+/** Login 409 with code SET_PASSWORD: the account has no password, so send the user to Forgot password. */
+export function isSetPasswordLoginError(error: unknown): boolean {
+  const response = (error as { response?: { status?: number; data?: { data?: { code?: string } } } } | undefined)?.response;
+  return response?.status === 409 && response.data?.data?.code === 'SET_PASSWORD';
+}
+
+export function forgotPasswordPath(email: string): string {
+  return `/forgot-password?email=${encodeURIComponent(email)}`;
+}
