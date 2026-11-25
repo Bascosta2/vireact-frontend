@@ -125,3 +125,13 @@ describe('verify outcome: set a new password', () => {
     expect(outcomeNotice('sent', 'a@b.co', true).message).toContain('newest email');
   });
 });
+
+describe('login: account needs a password', () => {
+  it('recognises the SET_PASSWORD 409 and builds the forgot-password link', async () => {
+    const { isSetPasswordLoginError, forgotPasswordPath } = await import('@/lib/verification-email');
+    expect(isSetPasswordLoginError({ response: { status: 409, data: { data: { code: 'SET_PASSWORD' } } } })).toBe(true);
+    expect(isSetPasswordLoginError({ response: { status: 409, data: { data: { code: 'USE_GOOGLE' } } } })).toBe(false);
+    expect(isSetPasswordLoginError({ response: { status: 401 } })).toBe(false);
+    expect(forgotPasswordPath('a+b@c.co')).toBe('/forgot-password?email=a%2Bb%40c.co');
+  });
+});

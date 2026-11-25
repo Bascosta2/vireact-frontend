@@ -15,7 +15,7 @@ import { isFunnelV2Enabled } from '@/funnel/cta';
 import { getFunnelSessionId } from '@/funnel/session';
 import { resolvePostAuthPath } from '@/hooks/useFunnelRedirect';
 import VerificationNotice from '@/components/VerificationNotice';
-import { isResignup, readVerificationOutcome, TOO_MANY_ATTEMPTS_MESSAGE, type VerificationOutcome } from '@/lib/verification-email';
+import { forgotPasswordPath, isSetPasswordLoginError, SET_PASSWORD_LOGIN_MESSAGE, isResignup, readVerificationOutcome, TOO_MANY_ATTEMPTS_MESSAGE, type VerificationOutcome } from '@/lib/verification-email';
 
 /** Quiz session to link on signup/login; only sent when Funnel V2 is on. */
 const funnelLinkBody = (): { funnelSessionId?: string } => {
@@ -219,6 +219,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         // Generic credential failure on login. Surface as a top-level form
         // error so neither email nor password gets a misleading field marker.
         setStatus({ formError: errorMessage || 'Invalid email or password' });
+      } else if (isLogin && isSetPasswordLoginError(error)) {
+        setStatus({ formError: SET_PASSWORD_LOGIN_MESSAGE, setPasswordEmail: values.email });
       } else if (error.response?.status === 409) {
         // 409 has two distinct meanings:
         //   - login + cross-provider conflict: the account exists under a
@@ -314,6 +316,12 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
                 data-testid="form-error"
               >
                 {status.formError}
+                {status.setPasswordEmail && (
+                  <>
+                    {' '}
+                    <a href={forgotPasswordPath(status.setPasswordEmail)} className="underline hover:text-white">Set a new password</a>
+                  </>
+                )}
                 {status.verify && (
                   <>
                     {' '}

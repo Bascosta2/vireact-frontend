@@ -9,6 +9,7 @@ import PreLoginPage from '@/components/Layout/PreLoginPage';
 /** /forgot-password: emails a reset link. Also how a Google-only account adds a password. */
 function ForgotPassword() {
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const prefilledEmail = new URLSearchParams(window.location.search).get('email') ?? '';
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -38,7 +39,7 @@ function ForgotPassword() {
                 </p>
               </div>
               <Formik
-                initialValues={{ email: '' }}
+                initialValues={{ email: prefilledEmail }}
                 validationSchema={Yup.object({ email: Yup.string().email('Enter a valid email').required('Email is required') })}
                 onSubmit={async (values, { setSubmitting }) => {
                   setError(null);
@@ -61,7 +62,7 @@ function ForgotPassword() {
                   <Form className="space-y-4">
                     <TextField field="email" label_text="Email Address" placeholder="Enter your email" type="email" required autoComplete="email" />
                     {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
-                    <button type="submit" disabled={isSubmitting || !isValid || !dirty} className="!w-full btn-primary">
+                    <button type="submit" disabled={isSubmitting || !isValid || (!dirty && !prefilledEmail)} className="!w-full btn-primary">
                       {isSubmitting ? 'Sending...' : 'Send reset link'}
                     </button>
                   </Form>
