@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { BarChart3, BookOpen, Brush, Check, Clock, Film, Gamepad2, GraduationCap, LayoutGrid, Music, Newspaper, Palette, Search, ShoppingBag, Smile, Sparkles, User, Wand2 } from 'lucide-react';
+import { BarChart3, BookOpen, Brush, Check, ChevronLeft, ChevronRight, Clock, Film, Gamepad2, GraduationCap, LayoutGrid, Music, Newspaper, Palette, Search, ShoppingBag, Smile, Sparkles, User, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Dropzone } from '@/components/app/Dropzone';
@@ -64,6 +64,100 @@ const inSection = (id: StyleCategory) => [...SKILLS.filter((x) => x.category ===
 
 /** A chip's short label ("Talking-head videos", "Gaming"). */
 const chipLabel = (title: string) => title.replace(/^For /, '').replace(/^./, (m) => m.toUpperCase());
+
+type CategoryFilter = StyleCategory | 'all';
+
+/**
+ * Category rail: the native (white on Windows) scrollbar is hidden; glass arrows, fading edges and a
+ * glowing progress track show where you are and scroll the chips left and right instead.
+ */
+function CategoryRail({ filter, onFilter }: { filter: CategoryFilter; onFilter: (id: CategoryFilter) => void }) {
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [rail, setRail] = useState({ left: false, right: false, progress: 0, thumb: 100 });
+
+  const updateRail = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setRail({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft < max - 4,
+      progress: max > 0 ? el.scrollLeft / max : 0,
+      thumb: el.scrollWidth > 0 ? Math.min(100, (el.clientWidth / el.scrollWidth) * 100) : 100,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateRail();
+    window.addEventListener('resize', updateRail);
+    return () => window.removeEventListener('resize', updateRail);
+  }, [updateRail]);
+
+  const scrollRail = (dir: -1 | 1) => {
+    const el = railRef.current;
+    if (!el) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({ left: dir * Math.max(240, el.clientWidth * 0.65), behavior: reduced ? 'auto' : 'smooth' });
+  };
+
+  const arrow = (dir: -1 | 1, enabled: boolean) => (
+    <button
+      type="button"
+      aria-label={dir < 0 ? 'Scroll categories left' : 'Scroll categories right'}
+      disabled={!enabled}
+      onClick={() => scrollRail(dir)}
+      className={cn(
+        'app-focus app-glass absolute top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-accent transition duration-200',
+        dir < 0 ? 'left-0' : 'right-0',
+        enabled ? 'hover:scale-105 hover:border-accent/60 hover:text-fg hover:shadow-[0_0_18px_rgba(232,103,53,0.35)] active:scale-95' : 'cursor-default opacity-25',
+      )}
+    >
+      {dir < 0 ? <ChevronLeft className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
+    </button>
+  );
+
+  return (
+    <div className="mb-6">
+      <div className="relative">
+        {arrow(-1, rail.left)}
+        <div className="pointer-events-none absolute inset-y-0 left-7 z-10 w-10 bg-gradient-to-r from-canvas/90 to-transparent" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-y-0 right-7 z-10 w-10 bg-gradient-to-l from-canvas/90 to-transparent" aria-hidden="true" />
+        {arrow(1, rail.right)}
+        <div
+          ref={railRef}
+          onScroll={updateRail}
+          className="scrollbar-hide flex gap-2 overflow-x-auto px-10 py-0.5"
+          role="group"
+          aria-label="Skill categories"
+        >
+          {[{ id: 'all' as const, title: 'All', icon: LayoutGrid }, ...SECTIONS].map((c) => {
+            const n = c.id === 'all' ? SKILLS.length : inSection(c.id).length;
+            const on = filter === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onFilter(c.id)}
+                className={cn('app-focus inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition duration-200', on ? 'border-accent/70 bg-accent-tint text-fg shadow-[0_0_16px_rgba(232,103,53,0.22)]' : 'border-line bg-surface text-fg-muted hover:border-white/20 hover:bg-surface-raised hover:text-fg')}
+              >
+                <c.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                {chipLabel(c.title)}
+                <span className="text-fg-subtle">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="relative mx-10 mt-2.5 h-[3px] overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
+        <div
+          className="bg-brand-gradient absolute inset-y-0 rounded-full shadow-[0_0_12px_rgba(232,103,53,0.55)]"
+          style={{ width: `${rail.thumb}%`, left: `${rail.progress * (100 - rail.thumb)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 function FeatureTile({ f, skill }: { f: EditingSkill['features'][number]; skill: EditingSkill }) {
   return (
@@ -226,25 +320,7 @@ export default function SkillsEditor() {
               />
             </label>
           </div>
-          <div className="mb-6 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Skill categories">
-            {[{ id: 'all' as const, title: 'All', icon: LayoutGrid }, ...SECTIONS].map((c) => {
-              const n = c.id === 'all' ? SKILLS.length : inSection(c.id).length;
-              const on = filter === c.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => setFilter(c.id)}
-                  className={cn('app-focus inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium', on ? 'border-accent bg-accent-tint text-fg' : 'border-line bg-surface text-fg-muted hover:bg-surface-raised')}
-                >
-                  <c.icon className="h-3.5 w-3.5" aria-hidden="true" />
-                  {chipLabel(c.title)}
-                  <span className="text-fg-subtle">{n}</span>
-                </button>
-              );
-            })}
-          </div>
+          <CategoryRail filter={filter} onFilter={setFilter} />
           {visible ? (
             visible.length ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
