@@ -1,54 +1,94 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import Axios from '@/api';
-import { SuccessNotification, ErrorNotification } from '@/utils/toast';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
+import { useAuth } from '@/redux/hooks/use-auth';
+import { useUser } from '@/redux/hooks/use-user';
+import { SuccessNotification } from '@/utils/toast';
+import { SET_PASSWORD_NOTICE, setPasswordPath, readVerifyResponse, readVerifyError, TOO_MANY_ATTEMPTS_MESSAGE } from '@/lib/verification-email';
+
+type VerificationStatus = 'verifying' | 'success' | 'error';
+
+const ERROR_MESSAGES = {
+  no_token: 'This link is missing its verification code. Request a new link and use the newest email.',
+  invalid_link: 'This link is invalid or was already used. If you already verified, just log in. Otherwise request a new link.',
+  rate_limited: TOO_MANY_ATTEMPTS_MESSAGE,
+  failed: "We couldn't verify your email right now. Try the link again in a moment, or request a new one.",
+} as const;
+
+// The link is single-use: keep the first request per token at module level so remounts reuse it.
+const verifyRequests = new Map<string, Promise<{ data: unknown }>>();
+
+// The token is stripped from the address bar once read, so a remount must remember it.
+let rememberedToken: string | null = null;
+
+function postVerifyOnce(token: string): Promise<{ data: unknown }> {
+  const existing = verifyRequests.get(token);
+  if (existing) return existing;
+  const request = Axios.post('/auth/verify-email', { token });
+  verifyRequests.set(token, request);
+  return request;
+}
 
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [verificationStatus, setVerificationStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
+  const { isAuthenticated, logout: clearAuth } = useAuth();
+  const { setUserData, clearUserData } = useUser();
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('verifying');
+  const [alreadyVerified, setAlreadyVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const verifyEmail = async () => {
-      const token = searchParams.get('token');
-      
+      const token = searchParams.get('token') ?? rememberedToken;
+      if (token) {
+        rememberedToken = token;
+        // Keep the one-time token out of history and screenshots.
+        window.history.replaceState(window.history.state, '', window.location.pathname);
+      }
+
       if (!token) {
         setVerificationStatus('error');
-        setErrorMessage('No verification token provided');
-        setIsVerifying(false);
+        setErrorMessage(ERROR_MESSAGES.no_token);
         return;
       }
 
       try {
-        const response = await Axios.post('/auth/verify-email', null, {
-          params: { token }
-        });
-
-        if (response.data.success) {
-          setVerificationStatus('success');
-          SuccessNotification('Email verified successfully!');
-          
-          // Redirect to login after 3 seconds
-          setTimeout(() => {
-            navigate('/login');
-          }, 3000);
+        const response = await postVerifyOnce(token);
+        const result = readVerifyResponse(response.data);
+        const passwordPath = result === 'verified_set_password' ? setPasswordPath(response.data) : null;
+        if (passwordPath) {
+          // The server revoked every session; drop the local one without calling the backend logout.
+          clearAuth();
+          clearUserData();
+          SuccessNotification(SET_PASSWORD_NOTICE);
+          navigate(passwordPath, { replace: true });
+          return;
         }
-      } catch (error: any) {
+        setAlreadyVerified(result === 'already_verified');
+        setVerificationStatus('success');
+        // Signed-in users keep their session; just update what the app knows about them.
+        if (isAuthenticated) setUserData({ isEmailVerified: true });
+      } catch (error: unknown) {
         console.error('Email verification error:', error);
+        const kind = readVerifyError(error);
+        setErrorMessage(kind === 'invalid_link' || kind === 'rate_limited' ? ERROR_MESSAGES[kind] : ERROR_MESSAGES.failed);
         setVerificationStatus('error');
-        const errorMsg = error.response?.data?.message || 'Email verification failed';
-        setErrorMessage(errorMsg);
-        ErrorNotification(errorMsg);
-      } finally {
-        setIsVerifying(false);
       }
     };
 
     verifyEmail();
-  }, [searchParams, navigate]);
+    // Runs once per mount by design (see postVerifyOnce).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Logged-out users are sent to log in a few seconds after success.
+  useEffect(() => {
+    if (verificationStatus !== 'success' || isAuthenticated) return undefined;
+    const timer = setTimeout(() => navigate('/login'), 3000);
+    return () => clearTimeout(timer);
+  }, [verificationStatus, isAuthenticated, navigate]);
 
   return (
     <PreLoginPage>
@@ -61,7 +101,7 @@ function VerifyEmail() {
                   <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
                 </div>
                 <h1 className="text-4xl font-bold text-white mb-2">Verifying Your Email</h1>
-                <p className="text-white/80">Please wait while we verify your email address...</p>
+                <p role="status" className="text-white/80">Please wait while we verify your email address...</p>
               </>
             )}
 
@@ -75,19 +115,25 @@ function VerifyEmail() {
                   </div>
                 </div>
                 <h1 className="text-4xl font-bold text-white mb-2">Email Verified!</h1>
-                <p className="text-white/80 mb-6">
-                  Your email has been successfully verified. You can now log in to your account.
+                <p role="status" className="text-white/80 mb-6">
+                  {alreadyVerified
+                    ? 'Your email is already verified. You can log in.'
+                    : isAuthenticated
+                      ? 'Your email is verified. You are all set.'
+                      : 'Your email is verified. You can log in now.'}
                 </p>
                 <div className="space-y-3">
                   <Link
-                    to={'/login'}
+                    to={isAuthenticated ? '/dashboard' : '/login'}
                     className="btn-secondary"
                   >
-                    Go to Login
+                    {isAuthenticated ? 'Continue' : 'Log in'}
                   </Link>
-                  <p className="text-sm text-white/60">
-                    You will be automatically redirected in a few seconds...
-                  </p>
+                  {!isAuthenticated && (
+                    <p className="text-sm text-white/60">
+                      You will be redirected to log in in a few seconds...
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -101,23 +147,25 @@ function VerifyEmail() {
                     </svg>
                   </div>
                 </div>
-                <h1 className="text-4xl font-bold text-white mb-2">Verification Failed</h1>
-                <p className="text-white/80 mb-6">
+                <h1 className="text-4xl font-bold text-white mb-2">We couldn't verify this link</h1>
+                <p role="alert" className="text-white/80 mb-6">
                   {errorMessage}
                 </p>
                 <div className="space-y-3">
-                  <Link
-                    to={'/resend-verification'}
-                    className="btn-secondary"
-                  >
-                    Resend Verification Email
-                  </Link>
-                  <Link
-                    to={'/login'}
-                    className="btn-outline"
-                  >
-                    Go to Login
-                  </Link>
+                  {isAuthenticated ? (
+                    <Link to="/dashboard" className="btn-secondary">
+                      Continue (use the banner to resend the link)
+                    </Link>
+                  ) : (
+                    <>
+                      <Link to={'/resend-verification'} className="btn-secondary">
+                        Request a new link
+                      </Link>
+                      <Link to={'/login'} className="btn-outline">
+                        Log in
+                      </Link>
+                    </>
+                  )}
                 </div>
               </>
             )}
