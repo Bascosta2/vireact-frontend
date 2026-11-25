@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isLimitError, limitPath, planLocks, trialEndLabel, trialHeadline } from './plan-limits';
 import { getCardCta } from '@/pages/User/SubscriptionPlans/card-cta';
+import { disconnectRequestConfig, returnErrorMessage } from '@/api/accounts';
 import { getTier } from '@/config/tiers';
 import { activeSubscriptions, ageLabel, ownerConsoleUrl, planRows, promoLength } from '@/api/admin';
 
@@ -58,6 +59,18 @@ describe('free trial offer', () => {
     // Paying customers switch plans; the trial never applies.
     expect(getCardCta('premium', pro, { eligible: false, days: 7 }).action).toEqual({ kind: 'switch', plan: 'pro' });
     expect(getCardCta('free', getTier('free')!, { eligible: true, days: 7 }).label).toBe('Current Plan');
+  });
+
+  it('maps account sign-in error codes to plain messages', () => {
+    expect(returnErrorMessage('still_deleting')).toContain("still removing your previous data");
+    expect(returnErrorMessage('denied')).toContain('cancelled');
+    expect(returnErrorMessage('something_new')).toBe(returnErrorMessage('failed'));
+    expect(returnErrorMessage(null)).toBe(returnErrorMessage('failed'));
+  });
+
+  it('only asks the backend to delete copied numbers when the box is ticked', () => {
+    expect(disconnectRequestConfig(true)).toEqual({ params: { deleteData: true } });
+    expect(disconnectRequestConfig(false)).toEqual({});
   });
 });
 
