@@ -80,9 +80,25 @@ export const startConnect = async (platform: AccountPlatform): Promise<string> =
 
 export const syncAccount = async (id: string): Promise<ConnectedAccount> => (await Axios.post<{ data: ConnectedAccount }>(`/accounts/${id}/sync`)).data.data;
 
-export const disconnectAccount = async (id: string): Promise<void> => {
-  await Axios.delete(`/accounts/${id}`);
+/** Request options for DELETE /accounts/:id; deleteData=true also removes the numbers copied onto the user's uploads. */
+export const disconnectRequestConfig = (deleteData: boolean) => (deleteData ? { params: { deleteData: true } } : {});
+
+export const disconnectAccount = async (id: string, deleteData = false): Promise<void> => {
+  await Axios.delete(`/accounts/${id}`, disconnectRequestConfig(deleteData));
 };
+
+const RETURN_ERROR_MESSAGES: Record<string, string> = {
+  denied: 'You cancelled the sign-in, so nothing was connected.',
+  expired: 'That sign-in took too long or was already used. Try connecting again.',
+  failed: 'The platform did not finish the sign-in. Try again in a minute.',
+  missing_state: 'The sign-in link was incomplete. Try connecting again.',
+  unknown_platform: 'That platform is not supported.',
+  still_deleting: "We're still removing your previous data for this account — try connecting again in a few minutes.",
+};
+
+/** Plain message for the `error` code the backend puts on the return URL after sign-in; unknown codes get the generic one. */
+export const returnErrorMessage = (code: string | null | undefined): string =>
+  RETURN_ERROR_MESSAGES[code ?? ''] ?? RETURN_ERROR_MESSAGES.failed;
 
 export const getConnectedPosts = async (accountId?: string): Promise<ConnectedPost[]> =>
   (await Axios.get<{ data: { posts: ConnectedPost[] } }>('/accounts/posts', { params: accountId ? { accountId } : {} })).data.data.posts;
