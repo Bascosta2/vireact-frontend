@@ -19,15 +19,19 @@ import {
   saveEdits,
   scoreEdit,
   startRender,
+  swapStoryboardBeat,
+  editorFeaturesV2,
   IN_PROGRESS,
   type EditProjectDetail,
   type Edits,
   type PreviewProps,
   type RenderInfo,
+  type Storyboard,
 } from '@/api/editor';
 import { FootageDisclaimer } from './Disclaimer';
 import Preview from './Preview';
 import ReviewPanel from './ReviewPanel';
+import { StoryboardPanel } from './Storyboard';
 
 const STEPS = ['Uploading', 'Preparing your footage', 'Transcribing every word', 'Studying viral patterns', 'Planning your edit'];
 
@@ -73,7 +77,7 @@ function ProcessingSteps({ project }: { project: EditProjectDetail }) {
 
 const ScheduleSheet = lazy(() => import('@/pages/User/Analytics/ScheduleSheet').then((m) => ({ default: m.ScheduleSheet })));
 
-function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; renderAvailable: boolean }) {
+function ExportCard({ project, renderAvailable, locked }: { project: EditProjectDetail; renderAvailable: boolean; locked: boolean }) {
   const navigate = useNavigate();
   const latest = project.renders.at(-1) ?? null;
   const [render, setRender] = useState<RenderInfo | null>(latest);
@@ -183,10 +187,11 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
         <>
           <p className="mt-1 text-sm text-fg-muted">Renders a 1080×1920 MP4 with every change you made here.</p>
           {render?.status === 'failed' && <p className="mt-2 text-sm text-danger">{render.error ?? 'The last export failed.'}</p>}
-          <Button className="mt-3" onClick={() => void exportNow()} disabled={busy}>
+          <Button className="mt-3" onClick={() => void exportNow()} disabled={busy || locked}>
             {busy && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
             Export MP4
           </Button>
+          {locked && <p className="mt-2 text-xs text-fg-subtle">Approve the storyboard to export.</p>}
         </>
       )}
       {render?.status === 'done' && !linkedVideoId && <p className="mt-2 text-xs text-fg-subtle">Scoring runs a normal analysis and uses one from your plan.</p>}
@@ -216,6 +221,8 @@ export default function EditProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
   const [renderAvailable, setRenderAvailable] = useState(true);
+  const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
+  const [busyBeat, setBusyBeat] = useState<string | null>(null);
   const saveSeq = useRef(0);
 
   const load = useCallback(async () => {
@@ -223,6 +230,7 @@ export default function EditProjectPage() {
       const p = await getEditProject(projectId);
       setProject(p);
       setProps(p.props);
+      setStoryboard(p.storyboard ?? null);
       setEdits(p.edits ?? {});
       setError(null);
     } catch (err) {
@@ -254,6 +262,7 @@ export default function EditProjectPage() {
         if (seq !== saveSeq.current) return;
         setEdits(res.edits);
         setProps(res.props);
+        if (res.storyboard) setStoryboard(res.storyboard);
         setSaveState('idle');
       } catch (err) {
         if (seq !== saveSeq.current) return;
@@ -268,6 +277,29 @@ export default function EditProjectPage() {
     setEdits((e) => ({ ...e, ...patch }));
     track('edit_change_toggled', { project_id: projectId, change: Object.keys(patch)[0] ?? 'unknown' });
     void persist(patch);
+  };
+  const onDropBeat = (id: string, drop: boolean) => {
+    const current = edits.disabledSegments ?? [];
+    onEdit({ disabledSegments: drop ? [...new Set([...current, id])] : current.filter((x) => x !== id), storyboardApproved: false });
+  };
+  const onApprove = () => onEdit({ storyboardApproved: true });
+  const onSwapBeat = async (beatId: string) => {
+    const seq = ++saveSeq.current;
+    setBusyBeat(beatId);
+    setError(null);
+    try {
+      const res = await swapStoryboardBeat(projectId, beatId);
+      // A newer change was made while the planner worked: its result wins.
+      if (seq !== saveSeq.current) return;
+      setEdits(res.edits);
+      setProps(res.props);
+      setStoryboard(res.storyboard);
+      track('edit_beat_swapped', { project_id: projectId });
+    } catch (err) {
+      if (seq === saveSeq.current) setError(apiErrorMessage(err, 'Could not find another option for that beat. Try again.'));
+    } finally {
+      setBusyBeat(null);
+    }
   };
   const onEditText = (i: number, text: string) => void persist({ captionText: { [i]: text } });
 
@@ -342,11 +374,24 @@ export default function EditProjectPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
               <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
                 <Preview props={props} proxyUrl={project.proxyUrl} originalSec={project.source?.durationSec ?? null} />
-                <ExportCard project={project} renderAvailable={renderAvailable} />
+                <ExportCard project={project} renderAvailable={renderAvailable} locked={editorFeaturesV2() && Boolean(storyboard) && !edits.storyboardApproved} />
                 <FootageDisclaimer compact />
               </div>
-              <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
-                <ReviewPanel project={project} props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} onRegenerate={onRegenerate} />
+              <div className="min-w-0 space-y-4">
+                {editorFeaturesV2() && storyboard && (
+                  <StoryboardPanel
+                    storyboard={storyboard}
+                    dropped={edits.disabledSegments ?? []}
+                    approved={edits.storyboardApproved === true}
+                    busyBeat={busyBeat}
+                    onDrop={onDropBeat}
+                    onSwap={(id) => void onSwapBeat(id)}
+                    onApprove={onApprove}
+                  />
+                )}
+                <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
+                  <ReviewPanel project={project} props={props} edits={edits} onEdit={onEdit} onEditText={onEditText} onRegenerate={onRegenerate} />
+                </div>
               </div>
             </div>
           </>

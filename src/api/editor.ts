@@ -65,7 +65,32 @@ export interface EditPlanView {
   look?: { grade: string; accent: string; progressBar: boolean; motion: boolean };
 }
 
+/** One planned beat (a segment of the edit) with what plays in it. Storyboard review: EditorFeaturesV2 only. */
+export interface StoryboardBeat {
+  id: string;
+  role: string;
+  start: number;
+  end: number;
+  reason: string;
+  dropped: boolean;
+  swapped: boolean;
+  swapNote: string | null;
+  graphics: { type: string; text: string; start: number }[];
+  sounds: { type: string; at: number }[];
+  effects: { type: string; at: number }[];
+  zooms: number;
+  framing: 'fill' | 'fit_blur' | 'split';
+}
+
+export interface Storyboard {
+  approved: boolean;
+  beats: StoryboardBeat[];
+}
+
 export interface Edits {
+  /** Storyboard review: the creator approved the beats as shown, and the beats they swapped (kept by the server). */
+  storyboardApproved?: boolean;
+  beatSwaps?: Record<string, unknown>;
   disabledSegments?: string[];
   restoredCandidates?: string[];
   disabledZooms?: number[];
@@ -110,6 +135,8 @@ export interface EditProjectDetail extends EditProjectSummary {
   linkedVideoId: string | null;
   plan: EditPlanView | null;
   edits: Edits;
+  /** Present only while the editor extras are on. */
+  storyboard?: Storyboard;
   props: PreviewProps | null;
   proxyUrl: string | null;
   candidates: { id: string; kind: string; start: number; end: number; text: string | null }[];
@@ -156,8 +183,12 @@ export const uploadToStorage = (url: string, file: File, headers: Record<string,
 export const confirmEditUpload = async (id: string): Promise<EditProjectSummary> =>
   (await Axios.post<{ data: EditProjectSummary }>(`/editor/projects/${id}/uploaded`)).data.data;
 
-export const saveEdits = async (id: string, edits: Edits): Promise<{ edits: Edits; props: PreviewProps }> =>
-  (await Axios.patch<{ data: { edits: Edits; props: PreviewProps } }>(`/editor/projects/${id}/edits`, edits)).data.data;
+export const saveEdits = async (id: string, edits: Edits): Promise<{ edits: Edits; props: PreviewProps; storyboard?: Storyboard }> =>
+  (await Axios.patch<{ data: { edits: Edits; props: PreviewProps; storyboard?: Storyboard } }>(`/editor/projects/${id}/edits`, edits)).data.data;
+
+/** Ask the planner for another treatment of one beat. */
+export const swapStoryboardBeat = async (id: string, beatId: string): Promise<{ edits: Edits; props: PreviewProps; storyboard: Storyboard }> =>
+  (await Axios.post<{ data: { edits: Edits; props: PreviewProps; storyboard: Storyboard } }>(`/editor/projects/${id}/storyboard/swap`, { beatId })).data.data;
 
 export const regenerateEdit = async (id: string, note: string): Promise<void> => {
   await Axios.post(`/editor/projects/${id}/regenerate`, { note });
