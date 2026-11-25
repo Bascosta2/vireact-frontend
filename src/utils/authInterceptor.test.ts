@@ -110,3 +110,18 @@ describe('verification email messages', () => {
     expect(resendErrorMessage({ response: { status: 429 } }, 'x')).toContain('Too many attempts');
   });
 });
+
+describe('verify outcome: set a new password', () => {
+  it('maps verified_set_password to the reset page and flags re-signups', async () => {
+    const { readVerifyResponse, setPasswordPath, isResignup, outcomeNotice } = await import('@/lib/verification-email');
+    const body = { data: { status: 'verified_set_password', resetToken: 'abc' } };
+    expect(readVerifyResponse(body)).toBe('verified_set_password');
+    expect(setPasswordPath(body)).toBe('/reset-password?token=abc');
+    expect(setPasswordPath({ data: { status: 'verified_set_password' } })).toBeNull();
+    const now = Date.parse('2026-01-01T00:10:00Z');
+    expect(isResignup({ createdAt: '2026-01-01T00:00:00Z' }, now)).toBe(true);
+    expect(isResignup({ createdAt: '2026-01-01T00:09:30Z' }, now)).toBe(false);
+    expect(outcomeNotice('unavailable', 'a@b.co', true).message).toBe("We couldn't send the email right now. Try again in a few minutes.");
+    expect(outcomeNotice('sent', 'a@b.co', true).message).toContain('newest email');
+  });
+});

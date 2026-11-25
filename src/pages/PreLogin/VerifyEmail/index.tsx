@@ -4,7 +4,8 @@ import Axios from '@/api';
 import PreLoginPage from '@/components/Layout/PreLoginPage';
 import { useAuth } from '@/redux/hooks/use-auth';
 import { useUser } from '@/redux/hooks/use-user';
-import { readVerifyResponse, readVerifyError, TOO_MANY_ATTEMPTS_MESSAGE } from '@/lib/verification-email';
+import { SuccessNotification } from '@/utils/toast';
+import { SET_PASSWORD_NOTICE, setPasswordPath, readVerifyResponse, readVerifyError, TOO_MANY_ATTEMPTS_MESSAGE } from '@/lib/verification-email';
 
 type VerificationStatus = 'verifying' | 'success' | 'error';
 
@@ -47,7 +48,14 @@ function VerifyEmail() {
 
       try {
         const response = await postVerifyOnce(token);
-        setAlreadyVerified(readVerifyResponse(response.data) === 'already_verified');
+        const result = readVerifyResponse(response.data);
+        const passwordPath = result === 'verified_set_password' ? setPasswordPath(response.data) : null;
+        if (passwordPath) {
+          SuccessNotification(SET_PASSWORD_NOTICE);
+          navigate(passwordPath, { replace: true });
+          return;
+        }
+        setAlreadyVerified(result === 'already_verified');
         setVerificationStatus('success');
         // Signed-in users keep their session; just update what the app knows about them.
         if (isAuthenticated) setUserData({ isEmailVerified: true });

@@ -11,13 +11,15 @@ import {
 interface VerificationNoticeProps {
   outcome: VerificationOutcome;
   email: string;
+  /** The account already existed (signed up again). */
+  resignup?: boolean;
   /** Lets the user go back and fix the address (bad_address). */
   onEditAddress?: () => void;
 }
 
 /** Tells the user what happened to their verification email, and offers a resend (60 s cooldown). */
-function VerificationNotice({ outcome, email, onEditAddress }: VerificationNoticeProps) {
-  const notice = outcomeNotice(outcome, email);
+function VerificationNotice({ outcome, email, resignup = false, onEditAddress }: VerificationNoticeProps) {
+  const notice = outcomeNotice(outcome, email, resignup);
   // The server just sent (or just skipped sending) a link, so the wait starts now.
   const { secondsLeft, start } = useResendCooldown(outcome === 'sent' || outcome === 'recent');
   const [isSending, setIsSending] = useState(false);

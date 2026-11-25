@@ -15,7 +15,7 @@ import { isFunnelV2Enabled } from '@/funnel/cta';
 import { getFunnelSessionId } from '@/funnel/session';
 import { resolvePostAuthPath } from '@/hooks/useFunnelRedirect';
 import VerificationNotice from '@/components/VerificationNotice';
-import { readVerificationOutcome, TOO_MANY_ATTEMPTS_MESSAGE, type VerificationOutcome } from '@/lib/verification-email';
+import { isResignup, readVerificationOutcome, TOO_MANY_ATTEMPTS_MESSAGE, type VerificationOutcome } from '@/lib/verification-email';
 
 /** Quiz session to link on signup/login; only sent when Funnel V2 is on. */
 const funnelLinkBody = (): { funnelSessionId?: string } => {
@@ -44,7 +44,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
   const { login, updateAuthData } = useAuth();
   const { setUserData } = useUser();
   // After signup: what happened to the verification email (the form stays mounted so edits are kept).
-  const [verification, setVerification] = React.useState<{ outcome: VerificationOutcome; email: string } | null>(null);
+  const [verification, setVerification] = React.useState<{ outcome: VerificationOutcome; email: string; resignup: boolean } | null>(null);
 
   /** Store the session the backend just issued and go to the app. */
   const completeSignIn = async (accessToken: string, user: any) => {
@@ -158,7 +158,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
           }
 
           try { sessionStorage.setItem('vireact-pending-verify-email', values.email); } catch { /* ignore */ }
-          setVerification({ outcome: readVerificationOutcome(response.data.data), email: values.email });
+          setVerification({ outcome: readVerificationOutcome(response.data.data), email: values.email, resignup: isResignup(user) });
 
           if (onSuccess) {
             onSuccess();
@@ -212,7 +212,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
       } else if (isLogin && error.response?.status === 429) {
         setStatus({ formError: 'Too many attempts. Wait a few minutes, or reset your password.' });
       } else if (error.response?.status === 429) {
-        setStatus({ formError: TOO_MANY_ATTEMPTS_MESSAGE });
+        setStatus({ formError: error.response?.data?.message || TOO_MANY_ATTEMPTS_MESSAGE });
       } else if (error.response?.status === 401 && isLogin) {
         // Generic credential failure on login. Surface as a top-level form
         // error so neither email nor password gets a misleading field marker.
@@ -255,6 +255,7 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
         <VerificationNotice
           outcome={verification.outcome}
           email={verification.email}
+          resignup={verification.resignup}
           onEditAddress={handleEditAddress}
         />
       )}
