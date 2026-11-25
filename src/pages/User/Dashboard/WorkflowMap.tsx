@@ -35,7 +35,7 @@ function Orb({ Icon, state }: { Icon: LucideIcon; state: NodeState }) {
  * step, which spins; every step links to its feature. One spotlight underneath says what to do next.
  * New creators see the same pipeline, pointed at their first analysis.
  */
-export function WorkflowMap({ data, headingId }: { data: WorkflowData; headingId: string }) {
+export function WorkflowMap({ data, headingId, showSpotlight = true }: { data: WorkflowData; headingId: string; showSpotlight?: boolean }) {
   const steps = workflowSteps(data);
   const { next, done } = workflowProgress(data);
   const spotlight = workflowSpotlight(data);
@@ -98,6 +98,7 @@ export function WorkflowMap({ data, headingId }: { data: WorkflowData; headingId
         })}
       </ol>
 
+      {showSpotlight && (
       <div className="relative flex flex-col gap-4 border-t border-line bg-white/[0.02] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-accent uppercase">
@@ -116,6 +117,7 @@ export function WorkflowMap({ data, headingId }: { data: WorkflowData; headingId
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </ButtonLink>
       </div>
+      )}
     </section>
   );
 }

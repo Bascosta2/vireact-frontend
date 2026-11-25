@@ -23,7 +23,7 @@ import { EmptyState } from '@/components/app/EmptyState';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { ChartCard, LegendKey, TooltipBox } from '@/components/charts/ChartCard';
 import { AXIS_PROPS, CHART, formatCompact, formatNumber, formatShortDate } from '@/components/charts/chart-theme';
-import { cleanVideoTitle } from '@/lib/video-file';
+import { displayVideoTitle } from '@/lib/video-file';
 import { cn } from '@/lib/utils';
 import { CHECK_LABELS, OUTCOME_GLYPH, OUTCOME_META } from './labels';
 import type { OpenLog } from './index';
@@ -64,7 +64,7 @@ function Kpi({ label, value, hint, delta }: { label: string; value: string; hint
   );
 }
 
-const title = (t: string) => cleanVideoTitle(t);
+const title = (t: string) => displayVideoTitle(t);
 
 /** Plain-language read of a rank correlation. */
 const describeDriver = (metric: string, rho: number) => {

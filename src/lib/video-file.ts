@@ -73,16 +73,56 @@ export const repairMojibake = (text: string): string => {
 /** File names that are only an id (platform downloads, uuids): nothing a person would recognise. */
 const MACHINE_NAME = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[A-Za-z0-9_-]{28,})$/i;
 
+/** Names a phone or camera stamps on a file ("ScreenRecording 10-12-2026 14-03", "IMG_4821", "RPReplay_Final1699"). */
+const DEVICE_NAME = /^(?:screen ?recording|screen recording|rpreplay|img|vid|pxl|mvi|dsc|trim|snapchat|video|movie|clip|untitled|export|final|copy)(?:[\s_.:-]*(?:final|copy|\d+|[0-9a-f]{6,}|\(\d+\)|am|pm))*$/i;
+
+/** True when a file name says nothing about the video (an id or a device stamp). */
+export const isMachineName = (filename: string | undefined | null): boolean => {
+  const raw = (filename ?? '').trim().replace(/\.[a-z0-9]{2,4}$/i, '');
+  if (!raw) return true;
+  return MACHINE_NAME.test(raw) || DEVICE_NAME.test(raw) || DEVICE_NAME.test(raw.replace(/[\d\s_.:-]+$/, ''));
+};
+
 /** Title for lists and pickers: cleaned, encoding repaired, and "Video from Apr 27" for id-only names. */
 export const displayVideoTitle = (filename: string | undefined, createdAt?: string): string => {
   const raw = (filename ?? '').trim().replace(/\.[a-z0-9]{2,4}$/i, '');
   const date = createdAt ? new Date(createdAt) : null;
-  if (!raw || MACHINE_NAME.test(raw)) {
+  if (!raw || isMachineName(raw)) {
     return date && !Number.isNaN(date.getTime())
       ? `Video from ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
       : 'Untitled video';
   }
   return cleanVideoTitle(repairMojibake(filename ?? ''));
+};
+
+const shortDate = (createdAt?: string) => {
+  const date = createdAt ? new Date(createdAt) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+};
+
+/** What a list needs to name a video. */
+export interface NameableVideo {
+  filename?: string;
+  title?: string | null;
+  sourceTitle?: string | null;
+  autoTitle?: string | null;
+  createdAt?: string;
+}
+
+/**
+ * The name to show for a video everywhere: the creator's own name, then the platform title, then a
+ * readable file name, then the first words spoken in it, then "Video from Nov 12".
+ */
+export const videoName = (v: NameableVideo): string => {
+  const own = v.title?.trim();
+  if (own) return own;
+  const source = v.sourceTitle?.trim();
+  if (source) return cleanVideoTitle(repairMojibake(source));
+  if (!isMachineName(v.filename)) return cleanVideoTitle(repairMojibake(v.filename ?? ''));
+  const spoken = v.autoTitle?.trim();
+  if (spoken) return `“${spoken.charAt(0).toUpperCase()}${spoken.slice(1)}”`;
+  const day = shortDate(v.createdAt);
+  return day ? `Video from ${day}` : 'Untitled video';
 };
 
 export const formatFileSize = (bytes: number): string => {

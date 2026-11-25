@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/app/EmptyState';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { ScoreRing } from '@/components/app/ScoreRing';
 import { formatCompact, formatShortDate } from '@/components/charts/chart-theme';
-import { cleanVideoTitle } from '@/lib/video-file';
+import { displayVideoTitle } from '@/lib/video-file';
 import { cn } from '@/lib/utils';
 import { OUTCOME_GLYPH, OUTCOME_META, PLATFORM_LABELS } from './labels';
 import type { OpenLog } from './index';
@@ -136,7 +136,7 @@ export default function VideosTab({ onLog, dataVersion }: { onLog: OpenLog; data
                         <Thumb row={r} />
                         <div className="min-w-0">
                           <Link to={`/videos/${r.videoId}`} className="app-focus block max-w-[22rem] truncate rounded font-medium text-fg hover:underline">
-                            {cleanVideoTitle(r.title)}
+                            {displayVideoTitle(r.title, r.createdAt)}
                           </Link>
                           <p className="text-xs text-fg-muted">Analyzed {formatShortDate(r.createdAt)}</p>
                         </div>
@@ -166,7 +166,7 @@ export default function VideosTab({ onLog, dataVersion }: { onLog: OpenLog; data
                       <OutcomeBadge row={r} />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button size="sm" variant={r.latestViews == null ? 'primary' : 'secondary'} onClick={() => onLog(r.videoId, cleanVideoTitle(r.title))}>
+                      <Button size="sm" variant="secondary" onClick={() => onLog(r.videoId, displayVideoTitle(r.title, r.createdAt))}>
                         {r.latestViews == null ? 'Log results' : 'Update'}
                       </Button>
                     </td>
@@ -184,7 +184,7 @@ export default function VideosTab({ onLog, dataVersion }: { onLog: OpenLog; data
                   <Thumb row={r} />
                   <div className="min-w-0 flex-1">
                     <Link to={`/videos/${r.videoId}`} className="app-focus block truncate rounded font-medium text-fg">
-                      {cleanVideoTitle(r.title)}
+                      {displayVideoTitle(r.title, r.createdAt)}
                     </Link>
                     <p className="text-xs text-fg-muted">
                       Analyzed {formatShortDate(r.createdAt)}
@@ -206,7 +206,7 @@ export default function VideosTab({ onLog, dataVersion }: { onLog: OpenLog; data
                     <dd className="font-semibold text-fg">{r.latestViews != null ? formatCompact(r.latestViews) : 'Not logged'}</dd>
                   </div>
                 </dl>
-                <Button size="sm" fullWidth className="mt-3" variant={r.latestViews == null ? 'primary' : 'secondary'} onClick={() => onLog(r.videoId, cleanVideoTitle(r.title))}>
+                <Button size="sm" fullWidth className="mt-3" variant="secondary" onClick={() => onLog(r.videoId, displayVideoTitle(r.title, r.createdAt))}>
                   {r.latestViews == null ? 'Log results' : 'Update results'}
                 </Button>
               </li>

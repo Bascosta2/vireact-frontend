@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardPen, Film, RefreshCw, Trash2 } from 'lucide-react';
+import { ClipboardPen, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { ANALYSIS_STATUS } from '@/constants';
 import { getVideoStatus, type Video } from '@/api/video';
 import { Button } from '@/components/app/Button';
@@ -10,7 +10,11 @@ import { StatusPill } from '@/components/app/StatusPill';
 import { formatVideoDate, isInProgress, statusKind } from '@/lib/video-status';
 import { Tooltip } from '@/components/app/Tooltip';
 import { featureLabel } from '@/data/analysis-features';
-import { cleanVideoTitle } from '@/lib/video-file';
+import { videoName } from '@/lib/video-file';
+import { VideoThumb } from '@/components/app/VideoThumb';
+import { InlineRename } from '@/components/app/InlineRename';
+import { InfoTip } from '@/components/app/InfoTip';
+import { cn } from '@/lib/utils';
 
 const RESULTS_NUDGE_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -24,10 +28,16 @@ interface VideoCardProps {
   onChatClick: (videoId: string) => void;
   deletingVideoId?: string | null;
   reanalyzingVideoId?: string | null;
+  /** Bulk selection (Library). */
+  selected?: boolean;
+  onToggleSelect?: (videoId: string) => void;
+  /** Called after an inline rename with the saved name (null: back to the automatic name). */
+  onRenamed?: (videoId: string, title: string | null) => void;
 }
 
-export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, deletingVideoId = null, reanalyzingVideoId = null }: VideoCardProps) {
+export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, deletingVideoId = null, reanalyzingVideoId = null, selected = false, onToggleSelect, onRenamed }: VideoCardProps) {
   const [fetchedErrorSummary, setFetchedErrorSummary] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
   const kind = statusKind(video.analysisStatus, video.uploadStatus);
   const listErrorSummary = typeof video.errorSummary === 'string' && video.errorSummary.trim() ? video.errorSummary.trim() : null;
 
@@ -50,7 +60,7 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
     };
   }, [video.analysisStatus, video._id, listErrorSummary]);
 
-  const title = cleanVideoTitle(video.filename || '');
+  const title = videoName(video);
   const features = video.selectedFeatures ?? [];
   const hasScore = kind === 'complete' && typeof video.viralityScore === 'number' && !Number.isNaN(video.viralityScore);
   const errorSummary = listErrorSummary || fetchedErrorSummary;
@@ -62,15 +72,20 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
   return (
     <article
       aria-labelledby={`video-title-${video._id}`}
-      className="app-glass flex h-full gap-4 rounded-xl p-3"
+      className={cn('app-glass group/card relative flex h-full gap-4 rounded-xl p-3', selected && 'ring-2 ring-accent/60')}
     >
-      <div className="relative h-[136px] w-[76px] shrink-0 overflow-hidden rounded-lg bg-canvas">
-        {video.thumbnailUrl ? (
-          <img src={video.thumbnailUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-fg-subtle" aria-hidden="true">
-            <Film className="h-6 w-6" />
-          </div>
+      <div className="relative shrink-0">
+        <VideoThumb video={video} className="h-[136px] w-[76px] rounded-lg" />
+        {onToggleSelect && (
+          <label
+            className={cn(
+              'absolute left-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-black/60 transition-opacity focus-within:opacity-100 group-hover/card:opacity-100',
+              selected ? 'opacity-100' : 'opacity-0 [@media(hover:none)]:opacity-100'
+            )}
+          >
+            <input type="checkbox" checked={selected} onChange={() => onToggleSelect(video._id)} className="h-4 w-4 accent-[#E86735]" />
+            <span className="sr-only">Select {title}</span>
+          </label>
         )}
       </div>
 
@@ -78,11 +93,21 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
         <StatusPill kind={kind} className="self-start" />
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 id={`video-title-${video._id}`} className="text-base font-medium text-fg">
-              <Tooltip content={video.filename || title} className="flex w-full" triggerClassName="block flex-1 truncate">
+            {renaming ? (
+              <InlineRename
+                videoId={video._id}
+                initial={video.title ?? title}
+                onDone={(saved) => {
+                  setRenaming(false);
+                  if (saved !== undefined) onRenamed?.(video._id, saved);
+                }}
+              />
+            ) : (
+              <h2 id={`video-title-${video._id}`} className="line-clamp-2 text-base font-medium leading-snug text-fg [overflow-wrap:anywhere]" title={video.filename && video.filename !== title ? `${title}
+File: ${video.filename}` : title}>
                 {title}
-              </Tooltip>
-            </h2>
+              </h2>
+            )}
             <p className="tabular mt-1 text-sm text-fg-muted">
               {formatVideoDate(video.createdAt)}
               {features.length > 0 && (
@@ -97,7 +122,12 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
               )}
             </p>
           </div>
-          {hasScore && <ScoreRing score={video.viralityScore as number} size={48} />}
+          {hasScore && (
+            <span className="flex shrink-0 items-start">
+              <ScoreRing score={video.viralityScore as number} size={48} />
+              <InfoTip term="viralityScore" label="the virality score" className="-ml-1" />
+            </span>
+          )}
         </div>
 
         {needsResults && (
@@ -119,7 +149,7 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
         <div className="mt-auto flex items-center justify-between gap-2">
           <Button
             size="sm"
-            variant={kind === 'complete' ? 'primary' : 'secondary'}
+            variant="secondary"
             aria-disabled={kind !== 'complete' || undefined}
             onClick={() => onChatClick(video._id)}
             className="h-11 px-4"
@@ -130,6 +160,12 @@ export default function VideoCard({ video, onDelete, onReanalyze, onChatClick, d
           <MoreActionsMenu
             label={`More actions for ${title}`}
             items={[
+              {
+                id: 'rename',
+                label: 'Rename',
+                icon: <Pencil className="h-4 w-4" aria-hidden="true" />,
+                onSelect: () => setRenaming(true),
+              },
               {
                 id: 'reanalyze',
                 label: isReanalyzing ? 'Re-analyzing' : 'Re-analyze',
