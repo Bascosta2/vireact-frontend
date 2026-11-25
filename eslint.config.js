@@ -20,4 +20,10 @@ export default tseslint.config([
       globals: globals.browser,
     },
   },
+  {
+    // Style themes export a theme object for the Remotion composition; their scene and overlay
+    // components are internal to it and never hot-swapped on their own.
+    files: ['src/remotion/styles/themes/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])

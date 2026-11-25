@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { APP_NAV_ITEMS, isNavActive } from '@/lib/app-nav';
 import { hookPath } from '@/remotion/skills/remotion-reel/hook-path';
-import { STYLE_IDS } from '@/remotion/styles/ids';
+import { ANIMATED_STYLE_IDS, LIBRARY_STYLE_IDS, PAINTED_STYLE_IDS, STYLE_IDS } from '@/remotion/styles/ids';
+import { LIBRARY } from '@/remotion/styles/library';
+import { STYLE_COVERS } from '@/remotion/styles/covers';
 import { STYLE_THEMES, themeFor } from '@/remotion/styles/registry';
 import { enterProgress, enterStyle } from '@/remotion/styles/motion';
 import { ANIMATION_STYLES, SKILLS, skillById } from './catalog';
@@ -31,10 +33,12 @@ describe('Skills Editor', () => {
     expect(skillById('nope')).toBeNull();
   });
 
-  it('lists the twenty styles, each its own skill with a theme the composition can draw', () => {
-    // Same ids as the backend registry (vireact-backend/src/service/editor/skills.js ANIMATION_STYLES):
-    // the 10 animation styles plus the 10 painted styles.
-    expect([...STYLE_IDS]).toEqual(['glow-sketch', 'comic-art', 'brick-build', 'pixel-art', 'chalkboard', 'retro-3d', 'flat-vector', 'minimal-line', 'cgi-motion', 'explainer-3d', 'watercolour', 'roman-mosaic', 'sumi-e', 'impasto-oil', 'nocturne-gouache', 'botanical-plate', 'paper-cut', 'art-nouveau', 'golden-hour', 'painted-anime']);
+  it('lists every style, each its own skill with a theme the composition can draw', () => {
+    // Same ids as the backend registry (vireact-backend/src/service/editor/skills.js): the 10 animation
+    // styles, the 10 painted styles, then the library (library.json, copied to the backend as is).
+    expect([...ANIMATED_STYLE_IDS, ...PAINTED_STYLE_IDS].length).toBe(20);
+    expect(LIBRARY_STYLE_IDS.length).toBe(111);
+    expect(new Set(STYLE_IDS).size).toBe(STYLE_IDS.length);
     expect(ANIMATION_STYLES.map((s) => s.id)).toEqual([...STYLE_IDS]);
     expect(SKILLS.map((s) => s.id)).toEqual(['remotion-reel', ...STYLE_IDS]);
     const names = new Set<string>();
@@ -48,11 +52,29 @@ describe('Skills Editor', () => {
       expect(theme?.id).toBe(s.id);
       expect(theme?.accent).toMatch(/^#[0-9A-F]{6}$/i);
       expect(theme!.transition.before + theme!.transition.after).toBeGreaterThan(4);
+      // Scene layouts need a scene; explainers keep the creator in a bubble; window layouts have a window.
+      if (s.layout === 'story' || s.layout === 'explainer') expect(theme?.Scene).toBeTruthy();
+      if (s.layout === 'explainer') expect(theme?.pip).toBeTruthy();
+      if (s.layout === 'window') expect(theme?.screen).toBeTruthy();
     }
-    expect(names.size).toBe(20);
-    // Trademarked names from the guides are renamed.
-    expect(SKILLS.map((s) => `${s.name} ${s.tagline}`).join(' ')).not.toMatch(/lego|ps2|playstation|ghibli/i);
+    expect(names.size).toBe(STYLE_IDS.length);
+    // Other companies' marks and creators' names from the sources are renamed or left out.
+    expect(SKILLS.map((s) => `${s.name} ${s.tagline} ${s.bestFor}`).join(' ')).not.toMatch(/lego|ps2|playstation|ghibli|hd-2d|backrooms|matrix|dan koe|zackd|clawd|reuters/i);
     expect(themeFor('remotion-reel')).toBeNull();
+  });
+
+  it('every library style is described once: copy, planner rules, sound palette and cover', () => {
+    for (const id of LIBRARY_STYLE_IDS) {
+      const e = LIBRARY[id];
+      expect(e, id).toBeTruthy();
+      expect(e!.accent).toBe(STYLE_THEMES[id].accent);
+      for (const k of ['tagline', 'bestFor', 'look', 'motion', 'hookRule', 'graphicsRule', 'ambient', 'captions', 'hook', 'graphics', 'transition', 'sound', 'source'] as const) expect(e![k].length, `${id}.${k}`).toBeGreaterThan(8);
+      expect(STYLE_COVERS[id].category).toBe(e!.category);
+      if (e!.layout === 'story' || e!.layout === 'explainer') expect(STYLE_COVERS[id].base).toBe('scene');
+    }
+    // Every section of the library has skills in it.
+    const used = new Set(ANIMATION_STYLES.flatMap((s) => [s.category, ...s.tags]));
+    for (const c of ['talking-head', 'any-footage', 'storytelling', 'explainer', 'data', 'product', 'news', 'retro', 'motion', 'cartoon', 'gaming', 'art', 'music']) expect(used.has(c as never), c).toBe(true);
   });
 
   it('accents match the backend, which sends them as the edit’s accent', () => {
@@ -62,7 +84,7 @@ describe('Skills Editor', () => {
       watercolour: '#E0533A', 'roman-mosaic': '#D9A441', 'sumi-e': '#C8102E', 'impasto-oil': '#E9A13B', 'nocturne-gouache': '#FFC978',
       'botanical-plate': '#4A7FD4', 'paper-cut': '#9FE8F5', 'art-nouveau': '#C9982F', 'golden-hour': '#FF8C42', 'painted-anime': '#3D9BE9',
     };
-    for (const id of STYLE_IDS) expect(STYLE_THEMES[id].accent).toBe(backend[id]);
+    for (const id of [...ANIMATED_STYLE_IDS, ...PAINTED_STYLE_IDS]) expect(STYLE_THEMES[id].accent).toBe(backend[id]);
   });
 
   it('entrances start hidden, settle visible and leave hidden', () => {
@@ -91,7 +113,9 @@ describe('Skills Editor', () => {
 describe('Skills library curation', () => {
   it('groups every skill by what it is for, and covers each on the kind of video it is for', async () => {
     const { STYLE_COVERS } = await import('@/remotion/styles/covers');
-    const byCat = (c: string) => SKILLS.filter((s) => s.category === c).map((s) => s.id);
+    // The hand-made sets (the library's sections are checked with library.json above).
+    const hand = new Set<string>(['remotion-reel', ...ANIMATED_STYLE_IDS, ...PAINTED_STYLE_IDS]);
+    const byCat = (c: string) => SKILLS.filter((s) => hand.has(s.id) && s.category === c).map((s) => s.id);
     expect(byCat('talking-head')).toEqual(['remotion-reel', 'chalkboard', 'flat-vector', 'minimal-line']);
     expect(byCat('any-footage')).toEqual(['glow-sketch', 'comic-art', 'brick-build', 'pixel-art', 'retro-3d', 'cgi-motion', 'explainer-3d']);
     expect(byCat('storytelling')).toEqual(['watercolour', 'roman-mosaic', 'sumi-e', 'impasto-oil', 'nocturne-gouache', 'botanical-plate', 'paper-cut', 'art-nouveau', 'golden-hour', 'painted-anime']);
@@ -102,13 +126,11 @@ describe('Skills library curation', () => {
     for (const s of SKILLS) expect(s.shown.length).toBeGreaterThan(3);
   });
 
-  it('every storytelling style paints a scene; no other style does', async () => {
-    const { STYLE_COVERS } = await import('@/remotion/styles/covers');
-    const { STYLE_THEMES } = await import('@/remotion/styles/registry');
-    for (const id of STYLE_IDS) {
-      const story = STYLE_COVERS[id].category === 'storytelling';
-      expect(Boolean(STYLE_THEMES[id].Scene)).toBe(story);
-      expect(STYLE_COVERS[id].base === 'scene').toBe(story);
+  it('every scene style (storytelling, explainers) paints a scene; no other style does', () => {
+    for (const s of ANIMATION_STYLES) {
+      const scene = s.layout === 'story' || s.layout === 'explainer';
+      expect(Boolean(STYLE_THEMES[s.id as keyof typeof STYLE_THEMES].Scene), s.id).toBe(scene);
+      expect(STYLE_COVERS[s.id as keyof typeof STYLE_COVERS].base === 'scene', s.id).toBe(scene);
     }
   });
 });

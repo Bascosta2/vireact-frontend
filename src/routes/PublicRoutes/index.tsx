@@ -27,6 +27,7 @@ const FAQs = lazy(() => import('@/pages/PreLogin/FAQs'));
 const GetInTouch = lazy(() => import('@/pages/PreLogin/GetInTouch'));
 const GoogleCallback = lazy(() => import('@/components/GoogleCallback'));
 const VerifyEmail = lazy(() => import('@/pages/PreLogin/VerifyEmail'));
+const ConfirmEmailChange = lazy(() => import('@/pages/PreLogin/ConfirmEmailChange'));
 const ResendVerification = lazy(() => import('@/pages/PreLogin/ResendVerification'));
 const ForgotPassword = lazy(() => import('@/pages/PreLogin/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
@@ -58,6 +59,7 @@ function PublicRoutes() {
                 <Route path='/login' element={<Login />} />
                 <Route path='/signup' element={<Signup />} />
                 <Route path='/verify-email' element={<VerifyEmail />} />
+                <Route path='/confirm-email-change' element={<ConfirmEmailChange />} />
                 <Route path='/resend-verification' element={<ResendVerification />} />
                 <Route path='/forgot-password' element={<ForgotPassword />} />
                 <Route path='/reset-password' element={<ResetPassword />} />

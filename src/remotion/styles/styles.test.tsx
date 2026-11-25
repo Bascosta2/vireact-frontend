@@ -35,6 +35,7 @@ const props = (id: (typeof STYLE_IDS)[number]): EditProps => ({
   graphics: [
     graphic('counter', 40), graphic('headline', 80), graphic('slam', 125, { text: 'BOOM' }), graphic('pill', 170), graphic('list', 215),
     graphic('callout', 260), graphic('visual', 300, { visual: 'brain' }), graphic('lower_third', 340), graphic('cta', 380),
+    graphic('chart', 400, { text: 'Revenue', items: ['2023: $1.2M', '2024: $2.6M', '2025: $4.4M'], durationFrames: 20 }),
   ],
   transitions: [{ type: 'punch', frame: 60 }],
   effects: [{ type: 'shake', frame: 125 }],
@@ -63,6 +64,10 @@ describe('animation styles', () => {
       if (at < 40) expect(html).toContain(`data-hook="${id}"`);
     }
     expect(frame(EditComposition as never, p, 310, p.durationInFrames)).toContain('data-visual="brain"');
+    // The chart graphic, and the scene layout (with the creator's bubble for explainers).
+    expect(frame(EditComposition as never, p, 412, p.durationInFrames)).toContain('$4.4M');
+    const scene = { ...p, skill: { ...p.skill!, layout: 'scene' as const } };
+    expect(frame(EditComposition as never, scene, 130, p.durationInFrames)).toContain(`data-captions="${id}"`);
   });
 
   it.each(STYLE_IDS)('%s has a library showcase', (id) => {

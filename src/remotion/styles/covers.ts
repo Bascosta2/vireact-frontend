@@ -1,5 +1,6 @@
 import type { ScreenId } from '../showcase/screens';
 import type { StyleId } from './ids';
+import { LIBRARY } from './library';
 
 /**
  * What each style is for, and the cover the Skills library shows for it.
@@ -11,7 +12,20 @@ import type { StyleId } from './ids';
  *   storytelling  animated storytelling: the style paints a whole animated world and the creator's voice
  *                 narrates it (the edit shows the painted scene, not the camera). Covers show the scene.
  */
-export type StyleCategory = 'talking-head' | 'any-footage' | 'storytelling';
+export type StyleCategory =
+  | 'talking-head'
+  | 'any-footage'
+  | 'storytelling'
+  | 'explainer'
+  | 'data'
+  | 'product'
+  | 'news'
+  | 'retro'
+  | 'motion'
+  | 'cartoon'
+  | 'gaming'
+  | 'art'
+  | 'music';
 
 export interface StyleCover {
   category: StyleCategory;
@@ -28,7 +42,7 @@ export interface StyleCover {
 
 const STORY_LINES = ['once upon a', 'time far*', 'away there', 'was a story*'];
 
-export const STYLE_COVERS: Record<StyleId, StyleCover> = {
+const HAND_COVERS: Partial<Record<StyleId, StyleCover>> = {
   // Talking-head skills
   chalkboard: { category: 'talking-head', base: 'talking', shown: 'Talking head: tutorial', hook: ['Editing 101', 'the hook'], lines: ['today we', 'learn the', 'one rule*', 'that matters*'], graphic: true },
   'minimal-line': { category: 'talking-head', base: 'talking', shown: 'Talking head: founder', hook: ['Less,', 'but better'], lines: ['I cut', 'everything', 'that does not', 'matter*'], graphic: true },
@@ -56,5 +70,11 @@ export const STYLE_COVERS: Record<StyleId, StyleCover> = {
   'painted-anime': { category: 'storytelling', base: 'scene', shown: 'Story: that summer', hook: ['That summer,', 'we ran forever'], lines: STORY_LINES, graphic: false },
 };
 
+/** Every style's cover: the hand-made ones above, then the library's (library.json). */
+export const STYLE_COVERS = {
+  ...HAND_COVERS,
+  ...Object.fromEntries(Object.values(LIBRARY).map((e) => [e.id, { ...e.cover, category: e.category }])),
+} as Record<StyleId, StyleCover>;
+
 /** The cover frame for a still: the hook over the scene for stories, captions and the graphic otherwise. */
-export const coverFrame = (style: StyleId) => (STYLE_COVERS[style].category === 'storytelling' ? 28 : 104);
+export const coverFrame = (style: StyleId) => ((LIBRARY[style] ? LIBRARY[style]?.layout === 'story' : STYLE_COVERS[style].category === 'storytelling') ? 28 : 104);

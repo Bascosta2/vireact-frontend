@@ -66,3 +66,32 @@ export function parseCount(text: string): { prefix: string; value: number; suffi
 
 export const formatCount = (n: number, decimals: number, commas: boolean) =>
   n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: commas });
+
+/** Must match CHART_FIRST_SEC / CHART_STEP_SEC in the backend: when each bar of a chart starts to grow. */
+export const CHART_FIRST_SEC = 0.35;
+export const CHART_STEP_SEC = 0.4;
+/** How long one bar takes to grow. */
+export const CHART_GROW_SEC = 0.7;
+
+const UNIT: Record<string, number> = { k: 1e3, K: 1e3, m: 1e6, M: 1e6, b: 1e9, B: 1e9, bn: 1e9, t: 1e12, T: 1e12 };
+
+/**
+ * The bars of a chart graphic from its items ("2021: $1.2M", "Japan - 125M", "Teens 9h"): a label and a
+ * value, scaled by k/M/B so "$900K" and "$1.2M" compare correctly. Items without a number are dropped.
+ */
+export function chartBars(items: string[]): { label: string; value: number; text: string }[] {
+  const out: { label: string; value: number; text: string }[] = [];
+  for (const raw of items) {
+    const item = raw.trim();
+    const split = /^(.*?)(?:\s*[:=–—-]\s*|\s+)([^\s:=]*\d[\d.,]*\s*(?:[a-zA-Z%]{0,3})?)$/.exec(item);
+    if (!split) continue;
+    const label = split[1].trim();
+    const text = split[2].trim();
+    const m = /(\d[\d,]*(?:\.\d+)?)\s*([a-zA-Z]{0,2})/.exec(text);
+    if (!m) continue;
+    const value = Number(m[1].replace(/,/g, '')) * (UNIT[m[2]] ?? 1);
+    if (!Number.isFinite(value)) continue;
+    out.push({ label: label || text, value, text });
+  }
+  return out.slice(0, 6);
+}

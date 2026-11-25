@@ -1,4 +1,5 @@
 import Axios from './index';
+import { readEmailChange, type EmailChange } from '@/lib/verification-email';
 
 interface User {
     _id: string;
@@ -8,6 +9,7 @@ interface User {
     role: string;
     avatar?: string;
     isEmailVerified: boolean;
+    pendingEmail?: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -19,10 +21,15 @@ interface GetProfileResponse {
 interface UpdateProfileRequest {
     name: string;
     email: string;
+    /** Only needed when the email changes on an account that has a password. */
+    currentPassword?: string;
+    /** Cancels an email change that is waiting for confirmation. */
+    cancelEmailChange?: true;
 }
 
 interface UpdateProfileResponse {
     user: User;
+    emailChange: EmailChange | null;
 }
 
 interface UpdatePasswordRequest {
@@ -42,9 +49,11 @@ export const getProfile = async (): Promise<User> => {
 /**
  * Update user profile (name and email)
  */
-export const updateProfile = async (data: UpdateProfileRequest): Promise<User> => {
+export const updateProfile = async (
+    data: UpdateProfileRequest
+): Promise<{ user: User; emailChange: EmailChange | null }> => {
     const response = await Axios.patch<{ data: UpdateProfileResponse }>('/profile', data);
-    return response.data.data.user;
+    return { user: response.data.data.user, emailChange: readEmailChange(response.data.data) };
 };
 
 /**

@@ -29,7 +29,10 @@ import { loadFont as loadFedero } from '@remotion/google-fonts/Federo';
 import { loadFont as loadDMSerif } from '@remotion/google-fonts/DMSerifDisplay';
 import { loadFont as loadMPlusRounded } from '@remotion/google-fonts/MPLUSRounded1c';
 import { loadFont as loadZenMaru } from '@remotion/google-fonts/ZenMaruGothic';
+import { continueRender, delayRender } from 'remotion';
+import { FONT_MODULES } from './font-modules';
 import type { StyleId } from './ids';
+import { LIBRARY } from './library';
 
 /**
  * Each style's two fonts. They load the first time the style is drawn (not when the app starts), so an
@@ -46,7 +49,7 @@ const stack = (family: string, fallback: string) => `"${family}", ${fallback}`;
 const SANS = '"Helvetica Neue", Arial, sans-serif';
 const SERIF = 'Georgia, "Times New Roman", serif';
 
-const LOADERS: Record<StyleId, () => StyleFonts> = {
+const LOADERS: Partial<Record<StyleId, () => StyleFonts>> = {
   'glow-sketch': () => {
     const f = loadOutfit('normal', opts(['300', '600', '800']));
     return { display: stack(f.fontFamily, SANS), body: stack(f.fontFamily, SANS) };
@@ -131,6 +134,36 @@ const LOADERS: Record<StyleId, () => StyleFonts> = {
   }),
 };
 
+type FontModule = { loadFont: (style: string, opts: { weights: string[]; subsets: string[] }) => { waitUntilDone: () => Promise<unknown> } };
+const requested = new Set<string>();
+
+/**
+ * Loads a library font in the background (it is code-split, so styles only fetch their own). The render
+ * holds the frame until it arrives; the CSS already names the family, so text switches to it on load.
+ */
+function loadLibraryFont(mod: string, weights: string) {
+  const key = `${mod}:${weights}`;
+  const entry = FONT_MODULES[mod];
+  if (requested.has(key) || !entry) return;
+  requested.add(key);
+  const handle = delayRender(`Loading font ${mod}`);
+  entry
+    .load()
+    .then((m) => (m as FontModule).loadFont('normal', { weights: weights.split(','), subsets: ['latin'] }).waitUntilDone())
+    .catch(() => undefined)
+    .finally(() => continueRender(handle));
+}
+
+/** A library style's fonts (library.json). */
+function libraryFonts(id: StyleId): StyleFonts | null {
+  const e = LIBRARY[id];
+  if (!e) return null;
+  const [[d, dw], [b, bw]] = e.fonts;
+  loadLibraryFont(d, dw);
+  loadLibraryFont(b, bw);
+  return { display: stack(FONT_MODULES[d]?.family ?? d, SANS), body: stack(FONT_MODULES[b]?.family ?? b, SANS) };
+}
+
 const loaded = new Map<StyleId, StyleFonts>();
 
 export function styleFonts(id: StyleId): StyleFonts {
@@ -138,7 +171,7 @@ export function styleFonts(id: StyleId): StyleFonts {
   if (hit) return hit;
   let fonts: StyleFonts;
   try {
-    fonts = LOADERS[id]();
+    fonts = LOADERS[id]?.() ?? libraryFonts(id) ?? { display: SANS, body: SANS };
   } catch {
     // Outside a browser (tests) or a font error: fall back to system fonts rather than fail the edit.
     fonts = { display: SANS, body: SANS };

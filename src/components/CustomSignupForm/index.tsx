@@ -88,7 +88,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
 
   const initialValues: FormValues = {
     name: '',
-    email: '',
+    // After confirming a new email the confirm page sends people here with it filled in.
+    email: isLogin ? new URLSearchParams(window.location.search).get('email') ?? '' : '',
     password: '',
     ...(isLogin ? {} : { confirmPassword: '' })
   };
@@ -102,8 +103,8 @@ const CustomSignupForm: React.FC<CustomSignupFormProps> = ({
     email: Yup.string()
       .email('Invalid email address')
       .required('Email is required'),
-    password: Yup.string()
-      .min(6, 'Password must be at least 6 characters')
+    password: isLogin ? Yup.string().required('Password is required') : Yup.string()
+      .min(8, 'Password must be at least 8 characters')
       .required('Password is required'),
     ...(isLogin ? {} : {
       confirmPassword: Yup.string()

@@ -16,7 +16,7 @@ export const SFX_TYPES = [
   'suspense', 'glitch', 'static', 'zap', 'error', 'alert', 'power_down', 'pulse', 'heartbeat',
 ] as const;
 export type SfxType = (typeof SFX_TYPES)[number];
-export type GraphicType = 'slam' | 'pill' | 'headline' | 'lower_third' | 'counter' | 'list' | 'callout' | 'cta' | 'visual';
+export type GraphicType = 'slam' | 'pill' | 'headline' | 'lower_third' | 'counter' | 'list' | 'callout' | 'cta' | 'visual' | 'chart';
 export type TransitionType = 'punch' | 'whip' | 'flash' | 'glitch';
 export type EffectType = 'shake' | 'flash';
 export type Grade = 'vivid' | 'warm' | 'cool' | 'punchy_bw' | 'none';

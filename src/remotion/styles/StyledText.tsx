@@ -31,12 +31,17 @@ export function StyledCaptions({ pages, theme, accent, fonts }: { pages: Caption
     <AbsoluteFill data-captions={theme.id}>
       <div style={{ position: 'absolute', left: '50%', top: Math.round(height * captionCenter), transform: 'translate(-50%, -50%)' }}>
         <div style={{ whiteSpace: 'nowrap', textAlign: 'center', lineHeight: 1.15, ...look.box(c), fontSize: size, ...enterStyle(look.entrance, t, 0, local) }}>
-          {page.words.map((w, k) => (
-            <Fragment key={`${w.i}-${k}`}>
-              <span style={look.word(w.emphasis, c)}>{w.text}</span>
-              {k === page.words.length - 1 ? null : ' '}
-            </Fragment>
-          ))}
+          {page.words.map((w, k) => {
+            // Kinetic styles bring each word in on its own, at the moment it is said.
+            const at = look.stagger ? (w.endFrame > w.startFrame ? Math.max(0, w.startFrame - page.startFrame) : k * 4) : 0;
+            const ws = look.stagger ? enterStyle(look.entrance, enterProgress(look.entrance, stepped(local - at, theme.step), fps, 2), 0, local - at) : null;
+            return (
+              <Fragment key={`${w.i}-${k}`}>
+                <span style={{ ...look.word(w.emphasis, c), ...(ws ? { display: 'inline-block', ...ws, opacity: local >= at ? ws.opacity : 0 } : {}) }}>{w.text}</span>
+                {k === page.words.length - 1 ? null : ' '}
+              </Fragment>
+            );
+          })}
         </div>
       </div>
     </AbsoluteFill>

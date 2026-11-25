@@ -10,7 +10,9 @@ import { styleFonts } from './fonts';
 import type { StyleId } from './ids';
 import { STYLE_THEMES } from './registry';
 import { StyledGraphic } from './StyledGraphics';
-import { StyleOverlay, StyleProgress, StyleScene, StyleTransitions } from './StyleLayers';
+import { PulseProvider, pulseFrom } from './pulse';
+import { StyleStage } from './Stage';
+import { StyleOverlay, StyleProgress, StyleTransitions } from './StyleLayers';
 import { StyledCaptions, StyledHook } from './StyledText';
 
 /**
@@ -66,11 +68,11 @@ export function StyleShowcase({ style, src = SHOWCASE_SRC, still = null }: { sty
   // A slow push-in, as every edit has.
   const push = 1 + 0.035 * interpolate(frame, [0, SHOWCASE_FRAMES], [0, 1]);
   const camera = `translate(${cam.x}%, ${cam.y}%) rotate(${cam.rotate}deg) ${cam.rotateY ? `perspective(1800px) rotateY(${cam.rotateY}deg) ` : ''}scale(${cam.scale * push})`;
-  const blur = cam.blur > 0.2 ? ` blur(${cam.blur.toFixed(1)}px)` : '';
+  const pages = pagesFor(cover.lines);
 
+  // The footage the cover shows: the talking take (also in a scene's bubble), a slide deck, or a sample screen.
   let base: ReactNode;
-  if (scene) base = <StyleScene theme={theme} accent={accent} fonts={fonts} />;
-  else if (cover.base === 'talking') base = <Take />;
+  if (scene || cover.base === 'talking' || cover.base === 'scene') base = <Take />;
   else if (cover.base === 'talking-panel')
     base = (
       <AbsoluteFill>
@@ -80,13 +82,14 @@ export function StyleShowcase({ style, src = SHOWCASE_SRC, still = null }: { sty
         </TwoThirdsPanel>
       </AbsoluteFill>
     );
-  else base = <SampleScreen id={cover.base === 'scene' ? 'app' : cover.base} />;
+  else base = <SampleScreen id={cover.base} />;
 
   const sample: Graphic = { type: theme.sample.type, startFrame: GRAPHIC_FROM, durationFrames: SHOWCASE_FRAMES - GRAPHIC_FROM, text: theme.sample.text, subtext: theme.sample.subtext ?? '', items: theme.sample.items ?? [], focusX: 0.5, focusY: 0.5 };
   return (
     <ShowcaseSource src={src} still={still}>
+      <PulseProvider value={pulseFrom(pages)}>
       <AbsoluteFill style={{ background: '#000', overflow: 'hidden' }}>
-        <AbsoluteFill style={{ transform: camera, filter: scene ? blur.trim() || undefined : `${theme.footage}${blur}` }}>{base}</AbsoluteFill>
+        <StyleStage theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} scene={scene} footage={base} camera={{ transform: camera, blur: cam.blur }} />
         <StyleOverlay theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} scene={scene} />
         <Sequence from={0} durationInFrames={HOOK_FRAMES} layout="none">
           <StyledHook lines={cover.hook} durationFrames={HOOK_FRAMES} theme={theme} accent={accent} fonts={fonts} />
@@ -96,10 +99,11 @@ export function StyleShowcase({ style, src = SHOWCASE_SRC, still = null }: { sty
             <StyledGraphic g={sample} theme={theme} accent={accent} fonts={fonts} />
           </Sequence>
         )}
-        <StyledCaptions pages={pagesFor(cover.lines)} theme={theme} accent={accent} fonts={fonts} />
+        <StyledCaptions pages={pages} theme={theme} accent={accent} fonts={fonts} />
         <StyleTransitions theme={theme} accent={accent} fonts={fonts} frames={[CUT]} />
         <StyleProgress theme={theme} accent={accent} fonts={fonts} total={SHOWCASE_FRAMES} />
       </AbsoluteFill>
+      </PulseProvider>
     </ShowcaseSource>
   );
 }

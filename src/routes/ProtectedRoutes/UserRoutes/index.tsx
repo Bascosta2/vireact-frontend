@@ -23,6 +23,7 @@ const SubscriptionPlans = lazy(() => import('@/pages/User/SubscriptionPlans'));
 const Trial = lazy(() => import('@/pages/User/Trial'));
 const ResetPassword = lazy(() => import('@/pages/PreLogin/ResetPassword'));
 const VerifyEmail = lazy(() => import('@/pages/PreLogin/VerifyEmail'));
+const ConfirmEmailChange = lazy(() => import('@/pages/PreLogin/ConfirmEmailChange'));
 
 /** Old upload steps now live on /new; query params (e.g. ?onboarding=1) carry over. */
 function RedirectKeepingQuery({ to }: { to: string }) {
@@ -54,6 +55,7 @@ function UserRoutes() {
                 <Route path='/reset-password' element={<ResetPassword />} />
                 {/* Verification links also work for signed-in users (otherwise the catch-all would drop the token). */}
                 <Route path='/verify-email' element={<VerifyEmail />} />
+                <Route path='/confirm-email-change' element={<ConfirmEmailChange />} />
                 <Route path='/new' element={<NewAnalysis />} />
                 <Route path='/upload' element={<RedirectKeepingQuery to="/new" />} />
                 <Route path='/features' element={<RedirectKeepingQuery to="/new" />} />

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
-import { BELOW_CAPTIONS, useCaptionBand, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, clamp, formatCount, parseCount } from '../graphics-utils';
+import { BELOW_CAPTIONS, useCaptionBand, CHART_FIRST_SEC, CHART_GROW_SEC, CHART_STEP_SEC, COUNTER_SEC, LIST_FIRST_SEC, LIST_STEP_SEC, calloutLabel, chartBars, clamp, formatCount, parseCount } from '../graphics-utils';
 import type { Graphic } from '../types';
 import { VISUALS } from '../visuals/registry';
 import type { StyleFonts } from './fonts';
 import { enterProgress, enterStyle, exitProgress, type Entrance } from './motion';
-import { stepped, type Ctx, type StyleTheme } from './theme';
+import { pointInFrame } from './stage-utils';
+import { stepped, type ChartBar, type Ctx, type StyleTheme } from './theme';
 
 /**
  * The nine graphic types in a style. Places on screen, lengths and timings match the standard graphics
@@ -147,8 +148,8 @@ const LABEL_HEIGHT = 90;
 function Callout(p: P) {
   const { g, c, theme } = p;
   const band = useCaptionBand();
-  const x = g.focusX * c.width;
-  const y = g.focusY * c.height;
+  // A style that shows the footage in a window points inside the window.
+  const { x, y } = pointInFrame(theme, g.focusX, g.focusY, c.width, c.height);
   const ring = Math.min(1, enterProgress(theme.entrance === 'step' ? 'step' : 'pop', p.f, c.fps));
   const out = exitProgress(c.frame, g.durationFrames);
   const { top: labelTop, above } = calloutLabel(y, c.height, LABEL_HEIGHT, band);
@@ -232,6 +233,42 @@ function Visual(p: P) {
   );
 }
 
+/** A plain chart on the style's card, for styles without a Chart of their own. */
+function DefaultChart({ c, theme, bars }: { c: Ctx; theme: StyleTheme; bars: ChartBar[] }) {
+  const max = Math.max(1e-9, ...bars.map((b) => b.value));
+  const [a, b2] = theme.colors;
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, height: 440 }}>
+      {bars.map((b, k) => (
+        <div key={k} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', minWidth: 0 }}>
+          <div style={{ fontSize: 34, whiteSpace: 'nowrap', opacity: b.grow > 0.6 ? 1 : 0, ...theme.title(c), color: c.accent }}>{b.text}</div>
+          <div style={{ width: '100%', height: `${(b.value / max) * 74 * b.grow}%`, marginTop: 8, borderRadius: theme.step > 1 ? 0 : 10, background: k === bars.length - 1 ? c.accent : k % 2 ? b2 : a }} />
+          <div style={{ marginTop: 10, fontSize: 28, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...theme.body(c) }}>{b.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A bar chart: the title, then one bar per item growing in turn (sounds land on each bar). */
+function Chart(p: P) {
+  const { g, c, theme } = p;
+  const m = motion(p, 8);
+  const bars: ChartBar[] = chartBars(g.items).map((b, k) => {
+    const at = Math.round((CHART_FIRST_SEC + k * CHART_STEP_SEC) * c.fps);
+    return { ...b, grow: interpolate(p.f - at, [0, CHART_GROW_SEC * c.fps], [0, 1], { ...clamp, easing: (v) => 1 - Math.pow(1 - v, 3) }) };
+  });
+  if (!bars.length) return null;
+  return (
+    <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: '11%' }}>
+      <div style={{ width: '86%', padding: '28px 34px', boxSizing: 'border-box', ...theme.card(c), ...m.style }}>
+        {g.text && <div style={{ fontSize: ts(p, 50), marginBottom: 16, lineHeight: 1.1, ...theme.title(c) }}>{g.text}</div>}
+        {theme.Chart ? <theme.Chart c={c} bars={bars} t={Math.min(1, m.t)} /> : <DefaultChart c={c} theme={theme} bars={bars} />}
+      </div>
+    </AbsoluteFill>
+  );
+}
+
 const RENDERERS: Record<Graphic['type'], (p: P) => ReactNode> = {
   slam: Slam,
   pill: Pill,
@@ -242,6 +279,7 @@ const RENDERERS: Record<Graphic['type'], (p: P) => ReactNode> = {
   callout: Callout,
   cta: Cta,
   visual: Visual,
+  chart: Chart,
 };
 
 /** One graphic in a style; place it inside a Sequence that starts at its startFrame. */
