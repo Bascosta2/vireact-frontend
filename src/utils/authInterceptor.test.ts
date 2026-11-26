@@ -116,7 +116,7 @@ describe('Google OAuth callback hydration', () => {
   }));
 
   // Serves /auth/me as the cookie session would: `me` is the signed-in user, or null for no cookie.
-  const runCallback = async (me: { _id: string; role: string; email: string } | null) => {
+  const runCallback = async (me: { _id: string; role: string; email: string } | null, staleToken = '') => {
     const seen: { url: string; auth: string }[] = [];
     const previous = h.Axios.defaults.adapter;
     h.Axios.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
@@ -126,6 +126,12 @@ describe('Google OAuth callback hydration', () => {
     };
     Object.values(oauth).forEach((fn) => fn.mockClear());
     memory.clear();
+    // The hook's updateAuthData goes to the real store, so the real request interceptor sees it.
+    const { store } = await import('@/redux/store');
+    const { setAuthData } = await import('@/redux/slices/auth-slice');
+    oauth.updateAuthData.mockImplementation((data) => { store.dispatch(setAuthData(data)); });
+    store.dispatch(setAuthData({ token: staleToken, role: staleToken ? 'user' : null, user: null }));
+    if (staleToken) memory.set('accessToken', staleToken);
     h.location.pathname = '/auth/google/callback';
     h.location.search = `?auth=success&data=${attackerData}`;
     const replaceState = window.history.replaceState as ReturnType<typeof vi.fn>;
@@ -148,8 +154,8 @@ describe('Google OAuth callback hydration', () => {
     const { seen, replaceState } = await runCallback({ _id: 'victim', role: 'user', email: 'victim@b.co' });
     expect(seen.map((r) => r.url)).toEqual(['/auth/me']);
     expect(seen[0].auth).not.toContain('attacker-token');
-    expect(oauth.updateAuthData).toHaveBeenCalledTimes(1);
-    expect(oauth.updateAuthData.mock.calls[0][0]).toMatchObject({ token: '', user: { id: 'victim' } });
+    expect(oauth.updateAuthData).toHaveBeenLastCalledWith(expect.objectContaining({ token: '', user: expect.objectContaining({ id: 'victim' }) }));
+    expect(oauth.updateAuthData.mock.calls.some(([d]) => d.token)).toBe(false);
     expect(memory.get('accessToken')).toBeUndefined();
     expect(JSON.stringify([...memory.values()])).not.toContain('attacker');
     expect(replaceState).toHaveBeenCalledWith({}, 'Vireact', '/auth/google/callback');
@@ -159,10 +165,19 @@ describe('Google OAuth callback hydration', () => {
   it('without a session cookie the data param does not sign anyone in', async () => {
     const { replaceState } = await runCallback(null);
     expect(oauth.login).not.toHaveBeenCalled();
-    expect(oauth.updateAuthData).not.toHaveBeenCalled();
+    expect(oauth.updateAuthData.mock.calls.some(([d]) => d.token || d.user)).toBe(false);
     expect(memory.size).toBe(0);
     expect(replaceState).toHaveBeenCalledWith({}, 'Vireact', '/auth/google/callback');
     expect(oauth.navigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  it('drops a token stored before the callback so /auth/me goes out on the cookie alone', async () => {
+    const { seen } = await runCallback({ _id: 'victim', role: 'user', email: 'victim@b.co' }, 'stale-attacker-token');
+    expect(seen).toEqual([{ url: '/auth/me', auth: '' }]);
+    const { store } = await import('@/redux/store');
+    expect(store.getState().auth.token).toBe('');
+    expect(memory.get('accessToken')).toBeUndefined();
+    expect(oauth.updateAuthData).toHaveBeenLastCalledWith(expect.objectContaining({ user: expect.objectContaining({ id: 'victim' }) }));
   });
 });
 

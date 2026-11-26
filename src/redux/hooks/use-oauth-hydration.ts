@@ -83,6 +83,11 @@ export const useOAuthHydration = (opts: Options = {}) => {
         });
 
         const hydrateViaCookie = async () => {
+            // Drop any token already in the browser first: the backend prefers a Bearer header over the
+            // cookie, so a stale (or planted) token would make /auth/me answer for that account.
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            updateAuthData({ token: '', role: null, user: null });
             const res = await Axios.get<{ data: { user: any } }>('/auth/me');
             const user = res.data?.data?.user;
             if (!user || !user.role) {
@@ -99,9 +104,6 @@ export const useOAuthHydration = (opts: Options = {}) => {
             localStorage.setItem('auth_role', user.role);
             localStorage.setItem('auth_user', JSON.stringify(mapped));
             localStorage.setItem('auth_is_authenticated', 'true');
-            // Defensive cleanup: OAuth users must never have JS-readable tokens.
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
         };
 
         (async () => {
