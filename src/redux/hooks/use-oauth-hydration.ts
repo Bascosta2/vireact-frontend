@@ -17,15 +17,16 @@ type Options = {
 /**
  * Hydrate Redux + localStorage after a Google OAuth round-trip.
  *
- * Three inputs off window.location.search:
- *  - ?error=<msg>        toast + strip param, no nav
- *  - ?auth=success&data= legacy inline path: decode tokens + user, persist
- *                        (kept for future inline-token flows; backend does not
- *                         currently emit `data`)
- *  - ?auth=success       cookie path: GET /auth/me via HttpOnly cookie,
- *                        populate Redux user/role/isAuthenticated only.
- *                        Tokens intentionally NOT persisted client-side for
- *                        OAuth users (HttpOnly cookie is the only store).
+ * Two inputs off window.location.search:
+ *  - ?error=<msg>   toast + strip param, no nav
+ *  - ?auth=success  cookie path: GET /auth/me via HttpOnly cookie,
+ *                   populate Redux user/role/isAuthenticated only.
+ *                   Tokens intentionally NOT persisted client-side for
+ *                   OAuth users (HttpOnly cookie is the only store).
+ *
+ * Identity is never read from the URL. Anyone can craft a link, so a token or
+ * user in the query (e.g. a `data` param) would let an attacker sign a victim
+ * into the attacker's account. Every query param is stripped either way.
  */
 export const useOAuthHydration = (opts: Options = {}) => {
     const {
@@ -44,7 +45,6 @@ export const useOAuthHydration = (opts: Options = {}) => {
 
         const params = new URLSearchParams(window.location.search);
         const authStatus = params.get('auth');
-        const dataParam = params.get('data');
         const errorParam = params.get('error');
         // Set by the backend Google callback: `new=1` for a just-created account,
         // `next` for the funnel post-auth destination (only when Funnel V2 is on).
@@ -82,32 +82,6 @@ export const useOAuthHydration = (opts: Options = {}) => {
             preferences: u?.preferences || {},
         });
 
-        const hydrateLegacy = () => {
-            if (!dataParam) return false;
-            try {
-                const decoded = JSON.parse(decodeURIComponent(dataParam));
-                if (!decoded?.user?.role) return false;
-                const mapped = mapUser(decoded.user);
-                login(true);
-                updateAuthData({
-                    token: decoded.accessToken,
-                    role: decoded.user.role,
-                    user: mapped,
-                });
-                setUserData(mapped);
-                if (decoded.accessToken) {
-                    localStorage.setItem('accessToken', decoded.accessToken);
-                }
-                localStorage.setItem('auth_role', decoded.user.role);
-                localStorage.setItem('auth_user', JSON.stringify(mapped));
-                localStorage.setItem('auth_is_authenticated', 'true');
-                return true;
-            } catch (e) {
-                console.error('[OAuth] failed to decode data param', e);
-                return false;
-            }
-        };
-
         const hydrateViaCookie = async () => {
             const res = await Axios.get<{ data: { user: any } }>('/auth/me');
             const user = res.data?.data?.user;
@@ -131,12 +105,6 @@ export const useOAuthHydration = (opts: Options = {}) => {
         };
 
         (async () => {
-            if (hydrateLegacy()) {
-                stripQuery();
-                if (showToastOnSuccess) SuccessNotification('Login successful!');
-                navigate(redirectOnSuccess, { replace: true });
-                return;
-            }
             try {
                 await hydrateViaCookie();
                 trackGoogleAuth();

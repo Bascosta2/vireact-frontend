@@ -1,6 +1,28 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
 import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios';
 
+// OAuth hydration test doubles. Without a DOM, run the hook's effect inline and stand in for the
+// Redux/router hooks it calls.
+const oauth = vi.hoisted(() => ({
+  login: vi.fn(),
+  updateAuthData: vi.fn(),
+  setUserData: vi.fn(),
+  navigate: vi.fn(),
+}));
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react')>()),
+  useEffect: (effect: () => void) => { effect(); },
+  useRef: <T,>(initial: T) => ({ current: initial }),
+}));
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => oauth.navigate,
+}));
+vi.mock('@/redux/hooks/use-auth', () => ({ useAuth: () => ({ login: oauth.login, updateAuthData: oauth.updateAuthData }) }));
+vi.mock('@/redux/hooks/use-user', () => ({ useUser: () => ({ setUserData: oauth.setUserData }) }));
+vi.mock('@/utils/toast', () => ({ SuccessNotification: vi.fn(), ErrorNotification: vi.fn() }));
+vi.mock('@/lib/analytics', () => ({ track: vi.fn() }));
+
 // Minimal browser globals: the auth store reads localStorage when it loads.
 const memory = new Map<string, string>();
 const stubStorage = {
@@ -14,15 +36,15 @@ type Harness = {
   Axios: typeof import('@/api').default;
   calls: { refresh: number; api: string[] };
   setRefreshResult: (ok: boolean) => void;
-  location: { pathname: string; href: string };
+  location: { pathname: string; href: string; search: string };
 };
 
 let h: Harness;
 
 beforeAll(async () => {
   vi.stubGlobal('localStorage', stubStorage);
-  const location = { pathname: '/dashboard', href: '/dashboard' };
-  vi.stubGlobal('window', { location });
+  const location = { pathname: '/dashboard', href: '/dashboard', search: '' };
+  vi.stubGlobal('window', { location, history: { replaceState: vi.fn() } });
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -84,6 +106,63 @@ describe('auth interceptor', () => {
     await expect(h.Axios.get('/videos')).rejects.toBeTruthy();
     expect(h.calls.refresh).toBe(0);
     expect(h.location.href).toBe('/pricing');
+  });
+});
+
+describe('Google OAuth callback hydration', () => {
+  const attackerData = encodeURIComponent(JSON.stringify({
+    accessToken: 'attacker-token',
+    user: { _id: 'attacker', role: 'user', email: 'attacker@evil.test' },
+  }));
+
+  // Serves /auth/me as the cookie session would: `me` is the signed-in user, or null for no cookie.
+  const runCallback = async (me: { _id: string; role: string; email: string } | null) => {
+    const seen: { url: string; auth: string }[] = [];
+    const previous = h.Axios.defaults.adapter;
+    h.Axios.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      seen.push({ url: config.url ?? '', auth: String(config.headers?.Authorization ?? '') });
+      if (me) return { data: { data: { user: me } }, status: 200, statusText: '200', headers: {}, config };
+      throw Object.assign(new Error('HTTP 401'), { config, response: { status: 401, data: {}, config }, isAxiosError: true });
+    };
+    Object.values(oauth).forEach((fn) => fn.mockClear());
+    memory.clear();
+    h.location.pathname = '/auth/google/callback';
+    h.location.search = `?auth=success&data=${attackerData}`;
+    const replaceState = window.history.replaceState as ReturnType<typeof vi.fn>;
+    replaceState.mockClear();
+    // Stubbed only here: axios treats a global `document` as a browser when it loads.
+    vi.stubGlobal('document', { title: 'Vireact' });
+    try {
+      // Renamed so the hook can run outside a component here (its effect is inlined above).
+      const { useOAuthHydration: hydrateCallbackPage } = await import('@/redux/hooks/use-oauth-hydration');
+      hydrateCallbackPage({ redirectOnSuccess: '/dashboard', redirectOnFailure: '/login' });
+      await vi.waitFor(() => expect(oauth.navigate).toHaveBeenCalled());
+    } finally {
+      h.Axios.defaults.adapter = previous;
+      vi.stubGlobal('document', undefined);
+    }
+    return { seen, replaceState };
+  };
+
+  it('ignores a token in the data param and signs in only through /auth/me', async () => {
+    const { seen, replaceState } = await runCallback({ _id: 'victim', role: 'user', email: 'victim@b.co' });
+    expect(seen.map((r) => r.url)).toEqual(['/auth/me']);
+    expect(seen[0].auth).not.toContain('attacker-token');
+    expect(oauth.updateAuthData).toHaveBeenCalledTimes(1);
+    expect(oauth.updateAuthData.mock.calls[0][0]).toMatchObject({ token: '', user: { id: 'victim' } });
+    expect(memory.get('accessToken')).toBeUndefined();
+    expect(JSON.stringify([...memory.values()])).not.toContain('attacker');
+    expect(replaceState).toHaveBeenCalledWith({}, 'Vireact', '/auth/google/callback');
+    expect(oauth.navigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+  });
+
+  it('without a session cookie the data param does not sign anyone in', async () => {
+    const { replaceState } = await runCallback(null);
+    expect(oauth.login).not.toHaveBeenCalled();
+    expect(oauth.updateAuthData).not.toHaveBeenCalled();
+    expect(memory.size).toBe(0);
+    expect(replaceState).toHaveBeenCalledWith({}, 'Vireact', '/auth/google/callback');
+    expect(oauth.navigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });
 
