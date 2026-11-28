@@ -102,6 +102,8 @@ export interface RenderInfo {
   error: string | null;
   createdAt?: string;
   downloadUrl?: string | null;
+  /** True when the creator changed the edit (e.g. switched animation style) after this render was baked. */
+  stale?: boolean;
 }
 
 export interface EditProjectDetail extends EditProjectSummary {

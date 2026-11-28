@@ -81,6 +81,10 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
   const navigate = useNavigate();
   const latest = project.renders.at(-1) ?? null;
   const [render, setRender] = useState<RenderInfo | null>(latest);
+  // A finished render with `stale: true` was baked from older edits (e.g. the creator switched
+  // animation style after exporting). The download would hand them the previous MP4, so the card
+  // hides the Download button and shows a single "Re-export with your latest changes" CTA instead.
+  const stale = render?.status === 'done' && render.stale === true;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkedVideoId, setLinkedVideoId] = useState(project.linkedVideoId);
@@ -114,6 +118,13 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
     if (!render) return;
     try {
       const fresh = await getRender(project.id, render.id);
+      // A late in-session edit (e.g. the creator switched animation style between export and click)
+      // would otherwise hand them the previous MP4. Refuse and point them at the re-export.
+      if (fresh.stale) {
+        setRender(fresh);
+        setError('Your edits changed since this export. Click "Re-export with your latest changes" to render a fresh MP4.');
+        return;
+      }
       if (fresh.downloadUrl) window.location.assign(fresh.downloadUrl);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not get the download. Try again.'));
@@ -147,23 +158,39 @@ function ExportCard({ project, renderAvailable }: { project: EditProjectDetail; 
           </div>
         </div>
       ) : render?.status === 'done' ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button onClick={() => void download()}>
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Download MP4
-          </Button>
-          {linkedVideoId ? (
-            <ButtonLink to={`/videos/${linkedVideoId}`} variant="secondary">
-              See the new score
-            </ButtonLink>
-          ) : (
-            <Button variant="secondary" onClick={() => void score()} disabled={busy}>
-              Score this edit
-            </Button>
+        <div className="mt-3 space-y-2">
+          {stale && (
+            <p role="status" className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              Your edits changed since this export (e.g. a new animation style). Re-export to include them in the MP4.
+            </p>
           )}
-          <Button variant="ghost" onClick={() => void exportNow()} disabled={busy}>
-            Export again
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {stale ? (
+              <Button onClick={() => void exportNow()} disabled={busy}>
+                {busy && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
+                Re-export with your latest changes
+              </Button>
+            ) : (
+              <Button onClick={() => void download()}>
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download MP4
+              </Button>
+            )}
+            {linkedVideoId ? (
+              <ButtonLink to={`/videos/${linkedVideoId}`} variant="secondary">
+                See the new score
+              </ButtonLink>
+            ) : (
+              <Button variant="secondary" onClick={() => void score()} disabled={busy || stale}>
+                Score this edit
+              </Button>
+            )}
+            {!stale && (
+              <Button variant="ghost" onClick={() => void exportNow()} disabled={busy}>
+                Export again
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <>
