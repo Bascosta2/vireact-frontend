@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Download, Loader2, Trash2, Wand2 } from 'lucide-react';
 import UserPage from '@/components/Layout/UserPage';
 import { Button, ButtonLink } from '@/components/app/Button';
 import { Skeleton } from '@/components/app/Skeleton';
@@ -73,6 +73,26 @@ function ProcessingSteps({ project }: { project: EditProjectDetail }) {
           <FootageDisclaimer compact />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Shown above the project page when the storyboard's subjects do not match the style's painted
+ * mascot (e.g. a blue-whale story on Paper Cut, whose Scene draws a fixed jellyfish). The painted
+ * scene starts off so the viewer is not watching an unrelated creature while hearing the story; the
+ * atmosphere (gradients, particles, light) still plays. The creator can turn the painted scene back
+ * on in the Style panel of the review tabs.
+ */
+function SubjectMismatchNotice({ storyboard }: { storyboard: NonNullable<EditProjectDetail['storyboard']> }) {
+  const subjectNames = (storyboard.subjects ?? []).filter((s) => s.role === 'protagonist' || s.role === 'supporting').slice(0, 3).map((s) => s.name);
+  const list = subjectNames.length ? subjectNames.join(', ') : 'your story';
+  return (
+    <div className="mb-5 flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-warning" role="status">
+      <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
+      <p>
+        We turned the style&rsquo;s painted scene off because this story is about <span className="font-semibold">{list}</span>, which the fixed painted scene cannot depict. The style&rsquo;s atmosphere (colour, light, texture) still plays, and the subject is carried by the on-screen graphics. You can turn the painted scene back on in the Style tab.
+      </p>
     </div>
   );
 }
@@ -357,6 +377,9 @@ export default function EditProjectPage() {
               </span>
             </div>
             {project.error && <p className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-warning">{project.error}</p>}
+            {project.storyboard?.autoDisabledScene && (
+              <SubjectMismatchNotice storyboard={project.storyboard} />
+            )}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
               <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
                 <Preview props={props} proxyUrl={project.proxyUrl} originalSec={project.source?.durationSec ?? null} />

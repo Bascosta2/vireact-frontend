@@ -150,6 +150,15 @@ export interface StoryboardOption {
   scenes: StoryboardScene[];
 }
 
+/** One character, object or place the story is about (persistent across scenes). Schema v2. */
+export interface StorySubject {
+  name: string;
+  description: string;
+  role: 'protagonist' | 'supporting' | 'object' | 'environment';
+  /** The VISUALS illustration that approximates this subject, or '' when nothing honestly matches. */
+  visualId: string;
+}
+
 export interface StoryboardView {
   prompt: string;
   lengthSec: number;
@@ -157,6 +166,11 @@ export interface StoryboardView {
   chosen: number | null;
   final: { title: string; scenes: StoryboardScene[] } | null;
   roundsLeft: number;
+  /** Null on storyboards built before schema v2. */
+  subjects: StorySubject[] | null;
+  /** False when the style's painted mascot does not match the story's subject (the painted scene is auto-off). */
+  mascotFits: boolean | null;
+  autoDisabledScene: boolean;
 }
 
 export const getEditorUsage = async (): Promise<EditorUsage> => (await Axios.get<{ data: EditorUsage }>('/editor/usage')).data.data;
