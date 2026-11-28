@@ -171,6 +171,19 @@ export interface StoryboardView {
   /** False when the style's painted mascot does not match the story's subject (the painted scene is auto-off). */
   mascotFits: boolean | null;
   autoDisabledScene: boolean;
+  /** Step 3 generative subject imagery state (empty / pending when the feature is dark). */
+  subjectImages?: {
+    enabled: boolean;
+    pending: boolean;
+    finishedAt: string | null;
+    subjects: Array<{ name: string; description: string; role: string; visualId: string; assetReady: boolean; assetError: string }>;
+  };
+  /** Step 4 visual QA advisory (null when off or not yet run). */
+  visualQa?: {
+    ranAt: string | null;
+    overallScore: number;
+    scenes: Array<{ sceneIdx: number; subjectPresent: boolean; actionPresent: boolean; possibleMismatch: boolean; note: string; subjectScore: number; actionScore: number; sampledFrames: number }>;
+  } | null;
 }
 
 export const getEditorUsage = async (): Promise<EditorUsage> => (await Axios.get<{ data: EditorUsage }>('/editor/usage')).data.data;
@@ -248,5 +261,9 @@ export const chooseStoryboard = async (id: string, option: number, title: string
 export const regenerateStoryboards = async (id: string, note: string): Promise<void> => {
   await Axios.post(`/editor/projects/${id}/storyboard/regenerate`, { note });
 };
+
+/** Rewrite one confirmed storyboard scene from a creator note (Visual QA "Regenerate this scene"). */
+export const regenerateStoryboardScene = async (id: string, sceneIdx: number, note: string): Promise<EditProjectDetail> =>
+  (await Axios.post<{ data: EditProjectDetail }>(`/editor/projects/${id}/storyboard/scenes/${sceneIdx}/regenerate`, { note })).data.data;
 
 export const STORY_LENGTHS = [15, 30, 45, 60] as const;
