@@ -133,6 +133,13 @@ describe('Editor illustrations', () => {
     'idea', 'book', 'search', 'question', 'warning', 'check', 'cross', 'lock', 'time',
     'phone', 'ai', 'code', 'chat', 'audience', 'video', 'globe',
     'fire', 'lightning', 'battery', 'star', 'shield', 'atom', 'gears', 'calendar', 'mountain', 'music',
+    // Story-first Stage 2 subjects (must stay in sync with vireact-backend edl.js VISUALS)
+    'whale', 'shark', 'squid', 'octopus', 'dolphin', 'turtle', 'jellyfish', 'fish_school', 'coral', 'submarine', 'underwater_cave',
+    'person', 'child', 'elder', 'runner', 'silhouette', 'crowd',
+    'car', 'plane', 'ship', 'city', 'bridge', 'factory', 'desk', 'laptop',
+    'tree', 'forest', 'river', 'desert', 'storm', 'sun', 'moon', 'stars', 'cloud', 'wave', 'cave',
+    'bird', 'wolf', 'deer', 'fox', 'horse', 'lion', 'butterfly', 'bee', 'flower', 'seedling',
+    'path', 'door', 'bridge_concept', 'clock', 'ladder',
   ];
   const visual = (name: string, text = ''): Graphic => ({ type: 'visual', visual: name, startFrame: 0, durationFrames: 90, text, subtext: '', items: [], focusX: 0.5, focusY: 0.5 });
 

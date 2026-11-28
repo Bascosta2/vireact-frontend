@@ -1,6 +1,7 @@
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Img, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { StyleFonts } from './fonts';
-import type { Ctx, StyleTheme } from './theme';
+import { inVocabulary, subjectMatchesMascot } from './subject-fit';
+import type { Ctx, SceneCtx, StyleTheme } from './theme';
 
 /**
  * The style's own full-frame layers in an edit: the ambient decoration, the transition at each jump,
@@ -18,9 +19,63 @@ export function StyleOverlay({ theme, accent, fonts, total, scene = false }: { t
   return <theme.Overlay c={c} total={total} scene={scene} />;
 }
 
-/** An animated storytelling style's painted world, filling the frame in place of the camera. */
-export function StyleScene({ theme, accent, fonts }: { theme: StyleTheme; accent: string; fonts: StyleFonts }) {
+export type StyleSceneProps = {
+  theme: StyleTheme;
+  accent: string;
+  fonts: StyleFonts;
+  subject?: string;
+  subjectVisualId?: string;
+  subjectRole?: string;
+  subjectAssetUrl?: string;
+  action?: string;
+};
+
+/**
+ * An animated storytelling style's painted world. Prefers Atmosphere + SubjectDraw/Mascot when the
+ * theme has been migrated (Stage 2); falls back to the legacy Scene for unmigrated themes.
+ */
+export function StyleScene({ theme, accent, fonts, subject, subjectVisualId, subjectRole, subjectAssetUrl, action }: StyleSceneProps) {
   const c = useCtx(accent, fonts);
+  const ctx: SceneCtx = { c, subject, subjectVisualId, subjectRole, subjectAssetUrl, action };
+
+  const key = subjectVisualId || subject || '';
+  const canDrawSubject = inVocabulary(key, theme.subjectVocabulary) || inVocabulary(subject, theme.subjectVocabulary);
+  const subjectNode = canDrawSubject && theme.SubjectDraw ? theme.SubjectDraw(ctx) : null;
+  const hasLayeredContract = Boolean(theme.Atmosphere || theme.Mascot || theme.SubjectDraw);
+
+  if (hasLayeredContract) {
+    const showMascot = !subjectNode && theme.Mascot && (!subject || subjectMatchesMascot(subject, theme.mascotSubjects));
+    const showAsset = !subjectNode && Boolean(subjectAssetUrl);
+    // Atmosphere preferred (no mascot). Unmigrated themes fall back to legacy Scene as the base.
+    const base = theme.Atmosphere
+      ? <theme.Atmosphere {...ctx} />
+      : theme.Scene
+        ? <theme.Scene c={c} />
+        : null;
+    return (
+      <AbsoluteFill>
+        {base}
+        {subjectNode}
+        {showMascot && theme.Mascot ? <theme.Mascot {...ctx} /> : null}
+        {showAsset && subjectAssetUrl ? (
+          <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
+            <Img
+              src={subjectAssetUrl}
+              style={{
+                width: '72%',
+                height: 'auto',
+                maxHeight: '55%',
+                objectFit: 'contain',
+                opacity: 0.92,
+                filter: 'drop-shadow(0 18px 28px rgba(0,0,0,0.45))',
+              }}
+            />
+          </AbsoluteFill>
+        ) : null}
+      </AbsoluteFill>
+    );
+  }
+
   return theme.Scene ? <theme.Scene c={c} /> : null;
 }
 

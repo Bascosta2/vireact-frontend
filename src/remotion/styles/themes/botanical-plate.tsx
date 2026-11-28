@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { drawStroke, focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { H, W, hexA, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Botanical Plate: a scientific illustration on cream paper — fine ink outlines, soft watercolour
@@ -90,6 +91,12 @@ export const botanicalPlate: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['butterfly', 'flower', 'plant', 'leaf', 'stem', 'botanical'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#D4A5A5', accent: '#7A9E7E', ink: '#3E2723', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       {/* The plate: cream corners and a fine double rule like an old print. */}

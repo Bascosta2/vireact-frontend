@@ -31,6 +31,11 @@ export function StyleStage({
   camera,
   extraFilter = '',
   noPip = false,
+  subject,
+  subjectVisualId,
+  subjectRole,
+  subjectAssetUrl,
+  action,
 }: {
   theme: StyleTheme;
   accent: string;
@@ -42,6 +47,11 @@ export function StyleStage({
   extraFilter?: string;
   /** Story mode: there is no creator to show in an explainer's bubble. */
   noPip?: boolean;
+  subject?: string;
+  subjectVisualId?: string;
+  subjectRole?: string;
+  subjectAssetUrl?: string;
+  action?: string;
 }) {
   const blur = camera.blur > 0.2 ? `blur(${camera.blur.toFixed(1)}px)` : '';
   const graded = [theme.footage, blur, extraFilter].filter((x) => x && x !== 'none').join(' ') || undefined;
@@ -54,7 +64,16 @@ export function StyleStage({
       <>
         {!pip && <AbsoluteFill style={{ opacity: 0 }}>{footage}</AbsoluteFill>}
         <AbsoluteFill style={{ ...moved, filter: blur || undefined }}>
-          <StyleScene theme={theme} accent={accent} fonts={fonts} />
+          <StyleScene
+            theme={theme}
+            accent={accent}
+            fonts={fonts}
+            subject={subject}
+            subjectVisualId={subjectVisualId}
+            subjectRole={subjectRole}
+            subjectAssetUrl={subjectAssetUrl}
+            action={action}
+          />
         </AbsoluteFill>
         {pip && (
           <div style={windowStyle(pip)}>

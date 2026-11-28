@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop, roughFilter, weaveStyle } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
+import { H, W, hexA, type SceneCtx, type StyleTheme } from '../theme';
 
 /**
  * Impasto Oil: thick paint, palette-knife and bristle strokes that follow the forms, swirling strokes in
@@ -46,6 +47,45 @@ function whale(frame: number) {
   );
 }
 
+const OIL_MARINE = { body: SKIN, accent: FOAM, shadow: 'rgba(0,0,0,0.45)', ink: FOAM };
+
+const Atmosphere = ({ c }: SceneCtx) => (
+  <AbsoluteFill style={{ background: `linear-gradient(180deg, #0E1E33 0%, ${DEEP} 28%, #3C5F84 50%, ${hexA(GOLD, 0.9)} 58%, ${SEA} 61%, ${DEEP} 100%)` }}>
+    <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+      <defs>
+        {roughFilter('io-edge', { scale: 9, freq: 0.03 })}
+        {roughFilter('io-sky', { scale: 16, freq: 0.02 })}
+      </defs>
+      {Array.from({ length: 14 }, (_, k) => {
+        const cx = (k * 211) % W;
+        const cy = 150 + ((k * 97) % 860);
+        const r = 90 + (k % 4) * 40;
+        return (
+          <path key={k} d={`M${cx - r} ${cy} A${r} ${r * 0.6} 0 1 1 ${cx + r * 0.7} ${cy + r * 0.3}`} transform={`rotate(${c.frame * (k % 2 ? 0.4 : -0.3) + k * 40} ${cx} ${cy})`} stroke={k % 3 === 0 ? GOLD : k % 3 === 1 ? '#5D86AE' : FOAM} strokeWidth={18 + (k % 3) * 8} fill="none" strokeLinecap="round" opacity={0.42} filter="url(#io-sky)" />
+        );
+      })}
+      <g transform={`translate(230 ${1145 + Math.sin(c.frame / 14) * 10}) rotate(${Math.sin(c.frame / 18) * 9})`}>
+        <path d="M-70 0 L70 0 L50 30 L-50 30 Z" fill="#4A2E1A" />
+        <line x1={0} y1={0} x2={0} y2={-90} stroke="#3A2414" strokeWidth={6} />
+        <path d="M4 -86 L60 -20 L4 -20 Z" fill={FOAM} />
+      </g>
+      {waveBand(c.frame, 1120, DEEP, 30, 40, 0.9)}
+      {waveBand(c.frame + 30, 1260, SEA, 40, 30, 0.95)}
+      {waveBand(c.frame + 70, 1450, '#3E84A8', 36, 26, 0.95)}
+      {waveBand(c.frame + 110, 1680, DEEP, 30, 22, 1)}
+    </svg>
+  </AbsoluteFill>
+);
+
+const Mascot = ({ c }: SceneCtx) => (
+  <AbsoluteFill>
+    <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+      <defs>{roughFilter('io-edge', { scale: 9, freq: 0.03 })}</defs>
+      <g transform={focus(790, 1560, 560, 980, 2)}>{whale(c.frame)}</g>
+    </svg>
+  </AbsoluteFill>
+);
+
 export const impastoOil: StyleTheme = {
   id: 'impasto-oil',
   accent: GOLD,
@@ -54,6 +94,14 @@ export const impastoOil: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['whale', 'wave', 'sea', 'ocean', 'storm', 'water'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  Atmosphere,
+  Mascot,
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, OIL_MARINE) : null;
+  },
   Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
@@ -62,7 +110,6 @@ export const impastoOil: StyleTheme = {
         {waveBand(c.frame + 40, 1870, SEA, 26, 34, 0.8)}
         {!scene && whale(c.frame)}
         {waveBand(c.frame + 90, 1905, '#3E84A8', 20, 27, 0.85)}
-        {/* Stroke ridges catching light along the top edge, like a stormy sky band. */}
         {Array.from({ length: 9 }, (_, k) => (
           <path key={k} d={`M${k * 130 - 30} 26 q60 ${14 + Math.sin(c.frame / 50 + k) * 8} 120 4`} stroke={k % 3 ? DEEP : GOLD} strokeWidth={13} fill="none" opacity={0.28} strokeLinecap="round" filter="url(#io-edge)" />
         ))}
@@ -72,33 +119,10 @@ export const impastoOil: StyleTheme = {
     </AbsoluteFill>
   ),
   Scene: ({ c }) => (
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, #0E1E33 0%, ${DEEP} 28%, #3C5F84 50%, ${hexA(GOLD, 0.9)} 58%, ${SEA} 61%, ${DEEP} 100%)` }}>
-      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
-        <defs>
-          {roughFilter('io-edge', { scale: 9, freq: 0.03 })}
-          {roughFilter('io-sky', { scale: 16, freq: 0.02 })}
-        </defs>
-        {/* Swirling storm strokes in the sky. */}
-        {Array.from({ length: 14 }, (_, k) => {
-          const cx = (k * 211) % W;
-          const cy = 150 + ((k * 97) % 860);
-          const r = 90 + (k % 4) * 40;
-          return (
-            <path key={k} d={`M${cx - r} ${cy} A${r} ${r * 0.6} 0 1 1 ${cx + r * 0.7} ${cy + r * 0.3}`} transform={`rotate(${c.frame * (k % 2 ? 0.4 : -0.3) + k * 40} ${cx} ${cy})`} stroke={k % 3 === 0 ? GOLD : k % 3 === 1 ? '#5D86AE' : FOAM} strokeWidth={18 + (k % 3) * 8} fill="none" strokeLinecap="round" opacity={0.42} filter="url(#io-sky)" />
-          );
-        })}
-        <g transform={`translate(230 ${1145 + Math.sin(c.frame / 14) * 10}) rotate(${Math.sin(c.frame / 18) * 9})`}>
-          <path d="M-70 0 L70 0 L50 30 L-50 30 Z" fill="#4A2E1A" />
-          <line x1={0} y1={0} x2={0} y2={-90} stroke="#3A2414" strokeWidth={6} />
-          <path d="M4 -86 L60 -20 L4 -20 Z" fill={FOAM} />
-        </g>
-        {waveBand(c.frame, 1120, DEEP, 30, 40, 0.9)}
-        <g transform={focus(790, 1560, 560, 980, 2)}>{whale(c.frame)}</g>
-        {waveBand(c.frame + 30, 1260, SEA, 40, 30, 0.95)}
-        {waveBand(c.frame + 70, 1450, '#3E84A8', 36, 26, 0.95)}
-        {waveBand(c.frame + 110, 1680, DEEP, 30, 22, 1)}
-      </svg>
-    </AbsoluteFill>
+    <>
+      <Atmosphere c={c} />
+      <Mascot c={c} />
+    </>
   ),
   caption: {
     size: 82,

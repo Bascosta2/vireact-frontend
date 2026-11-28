@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { H, W, hexA, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Art Nouveau: a poster with flowing whiplash lines, a thick dark outline around every shape, flat
@@ -70,6 +71,12 @@ export const artNouveau: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['hummingbird', 'vine', 'flower', 'bird', 'halo', 'poster'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#C45B7A', accent: '#E8C547', ink: '#2B1D1A', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>

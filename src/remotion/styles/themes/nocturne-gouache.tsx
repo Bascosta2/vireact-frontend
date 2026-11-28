@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, noise, type StyleTheme } from '../theme';
+import { H, W, hexA, noise, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Nocturne Gouache: a night painting in opaque layers of blue and green, matte bristle texture, the
@@ -45,6 +46,12 @@ export const nocturneGouache: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['deer', 'firefly', 'night', 'moonlight', 'meadow', 'grass'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#A7C4A0', accent: '#F4E28D', ink: '#1B2430', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => {
     const cloud = loop(c.frame, 900) * 260 - 130;
     return (

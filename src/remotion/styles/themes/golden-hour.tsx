@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { H, W, hexA, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Golden Hour: warm opaque gouache at sunset — the low sun turning wheat gold and orange, long
@@ -65,6 +66,12 @@ export const goldenHour: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['swallow', 'bird', 'wheat', 'field', 'sunset', 'sun'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#E89B3C', accent: '#F2D6A2', ink: '#3A2414', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => {
     const glow = 0.5 + Math.sin(c.frame / 47) * 0.08;
     return (

@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { drawStroke, grainStyle, loop, roughFilter, smooth } from '../painted';
-import { H, W, hexA, type StyleTheme } from '../theme';
+import { H, W, hexA, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Sumi-e Ink: black ink from deep black to pale grey washes on rice paper, wet bleeding edges, dry brush
@@ -59,6 +60,12 @@ export const sumiE: StyleTheme = {
   entrance: 'write',
   step: 1,
   textScale: 1.05,
+  mascotSubjects: ['crane', 'bird', 'ink', 'wash', 'mountain', 'mist'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#1A1A1A', accent: '#6B6B6B', ink: '#0A0A0A', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => {
     // The pair crosses every 8 seconds; the mate joins halfway.
     const p = loop(c.frame, 240);

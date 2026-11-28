@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, noise, type StyleTheme } from '../theme';
+import { H, W, noise, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Roman Mosaic: small stone tiles laid in rows, grout between them, each tile with its own slight colour
@@ -116,6 +117,12 @@ export const romanMosaic: StyleTheme = {
   entrance: 'pop',
   step: 1,
   textScale: 0.86,
+  mascotSubjects: ['turtle', 'mosaic', 'stone', 'tile', 'roman', 'tortoise'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#C9A66B', accent: '#5C7A8A', ink: '#2C241B', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => {
     const light = loop(c.frame, 150);
     return (

@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, noise, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
+import { H, W, hexA, noise, type SceneCtx, type StyleTheme } from '../theme';
 
 /**
  * Paper Cut: a diorama of 6 to 9 layers of cut paper, pale surface blue to near black, each casting a
@@ -63,6 +64,30 @@ function fish(frame: number) {
   });
 }
 
+const PAPER_MARINE = { body: JELLY, accent: GLOW, shadow: 'rgba(0,0,0,0.35)', ink: '#0B2036' };
+
+const Atmosphere = ({ c }: SceneCtx) => (
+  <AbsoluteFill style={{ background: `linear-gradient(180deg, ${SURFACE} 0%, ${LAYERS[1]} 30%, ${LAYERS[3]} 62%, ${LAYERS[5]} 100%)` }}>
+    <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+      <g transform="translate(0 -760)" opacity={0.55}>{layers(c.frame * 0.5)}</g>
+      <g transform="translate(0 -430)" opacity={0.8}>{layers(c.frame * 0.8)}</g>
+      {Array.from({ length: 14 }, (_, k) => {
+        const x = 60 + noise(k, 31) * 960;
+        const y = ((c.frame * (1.2 + noise(k, 32)) + noise(k, 33) * 1900) % 1900) - 20;
+        return <circle key={k} cx={x + Math.sin(c.frame / 30 + k) * 14} cy={y} r={7 + noise(k, 34) * 6} fill="#F4FBFD" opacity={0.75} style={{ filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.25))' }} />;
+      })}
+    </svg>
+  </AbsoluteFill>
+);
+
+const Mascot = ({ c }: SceneCtx) => (
+  <AbsoluteFill>
+    <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
+      <g transform={focus(205, 1010, 540, 880, 2.2)}>{jellyfish(c.frame)}</g>
+    </svg>
+  </AbsoluteFill>
+);
+
 export const paperCut: StyleTheme = {
   id: 'paper-cut',
   accent: GLOW,
@@ -71,6 +96,14 @@ export const paperCut: StyleTheme = {
   entrance: 'glide',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['jellyfish', 'ocean', 'sea', 'underwater', 'paper', 'layer'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  Atmosphere,
+  Mascot,
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, PAPER_MARINE) : null;
+  },
   Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
@@ -78,7 +111,6 @@ export const paperCut: StyleTheme = {
         {fish(c.frame)}
         {!scene && jellyfish(c.frame)}
         {layers(c.frame)}
-        {/* Punched paper dots drifting down like snow. */}
         {Array.from({ length: 20 }, (_, k) => {
           const y = ((c.frame * (1 + (k % 4) * 0.4) + k * 211) % (H + 80)) - 40;
           return <circle key={k} cx={(k * 173) % W + Math.sin(c.frame / 36 + k) * 18} cy={y} r={4 + (k % 3) * 2.4} fill={SURFACE} opacity={0.5} />;
@@ -88,19 +120,10 @@ export const paperCut: StyleTheme = {
     </AbsoluteFill>
   ),
   Scene: ({ c }) => (
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${SURFACE} 0%, ${LAYERS[1]} 30%, ${LAYERS[3]} 62%, ${LAYERS[5]} 100%)` }}>
-      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
-        {/* Deeper paper layers sliding past at their own speeds, like a multiplane camera. */}
-        <g transform="translate(0 -760)" opacity={0.55}>{layers(c.frame * 0.5)}</g>
-        <g transform="translate(0 -430)" opacity={0.8}>{layers(c.frame * 0.8)}</g>
-        <g transform={focus(205, 1010, 540, 880, 2.2)}>{jellyfish(c.frame)}</g>
-        {Array.from({ length: 14 }, (_, k) => {
-          const x = 60 + noise(k, 31) * 960;
-          const y = ((c.frame * (1.2 + noise(k, 32)) + noise(k, 33) * 1900) % 1900) - 20;
-          return <circle key={k} cx={x + Math.sin(c.frame / 30 + k) * 14} cy={y} r={7 + noise(k, 34) * 6} fill="#F4FBFD" opacity={0.75} style={{ filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.25))' }} />;
-        })}
-      </svg>
-    </AbsoluteFill>
+    <>
+      <Atmosphere c={c} />
+      <Mascot c={c} />
+    </>
   ),
   caption: {
     size: 80,

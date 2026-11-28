@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop, roughFilter } from '../painted';
-import { H, W, hexA, noise, type StyleTheme } from '../theme';
+import { H, W, hexA, noise, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Watercolour: soft washes with blooms and hard dried edges on cold-press paper, a few colours (warm koi
@@ -90,6 +91,12 @@ export const watercolour: StyleTheme = {
   entrance: 'fade',
   step: 1,
   textScale: 1,
+  mascotSubjects: ['koi', 'fish', 'pond', 'water', 'ripple'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#E07A5F', accent: '#81B29A', ink: '#3D405B', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => {
     // One sun glint crosses the water every few seconds.
     const glint = loop(c.frame, 180);

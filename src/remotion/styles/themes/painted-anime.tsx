@@ -1,6 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { focus, grainStyle, loop } from '../painted';
-import { H, W, hexA, noise, type StyleTheme } from '../theme';
+import { H, W, hexA, noise, type SceneCtx, type StyleTheme } from '../theme';
+import { MARINE_VOCABULARY, drawMarine, resolveMarineId } from '../subjects/marine';
 
 /**
  * Painted Anime: a hand-painted anime film background in gouache — lush greens, big white cumulus
@@ -65,6 +66,12 @@ export const paintedAnime: StyleTheme = {
   entrance: 'step',
   step: 2,
   textScale: 1,
+  mascotSubjects: ['kid', 'child', 'summer', 'field', 'cloud', 'running'],
+  subjectVocabulary: [...MARINE_VOCABULARY],
+  SubjectDraw: ({ c, subject, subjectVisualId }) => {
+    const id = resolveMarineId(subject, subjectVisualId);
+    return id ? drawMarine(id, c.frame, { body: '#F4A261', accent: '#2A9D8F', ink: '#264653', shadow: 'rgba(0,0,0,0.35)' }) : null;
+  },
   Overlay: ({ c, scene }) => (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <AbsoluteFill style={{ background: `linear-gradient(180deg, ${hexA(SKY, 0.28)} 0%, transparent 24%, transparent 76%, ${hexA(DEEP_LEAF, 0.35)} 100%)`, mixBlendMode: 'soft-light' }} />

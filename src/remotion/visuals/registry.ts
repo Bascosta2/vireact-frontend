@@ -3,6 +3,7 @@ import { ENERGY_VISUALS } from './energy';
 import { IDEA_VISUALS } from './ideas';
 import type { Visual } from './kit';
 import { MONEY_VISUALS } from './money';
+import { STORY_VISUALS } from './story';
 import { TECH_VISUALS } from './tech';
 
 /**
@@ -15,6 +16,7 @@ export const VISUALS: Record<string, Visual> = {
   ...IDEA_VISUALS,
   ...TECH_VISUALS,
   ...ENERGY_VISUALS,
+  ...STORY_VISUALS,
 };
 
 export const VISUAL_NAMES = Object.keys(VISUALS);

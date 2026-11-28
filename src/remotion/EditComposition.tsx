@@ -183,7 +183,10 @@ export function EditComposition(props: EditProps) {
   const effects = props.effects ?? [];
   const transitionFrames = transitions.map((t) => t.frame);
   // Animated storytelling: the style's painted world replaces the picture; the footage keeps its sound.
-  const scene = Boolean(theme?.Scene && props.skill?.layout === 'scene');
+  const scene = Boolean((theme?.Scene || theme?.Atmosphere) && props.skill?.layout === 'scene');
+  // Active storyboard scene for the current frame (SubjectDraw / Mascot decisions).
+  const activeStoryScene = props.storyboard?.scenes.find((s) => frame >= s.startFrame && frame < s.startFrame + s.durationFrames)
+    ?? props.storyboard?.scenes[0];
 
   const zoom = zoomAt(frame, props.zooms);
   const piece = props.timeline.length ? props.timeline[pieceIndexAt(frame, props.timeline)] : null;
@@ -231,6 +234,11 @@ export function EditComposition(props: EditProps) {
             footage={footage}
             noPip={Boolean(props.storyboard)}
             camera={{ transform: String(footageStyle.transform), transformOrigin: String(footageStyle.transformOrigin), blur }}
+            subject={activeStoryScene?.subject}
+            subjectVisualId={activeStoryScene?.subjectVisualId}
+            subjectRole={activeStoryScene?.subjectRole}
+            subjectAssetUrl={activeStoryScene?.subjectAssetUrl}
+            action={activeStoryScene?.action}
           />
         ) : (
           <AbsoluteFill style={footageStyle}>{footage}</AbsoluteFill>

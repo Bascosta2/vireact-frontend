@@ -93,6 +93,24 @@ export interface StoryboardScene {
   durationFrames: number;
   /** A backdrop id (showcase/backdrops.tsx), or 'scene' when the style paints its own world. */
   backdrop: string;
+  /** Name of the subject from the storyboard registry acting in this scene. */
+  subject?: string;
+  /** VISUALS id chosen for this subject (or ''). */
+  subjectVisualId?: string;
+  subjectRole?: string;
+  /** Signed URL of a generated subject image (Step 3), when ready. */
+  subjectAssetUrl?: string;
+  /** What the subject is doing in this scene. */
+  action?: string;
+}
+
+/** Persistent character / object / place from the storyboard subjects registry. */
+export interface StoryboardSubject {
+  name: string;
+  description: string;
+  role: string;
+  visualId: string;
+  assetUrl?: string;
 }
 
 // A type alias (not an interface) so it is assignable to Remotion's Record<string, unknown> props.
@@ -127,5 +145,5 @@ export type EditProps = {
    * Story mode (a video animated from a typed idea): there is no footage; each scene's backdrop is drawn
    * in its place (or the style's own scene), so `videoUrl` is empty and `timeline` is unused.
    */
-  storyboard?: { scenes: StoryboardScene[] };
+  storyboard?: { scenes: StoryboardScene[]; subjects?: StoryboardSubject[] };
 };

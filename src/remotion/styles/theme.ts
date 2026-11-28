@@ -23,6 +23,19 @@ export interface Ctx {
   height: number;
 }
 
+/**
+ * Context for Atmosphere / Mascot / SubjectDraw (story-first Stage 2). Extends the frame context with
+ * the active storyboard scene's subject so a theme can draw the right creature instead of its fixed mascot.
+ */
+export interface SceneCtx {
+  c: Ctx;
+  subject?: string;
+  subjectVisualId?: string;
+  subjectRole?: string;
+  subjectAssetUrl?: string;
+  action?: string;
+}
+
 export interface CaptionLook {
   /** Font size before any shrink-to-fit. */
   size: number;
@@ -106,8 +119,19 @@ export interface StyleTheme {
   /**
    * Animated storytelling styles: a whole painted world that fills the frame in place of the camera,
    * with the main subject in the middle. The creator's voice narrates it.
+   * Prefer Atmosphere + Mascot + SubjectDraw for new work; Scene remains as a backward-compat shim.
    */
   Scene?: (p: { c: Ctx }) => ReactNode;
+  /** Always-on background: gradient, light, particles. Never depicts a specific story creature. */
+  Atmosphere?: (p: SceneCtx) => ReactNode;
+  /** The style's signature creature. Drawn only when the scene's subject matches mascotSubjects. */
+  Mascot?: (p: SceneCtx) => ReactNode | null;
+  /** Draw this scene's subject in the style's aesthetic. Null when outside subjectVocabulary. */
+  SubjectDraw?: (p: SceneCtx) => ReactNode | null;
+  /** Subjects this theme can draw via SubjectDraw (VISUALS ids). */
+  subjectVocabulary?: string[];
+  /** Words that mean "the story is about this theme's mascot" (mirrors backend mascotSubjects). */
+  mascotSubjects?: string[];
   caption: CaptionLook;
   hook: HookLook;
   /** The surface graphics sit on. */
