@@ -166,12 +166,14 @@ export const listEditProjects = async (skill?: string): Promise<EditProjectSumma
 export const getEditProject = async (id: string): Promise<EditProjectDetail> =>
   (await Axios.get<{ data: EditProjectDetail }>(`/editor/projects/${id}`)).data.data;
 
-export const createEditProject = async (file: File, skill: string | null = null): Promise<{ project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } }> =>
+/** `animationNote` is an optional 500-char creator brief (how they want the animation to feel); the planner reads it as top-priority steering. */
+export const createEditProject = async (file: File, skill: string | null = null, animationNote = ''): Promise<{ project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } }> =>
   (await Axios.post<{ data: { project: EditProjectSummary; upload: { url: string; method: 'PUT'; headers: Record<string, string> } } }>('/editor/projects', {
     fileName: file.name,
     contentType: file.type,
     sizeBytes: file.size,
     ...(skill ? { skill } : {}),
+    ...(animationNote.trim() ? { animationNote: animationNote.trim().slice(0, 500) } : {}),
   })).data.data;
 
 /**

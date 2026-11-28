@@ -203,6 +203,44 @@ function StyleTile({ skill, selected, onSelect }: { skill: EditingSkill; selecte
   );
 }
 
+/**
+ * Optional short brief: "describe how you want the animation to be". Sent with the upload to the
+ * planner as top-priority steering so graphics, illustrations and transitions line up with the
+ * creator's intent (e.g. "visualize my tech workflow as numbered steps with a small icon on each").
+ * Empty by default; hidden inside a disclosure so it never crowds the dropzone.
+ */
+function AnimationBrief({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const left = Math.max(0, 500 - value.length);
+  const near = left <= 50;
+  return (
+    <details className="group mb-3 rounded-xl border border-line bg-surface">
+      <summary className="app-focus flex cursor-pointer select-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm text-fg">
+        <span className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
+          <span className="font-medium">Describe your animation <span className="text-fg-subtle">(optional)</span></span>
+        </span>
+        <span className="text-xs text-fg-muted group-open:hidden">Add a short brief to tailor the graphics</span>
+        <ChevronRight className="h-4 w-4 text-fg-muted transition group-open:rotate-90" aria-hidden="true" />
+      </summary>
+      <div className="border-t border-line px-4 py-3">
+        <label htmlFor="animation-brief" className="sr-only">Describe your animation</label>
+        <textarea
+          id="animation-brief"
+          value={value}
+          onChange={(e) => onChange(e.target.value.slice(0, 500))}
+          rows={3}
+          placeholder="e.g. Visualize my tech workflow as numbered steps with a small icon on each. Use a chart when I compare the two tools."
+          className="app-focus block w-full resize-none rounded-md border border-line bg-canvas px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
+        />
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <p className="text-fg-muted">The AI follows your brief where it can (graphics, visuals, hook, transitions), on top of the skill&rsquo;s own style.</p>
+          <p aria-live="polite" className={cn('tabular shrink-0', near ? 'text-warning' : 'text-fg-subtle')}>{left} left</p>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 export default function SkillsEditor() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -238,6 +276,8 @@ export default function SkillsEditor() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [inProgressId, setInProgressId] = useState<string | null>(null);
   const [upload, setUpload] = useState<{ name: string; pct: number } | null>(null);
+  // Optional creator brief: tells the planner how the creator wants the animation to feel. Passed to Claude as top-priority steering.
+  const [animationNote, setAnimationNote] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
@@ -273,7 +313,7 @@ export default function SkillsEditor() {
     abortRef.current = controller;
     setUpload({ name: file.name, pct: 0 });
     try {
-      const { project, upload: target } = await createEditProject(file, skill.id);
+      const { project, upload: target } = await createEditProject(file, skill.id, animationNote);
       track('skill_edit_started', { skill: skill.id });
       await uploadToStorage(target.url, file, target.headers, (pct) => setUpload({ name: file.name, pct }), controller.signal);
       await confirmEditUpload(project.id);
@@ -449,6 +489,7 @@ export default function SkillsEditor() {
             </div>
           ) : (
             <>
+              <AnimationBrief value={animationNote} onChange={setAnimationNote} />
               <Dropzone
                 onFile={(f) => void onFile(f)}
                 error={uploadError}
